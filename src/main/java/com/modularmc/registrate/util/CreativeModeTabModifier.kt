@@ -6,7 +6,9 @@ import net.minecraft.world.item.CreativeModeTab.ItemDisplayParameters
 import net.minecraft.world.item.CreativeModeTab.TabVisibility
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.ItemLike
+
 import org.jetbrains.annotations.ApiStatus
+
 import java.util.function.BiConsumer
 import java.util.function.BooleanSupplier
 import java.util.function.Supplier

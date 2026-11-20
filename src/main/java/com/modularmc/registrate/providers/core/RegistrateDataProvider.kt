@@ -33,7 +33,7 @@ open class RegistrateDataProvider(parent: AbstractRegistrate<*>, private val mod
 
 	init {
 		LOGGER.debug(DebugMarkers.DATA, RegistrateLogger.modMessage("Collecting datagen providers"), mod)
-		val sortedProviders = parent.getDataGenInitializer().getSortedProviders()
+		val sortedProviders = parent.dataGenInitializer.getSortedProviders()
 		val known = Object2ObjectOpenHashMap<ProviderType<*>, RegistrateProvider>(sortedProviders.size)
 		for ((id, type, prerequisite) in sortedProviders) {
 			if (type in CLIENT_TYPES && !event.includeClient()) continue

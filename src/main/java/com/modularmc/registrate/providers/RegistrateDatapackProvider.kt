@@ -12,7 +12,7 @@ import net.neoforged.neoforge.common.data.DatapackBuiltinEntriesProvider
 import java.util.concurrent.CompletableFuture
 
 open class RegistrateDatapackProvider(parent: AbstractRegistrate<*>, output: PackOutput, provider: CompletableFuture<HolderLookup.Provider>) :
-	DatapackBuiltinEntriesProvider(output, RegistryPatchGenerator.createLookup(provider, parent.getDataGenInitializer().getDatapackRegistryProviders()), setOf(parent.modid)),
+	DatapackBuiltinEntriesProvider(output, RegistryPatchGenerator.createLookup(provider, parent.dataGenInitializer.getDatapackRegistryProviders()), setOf(parent.modid)),
 	RegistrateLookupFillerProvider {
 	override fun getFilledProvider(): CompletableFuture<HolderLookup.Provider> = registryProvider
 

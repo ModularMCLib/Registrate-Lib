@@ -36,7 +36,7 @@ class OneTimeEventReceiver<T : Event>(private val bus: IEventBus, private val li
 
 		@JvmStatic
 		fun <T> addModListener(owner: AbstractRegistrate<*>, priority: EventPriority, eventClass: Class<T>, listener: Consumer<in T>) where T : Event, T : IModBusEvent {
-			val bus = owner.getModEventBus()
+			val bus = owner.modEventBus
 			if (bus == null) {
 				waitingModListeners.getOrPut(owner, ::ArrayList).add { addListener(it, priority, eventClass, listener) }
 				return
