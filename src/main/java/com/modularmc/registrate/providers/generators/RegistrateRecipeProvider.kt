@@ -374,7 +374,7 @@ open class RegistrateRecipeProvider(private val owner: AbstractRegistrate<*>, ou
 	}
 
 	// @formatter:off
-	// GENERATED START - DO NOT EDIT BELOW THIS LINE
+	// GENERATED OVERRIDE START
 
 	/** Generated override to expose protected method: [RecipeProvider.buildAdvancement]  */
 	@Generated(value = ["com.modularmc.registrate.test.meta.UpdateRecipeProvider"], date = "Tue, 28 Apr 2026 01:45:28 GMT")
@@ -393,6 +393,7 @@ open class RegistrateRecipeProvider(private val owner: AbstractRegistrate<*>, ou
 	/** Generated override to expose protected method: [RecipeProvider.generateForEnabledBlockFamilies]  */
 	@Generated(value = ["com.modularmc.registrate.test.meta.UpdateRecipeProvider"], date = "Tue, 28 Apr 2026 01:45:28 GMT")
 	public override fun generateForEnabledBlockFamilies(enabledFeatures: RecipeOutput, flagSet: FeatureFlagSet) = super.generateForEnabledBlockFamilies(enabledFeatures, flagSet)
+	// GENERATED OVERRIDE END
 
 	companion object {
 		const val DEFAULT_SMELT_TIME: Int = 200
@@ -406,6 +407,8 @@ open class RegistrateRecipeProvider(private val owner: AbstractRegistrate<*>, ou
 			.put(RecipeSerializer.SMOKING_RECIPE, "smoking")
 			.put(RecipeSerializer.CAMPFIRE_COOKING_RECIPE, "campfire")
 			.build()
+
+		// GENERATED STATIC START
 
 		/** Generated override to expose protected method: [RecipeProvider.netheriteSmithing]  */
 		@Generated(value = ["com.modularmc.registrate.test.meta.UpdateRecipeProvider"], date = "Tue, 28 Apr 2026 01:45:28 GMT")
@@ -801,6 +804,7 @@ open class RegistrateRecipeProvider(private val owner: AbstractRegistrate<*>, ou
 		/** Generated override to expose protected method: [RecipeProvider.getBlastingRecipeName]  */
 		@Generated(value = ["com.modularmc.registrate.test.meta.UpdateRecipeProvider"], date = "Tue, 28 Apr 2026 01:45:28 GMT")
 		@JvmStatic
-		fun getBlastingRecipeName(itemLike: ItemLike): String = RecipeProvider.getBlastingRecipeName(itemLike) // GENERATED END
+		fun getBlastingRecipeName(itemLike: ItemLike): String = RecipeProvider.getBlastingRecipeName(itemLike)
+		// GENERATED STATIC END
 	}
 }

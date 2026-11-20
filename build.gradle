@@ -8,9 +8,7 @@ plugins {
     alias libs.plugins.modDevGradle
     //alias libs.plugins.shadow
     alias libs.plugins.spotless
-    alias libs.plugins.lombok
     alias libs.plugins.kotlin.jvm
-    alias libs.plugins.kotlin.lombok
     alias libs.plugins.ksp
 }
 
@@ -89,16 +87,6 @@ apply from: "$rootDir/gradle/scripts/resources.gradle"
 apply from: "$rootDir/gradle/scripts/publishing.gradle"
 apply from: "$rootDir/gradle/scripts/spotless.gradle"
 
-tasks.named('compileJava', JavaCompile) {
-    dependsOn tasks.named('compileKotlin')
-    classpath += files(layout.buildDirectory.dir('classes/kotlin/main'))
-}
-
-tasks.named('delombok') {
-    dependsOn tasks.named('compileJava')
-    classpath.from(layout.buildDirectory.dir('classes/kotlin/main'))
-}
-
 tasks.withType(JavaCompile).configureEach {
     options.encoding = "UTF-8"
     options.compilerArgs << '-Xmaxerrs' << '2000'
@@ -108,12 +96,4 @@ tasks.withType(JavaCompile).configureEach {
 tasks.named('test') {
     // The test source set is exercised by NeoForge's GameTest server.
     failOnNoDiscoveredTests = false
-}
-
-lombok {
-    version = "1.18.38"
-}
-
-kotlinLombok {
-    lombokConfigurationFile(file('lombok.config'))
 }

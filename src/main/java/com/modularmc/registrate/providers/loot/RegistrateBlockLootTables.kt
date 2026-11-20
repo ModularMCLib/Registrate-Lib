@@ -47,7 +47,7 @@ open class RegistrateBlockLootTables(provider: HolderLookup.Provider, private va
 	fun entityLookup(): HolderLookup<EntityType<*>> = entityLookup
 
 	// @formatter:off
-	// GENERATED START - DO NOT EDIT BELOW THIS LINE
+	// GENERATED OVERRIDE START
 
 	/** Generated override to expose protected method: [BlockLootSubProvider.applyExplosionDecay]  */
 	@Generated(value = ["com.modularmc.registrate.test.meta.UpdateBlockLootTables"], date = "Tue, 28 Apr 2026 01:43:43 GMT")
@@ -208,9 +208,11 @@ open class RegistrateBlockLootTables(provider: HolderLookup.Provider, private va
 
 	/** Generated override to expose protected method: [BlockLootSubProvider.add]  */
 	@Generated(value = ["com.modularmc.registrate.test.meta.UpdateBlockLootTables"], date = "Tue, 28 Apr 2026 01:43:43 GMT")
-	public override fun add(block: Block, builder: LootTable.Builder) = super.add(block, builder) // GENERATED END
+	public override fun add(block: Block, builder: LootTable.Builder) = super.add(block, builder)
+	// GENERATED OVERRIDE END
 
 	companion object {
+		// GENERATED STATIC START
 		/** Generated override to expose protected method: [BlockLootSubProvider.createShearsOnlyDrop]  */
 		@Generated(value = ["com.modularmc.registrate.test.meta.UpdateBlockLootTables"], date = "Tue, 28 Apr 2026 01:43:43 GMT")
 		@JvmStatic
@@ -220,5 +222,6 @@ open class RegistrateBlockLootTables(provider: HolderLookup.Provider, private va
 		@Generated(value = ["com.modularmc.registrate.test.meta.UpdateBlockLootTables"], date = "Tue, 28 Apr 2026 01:43:43 GMT")
 		@JvmStatic
 		fun createCandleCakeDrops(candleCakeBlock: Block): LootTable.Builder = BlockLootSubProvider.createCandleCakeDrops(candleCakeBlock)
+		// GENERATED STATIC END
 	}
 }

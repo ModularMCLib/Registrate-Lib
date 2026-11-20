@@ -44,6 +44,8 @@ open class RegistrateEntityLootTables(provider: HolderLookup.Provider, private v
 
 	fun entityLookup(): HolderLookup<EntityType<*>> = entityLookup
 
+	// GENERATED OVERRIDE START
+
 	/** Generated override to expose protected method: [EntityLootSubProvider.canHaveLootTable]  */
 	@Generated(
 		value = ["com.modularmc.registrate.test.meta.UpdateEntityLootTables"],
@@ -74,14 +76,16 @@ open class RegistrateEntityLootTables(provider: HolderLookup.Provider, private v
 	)
 	public override fun add(entityType: EntityType<*>, defaultLootTable: ResourceKey<LootTable>, builder: LootTable.Builder) {
 		super.add(entityType, defaultLootTable, builder)
-	} // GENERATED END
+	}
+	// GENERATED OVERRIDE END
 
 	companion object {
 		// @formatter:off
-		// GENERATED START - DO NOT EDIT BELOW THIS LINE
+		// GENERATED STATIC START
 		/** Generated override to expose protected method: [EntityLootSubProvider.createSheepTable]  */
 		@Generated(value = ["com.modularmc.registrate.test.meta.UpdateEntityLootTables"], date = "Tue, 28 Apr 2026 01:45:14 GMT")
 		@JvmStatic
 		fun createSheepTable(woolItem: ItemLike): LootTable.Builder = EntityLootSubProvider.createSheepTable(woolItem)
+		// GENERATED STATIC END
 	}
 }

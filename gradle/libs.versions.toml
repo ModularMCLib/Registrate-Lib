@@ -6,7 +6,6 @@ parchment = "2024.11.17" # https://parchmentmc.org/docs/getting-started
 shadow = "9.6.1"
 spotless = "8.11.0"
 modDevGradle = "2.0.148"
-lombok = "9.8.3"
 kotlin = "2.4.21"
 ksp = "2.3.14"
 jetbrains-annotations = "26.1.0"
@@ -29,7 +28,5 @@ jspecify                = { module = "org.jspecify:jspecify", version.ref = "jsp
 modDevGradle            = { id = "net.neoforged.moddev", version.ref = "modDevGradle" }
 shadow                  = { id = "com.gradleup.shadow", version.ref = "shadow" }
 spotless                = { id = "com.diffplug.spotless", version.ref = "spotless" }
-lombok                  = { id = "io.freefair.lombok", version.ref = "lombok" }
 kotlin-jvm              = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-kotlin-lombok           = { id = "org.jetbrains.kotlin.plugin.lombok", version.ref = "kotlin" }
 ksp                     = { id = "com.google.devtools.ksp", version.ref = "ksp" }

@@ -17,16 +17,6 @@ java {
     withSourcesJar()
 }
 
-// Include expanded Java sources alongside the Kotlin sources.
-sourcesJar {
-    exclude {
-        sourceSets.main.allSource.contains(it.file) && it.file.name.endsWith('.java')
-    }
-    from(delombok) {
-        include '**/*.java'
-    }
-}
-
 base {
     archivesName = "${project.name}-${libs.versions.minecraft.get()}"
 }
