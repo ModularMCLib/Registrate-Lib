@@ -21,7 +21,7 @@ classes/
 .settings
 *.launch
 .architectury-transformer/debug.log
-**/resources/.cache/
+**/resources/
 
 *.patch
 *.DS_Store
