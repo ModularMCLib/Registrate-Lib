@@ -11,6 +11,7 @@ dependencies {
 
     testImplementation(libs.testframework.get())
     testAnnotationProcessor(project(':localization-processor'))
+    kspTest(project(':localization-processor'))
 
     // Standard runtime mods //
     localRuntime(libs.testframework)

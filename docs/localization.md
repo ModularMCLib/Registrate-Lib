@@ -34,11 +34,13 @@ var title = registrate.addLocalization(new TranslationKey(MOD_ID, "gui.mymod.vol
 
 ## 接入注解处理器
 
-用 `./gradlew :localization-processor:jar` 构建处理器。下游模组通过 `annotationProcessor` 引入与库版本对应的处理器，主库继续作为模组依赖。
+用 `./gradlew :localization-processor:jar` 构建与库版本对应的处理器。Java 源码使用 `annotationProcessor`，Kotlin 源码使用 KSP 插件和 `ksp`。混合项目可同时使用两项配置，主库作为模组依赖。
 
 ```groovy
 dependencies {
-    annotationProcessor(files("libs/registratelib-1.21.1-${registratelib_version}-localization-processor.jar"))
+    def processor = files("libs/registratelib-1.21.1-${registratelib_version}-localization-processor.jar")
+    annotationProcessor(processor)
+    ksp(processor)
 }
 ```
 
@@ -56,7 +58,7 @@ final class Labels {
 }
 ```
 
-编译器按 Mod ID 生成声明索引，DataGen 从所属模组读取索引。变体的 Key 由前缀和 ID 拼接，例如 `gui.mymod.power.low`。同一命名空间、Key 和 Locale 下，同级异值声明会报告双方来源。`%s` 的隐式索引按出现顺序分配，译文可用 `%1$s` 等显式索引重排。
+Kotlin 中在带有后备字段的属性上使用 `@field:Trans` 或 `@field:TransVariants`。两个处理器按 Mod ID 写入各自的版本化声明索引，DataGen 从所属模组读取并合并。变体的 Key 由前缀和 ID 拼接，例如 `gui.mymod.power.low`。同一命名空间、Key 和 Locale 下，同级异值声明会报告双方来源。`%s` 的隐式索引按出现顺序分配，译文可用 `%1$s` 等显式索引重排。
 
 ## 注册兼容性
 

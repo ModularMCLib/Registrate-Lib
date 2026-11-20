@@ -8,6 +8,7 @@ spotless = "8.11.0"
 modDevGradle = "2.0.148"
 lombok = "9.8.3"
 kotlin = "2.4.21"
+ksp = "2.3.14"
 jetbrains-annotations = "26.1.0"
 jspecify = "1.0.1"
 renderNurse = "0.0.26"
@@ -18,6 +19,7 @@ minecraft               = { module = "com.mojang:minecraft", version.ref = "mine
 neoForge                = { module = "net.neoforged:neoforge", version.ref = "neoForge" }
 testframework           = { module = "net.neoforged:testframework", version.ref = "neoForge" }
 kotlin-stdlib           = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
+ksp-api                 = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
 renderNurse             = { module = "net.neoforged:render-nurse", version.ref = "renderNurse" }
 mixin                   = { module = "org.spongepowered:mixin", version.ref = "mixin" }
 jetbrains-annotations   = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
@@ -30,3 +32,4 @@ spotless                = { id = "com.diffplug.spotless", version.ref = "spotles
 lombok                  = { id = "io.freefair.lombok", version.ref = "lombok" }
 kotlin-jvm              = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-lombok           = { id = "org.jetbrains.kotlin.plugin.lombok", version.ref = "kotlin" }
+ksp                     = { id = "com.google.devtools.ksp", version.ref = "ksp" }
