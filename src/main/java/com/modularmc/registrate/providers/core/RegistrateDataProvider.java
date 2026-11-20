@@ -10,6 +10,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.resources.ResourceKey;
+import net.neoforged.fml.LogicalSide;
 import net.neoforged.neoforge.data.event.GatherDataEvent;
 
 import com.google.common.collect.BiMap;
@@ -61,12 +62,14 @@ public class RegistrateDataProvider implements DataProvider {
                 throw new IllegalStateException("Tag providers must be registered through ProviderType::registerTag");
             }
             known.put(type, prov);
-            LOGGER.debug(
-                    DebugMarkers.DATA,
-                    RegistrateLogger.modMessage("Added datagen provider {}"),
-                    mod,
-                    sorted.id());
-            subProviders.put(type, prov);
+            if (prov.getSide() == LogicalSide.CLIENT ? event.includeClient() : event.includeServer()) {
+                LOGGER.debug(
+                        DebugMarkers.DATA,
+                        RegistrateLogger.modMessage("Added datagen provider {}"),
+                        mod,
+                        sorted.id());
+                subProviders.put(type, prov);
+            }
         }
     }
 
