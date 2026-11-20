@@ -20,7 +20,6 @@ import net.minecraft.world.inventory.MenuType
 import net.neoforged.api.distmarker.Dist
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension
-import net.neoforged.neoforge.network.IContainerFactory
 import net.neoforged.neoforge.registries.DeferredHolder
 
 open class MenuBuilder<T : AbstractContainerMenu, S, P : Any>(
@@ -67,11 +66,9 @@ open class MenuBuilder<T : AbstractContainerMenu, S, P : Any>(
 
 	override fun createEntry(): MenuType<T> {
 		val supplier = asSupplier()
-		val menu = IMenuTypeExtension.create<T>(
-			IContainerFactory { id, inventory, buffer ->
-				factory.create(supplier.get(), id, inventory!!, buffer)
-			},
-		)
+		val menu = IMenuTypeExtension.create<T> { id, inventory, buffer ->
+			factory.create(supplier.get(), id, inventory, buffer)
+		}
 		unsafeRunWhenOn(Dist.CLIENT) {
 			Runnable {
 				val screen = screenFactory.get()
@@ -83,7 +80,7 @@ open class MenuBuilder<T : AbstractContainerMenu, S, P : Any>(
 		return menu
 	}
 
-	override fun createEntryWrapper(delegate: DeferredHolder<MenuType<*>, MenuType<T>>): RegistryEntry<MenuType<*>, MenuType<T>> = MenuEntry<T>(owner, delegate)
+	override fun createEntryWrapper(delegate: DeferredHolder<MenuType<*>, MenuType<T>>): RegistryEntry<MenuType<*>, MenuType<T>> = MenuEntry(owner, delegate)
 
-	public override fun register(): MenuEntry<T> = super.register() as MenuEntry<T>
+	override fun register(): MenuEntry<T> = super.register() as MenuEntry<T>
 }

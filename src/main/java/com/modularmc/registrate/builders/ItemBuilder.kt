@@ -7,7 +7,7 @@ import com.modularmc.registrate.internal.event.OneTimeEventReceiver.Companion.ad
 import com.modularmc.registrate.internal.util.RegistrateDistExecutor.unsafeRunWhenOn
 import com.modularmc.registrate.localization.LocalizationDeclaration
 import com.modularmc.registrate.providers.DataGenContext
-import com.modularmc.registrate.providers.RegistrateItemTagsProvider
+import com.modularmc.registrate.providers.RegistrateLangProvider
 import com.modularmc.registrate.providers.core.ProviderType
 import com.modularmc.registrate.providers.generators.RegistrateItemModelGenerator
 import com.modularmc.registrate.providers.generators.RegistrateRecipeProvider
@@ -17,7 +17,6 @@ import com.modularmc.registrate.util.entry.RegistryEntry
 import com.modularmc.registrate.util.nullness.*
 
 import net.minecraft.client.color.item.ItemColor
-import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
 import net.minecraft.resources.ResourceKey
 import net.minecraft.tags.TagKey
@@ -54,8 +53,7 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 	private val factory: NonNullFunction<Item.Properties, T>,
 ) : AbstractBuilder<Item, T, P, ItemBuilder<T, P>>(owner, parent, name, callback, Registries.ITEM) {
 	private var initialProperties = NonNullSupplier { Item.Properties() }
-	private var propertiesCallback: NonNullFunction<Item.Properties, Item.Properties> =
-		NonNullUnaryOperator.identity<Item.Properties>()
+	private var propertiesCallback: NonNullFunction<Item.Properties, Item.Properties> = NonNullUnaryOperator.identity()
 	private var colorHandler: NonNullSupplier<Supplier<ItemColor>>? = null
 
 	private val creativeModeTabs: MutableMap<ResourceKey<CreativeModeTab>, NonNullBiConsumer<DataGenContext<Item, T>, CreativeModeTabModifier>> =
@@ -74,7 +72,7 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 	 * @return this [ItemBuilder]
 	 */
 	open fun properties(func: NonNullUnaryOperator<Item.Properties>): ItemBuilder<T, P> {
-		propertiesCallback = propertiesCallback.andThen<Item.Properties>(func)
+		propertiesCallback = propertiesCallback.andThen(func)
 		return this
 	}
 
@@ -99,7 +97,7 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 			modifier.accept(item)
 		},
 	): ItemBuilder<T, P> {
-		creativeModeTabs.put(tab, modifier) // Should we get the current value in the map [if one exists] and
+		creativeModeTabs[tab] = modifier // Should we get the current value in the map [if one exists] and
 		// .andThen() the 2 together? right now we replace any consumer that
 		// currently exists
 		return this
@@ -121,16 +119,14 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 	 *
 	 * @return this [ItemBuilder]
 	 */
-	open fun defaultModel(): ItemBuilder<T, P> = model(
-		NonNullSupplier {
-			NonNullBiConsumer { ctx: DataGenContext<Item, T>, prov: RegistrateItemModelGenerator ->
-				prov.generateFlatItem(
-					ctx.get(),
-					prov.modItemTexture(ctx.name),
-				)
-			}
-		},
-	)
+	open fun defaultModel(): ItemBuilder<T, P> = model {
+		NonNullBiConsumer { ctx: DataGenContext<Item, T>, prov: RegistrateItemModelGenerator ->
+			prov.generateFlatItem(
+				ctx.get(),
+				prov.modItemTexture(ctx.name),
+			)
+		}
+	}
 
 	/**
 	 * Registers the client color handler for the tint indices used by the item model.
@@ -140,14 +136,14 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 	 */
 	open fun color(colorHandler: NonNullSupplier<Supplier<ItemColor>>): ItemBuilder<T, P> {
 		if (this.colorHandler == null) {
-			unsafeRunWhenOn(Dist.CLIENT, Supplier { Runnable { this.registerItemColor() } })
+			unsafeRunWhenOn(Dist.CLIENT) { Runnable { this.registerItemColor() } }
 		}
 		this.colorHandler = colorHandler
 		return this
 	}
 
 	protected open fun registerItemColor() {
-		addModListener<RegisterColorHandlersEvent.Item>(
+		addModListener(
 			owner,
 			RegisterColorHandlersEvent.Item::class.java,
 			Consumer { event: RegisterColorHandlersEvent.Item ->
@@ -170,12 +166,11 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 	open fun model(cons: NonNullSupplier<NonNullBiConsumer<DataGenContext<Item, T>, RegistrateItemModelGenerator>>): ItemBuilder<T, P> {
 		val model: NonNullSupplier<NonNullBiConsumer<DataGenContext<Item, T>, RegistrateItemModelGenerator>> =
 			cons.lazy()
-		return setData<RegistrateItemModelGenerator>(
+		return setData(
 			ProviderType.ITEM_MODEL,
-			NonNullBiConsumer { context: DataGenContext<Item, T>, generator: RegistrateItemModelGenerator ->
-				model.get().accept(context, generator)
-			},
-		)
+		) { context: DataGenContext<Item, T>, generator: RegistrateItemModelGenerator ->
+			model.get().accept(context, generator)
+		}
 	}
 
 	/**
@@ -186,10 +181,10 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 	 *
 	 * @return this [ItemBuilder]
 	 */
-	open fun defaultLang(): ItemBuilder<T, P> = lang(NonNullFunction { obj: T -> obj.getDescriptionId() })
+	open fun defaultLang(): ItemBuilder<T, P> = lang { obj: T -> obj.descriptionId }
 
 	/** Configures the source text and translations of this entry.  */
-	open fun localization(configure: Consumer<LocalizationDeclaration.Builder>): ItemBuilder<T, P> = localization(NonNullFunction { obj: T -> obj.getDescriptionId() }, configure)
+	open fun localization(configure: Consumer<LocalizationDeclaration.Builder>): ItemBuilder<T, P> = localization({ obj: T -> obj.descriptionId }, configure)
 
 	/**
 	 * Set the translation for this item.
@@ -198,7 +193,7 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 	 * A localized English name
 	 * @return this [ItemBuilder]
 	 */
-	open fun lang(name: String): ItemBuilder<T, P> = lang(NonNullFunction { obj: T -> obj.getDescriptionId() }, name)
+	open fun lang(name: String): ItemBuilder<T, P> = lang({ obj: T -> obj.descriptionId }, name)
 
 	/**
 	 * Configure the recipe(s) for this item.
@@ -208,7 +203,7 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 	 * @return this [ItemBuilder]
 	 * @see .setData
 	 */
-	open fun recipe(cons: NonNullBiConsumer<DataGenContext<Item, T>, RegistrateRecipeProvider>): ItemBuilder<T, P> = setData<RegistrateRecipeProvider>(ProviderType.RECIPE, cons)
+	open fun recipe(cons: NonNullBiConsumer<DataGenContext<Item, T>, RegistrateRecipeProvider>) = setData(ProviderType.RECIPE, cons)
 
 	/**
 	 * Add burn time for the item
@@ -232,13 +227,12 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 				creativeModeTabs.forEach { (creativeModeTab, consumer) ->
 					owner.modifyCreativeModeTab(
 						creativeModeTab,
-						Consumer { modifier: CreativeModeTabModifier ->
-							consumer.accept(
-								DataGenContext.from<Item, T>(this),
-								modifier,
-							)
-						},
-					)
+					) { modifier: CreativeModeTabModifier ->
+						consumer.accept(
+							DataGenContext.from(this),
+							modifier,
+						)
+					}
 				}
 				creativeModeTabs.clear() // this registration should only fire once, to doubly ensure this, clear the map
 			},
@@ -255,14 +249,14 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 	 */
 	open fun clientExtension(clientExtension: NonNullSupplier<Supplier<IClientItemExtensions>>): ItemBuilder<T, P> {
 		if (this.clientExtension == null) {
-			unsafeRunWhenOn(Dist.CLIENT, Supplier { Runnable { this.registerClientExtension() } })
+			unsafeRunWhenOn(Dist.CLIENT) { Runnable { this.registerClientExtension() } }
 		}
 		this.clientExtension = clientExtension
 		return this
 	}
 
 	protected open fun registerClientExtension() {
-		addModListener<RegisterClientExtensionsEvent>(
+		addModListener(
 			owner,
 			RegisterClientExtensionsEvent::class.java,
 			Consumer { e: RegisterClientExtensionsEvent ->
@@ -282,7 +276,7 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 	 * @return this [ItemBuilder]
 	 */
 	@SafeVarargs
-	fun tag(vararg tags: TagKey<Item>): ItemBuilder<T, P> = tag<RegistrateItemTagsProvider>(ProviderType.ITEM_TAGS, *tags)
+	fun tag(vararg tags: TagKey<Item>) = tag(ProviderType.ITEM_TAGS, *tags)
 
 	override fun createEntry(): T {
 		var properties = this.initialProperties.get()
@@ -290,9 +284,9 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 		return factory.apply(properties)
 	}
 
-	override fun createEntryWrapper(delegate: DeferredHolder<Item, T>): RegistryEntry<Item, T> = ItemEntry<T>(owner, delegate)
+	override fun createEntryWrapper(delegate: DeferredHolder<Item, T>): RegistryEntry<Item, T> = ItemEntry(owner, delegate)
 
-	public override fun register(): ItemEntry<T> = super.register() as ItemEntry<T>
+	override fun register(): ItemEntry<T> = super.register() as ItemEntry<T>
 
 	companion object {
 		/**
@@ -323,8 +317,8 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 		 * @return A new [ItemBuilder] with reasonable default data generators.
 		</P></T> */
 		@JvmStatic
-		fun <T : Item, P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, factory: NonNullFunction<Item.Properties, T>): ItemBuilder<T, P> =
-			ItemBuilder<T, P>(owner, parent, name, callback, factory)
+		fun <T : Item, P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, factory: NonNullFunction<Item.Properties, T>) =
+			ItemBuilder(owner, parent, name, callback, factory)
 				.defaultModel().defaultLang()
 	}
 }

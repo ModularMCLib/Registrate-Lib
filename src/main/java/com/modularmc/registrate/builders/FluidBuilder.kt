@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:max-line-length") // Spotless reports a line-length violation at the file header during formatting.
+
 package com.modularmc.registrate.builders
 
 import com.modularmc.registrate.AbstractRegistrate
@@ -8,6 +10,7 @@ import com.modularmc.registrate.internal.event.OneTimeEventReceiver.Companion.ad
 import com.modularmc.registrate.internal.util.RegistrateDistExecutor.unsafeRunWhenOn
 import com.modularmc.registrate.localization.LocalizationDeclaration
 import com.modularmc.registrate.providers.DataGenContext
+import com.modularmc.registrate.providers.RegistrateLangProvider
 import com.modularmc.registrate.providers.RegistrateTagsProvider
 import com.modularmc.registrate.providers.core.ProviderType
 import com.modularmc.registrate.providers.generators.RegistrateBlockModelGenerator
@@ -18,7 +21,6 @@ import com.modularmc.registrate.util.nullness.*
 
 import net.minecraft.Util
 import net.minecraft.core.registries.Registries
-import net.minecraft.data.tags.IntrinsicHolderTagsProvider.IntrinsicTagAppender
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.tags.TagKey
 import net.minecraft.world.item.BucketItem
@@ -36,6 +38,7 @@ import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsE
 import net.neoforged.neoforge.client.model.DynamicFluidContainerModel.Colors
 import net.neoforged.neoforge.common.util.Lazy
 import net.neoforged.neoforge.fluids.BaseFlowingFluid
+import net.neoforged.neoforge.fluids.BaseFlowingFluid.Flowing
 import net.neoforged.neoforge.fluids.FluidType
 import net.neoforged.neoforge.registries.DeferredHolder
 import net.neoforged.neoforge.registries.NeoForgeRegistries
@@ -46,11 +49,6 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 import java.util.function.Consumer
 import java.util.function.Supplier
 import java.util.function.ToIntFunction
-import kotlin.IllegalStateException
-import kotlin.Int
-import kotlin.String
-import kotlin.check
-import kotlin.checkNotNull
 
 open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, T, P, FluidBuilder<T, P>> {
 	fun interface FluidTypeFactory {
@@ -75,7 +73,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	 */
 	open fun clientExtension(clientExtension: NonNullSupplier<Supplier<IClientFluidTypeExtensions>>): FluidBuilder<T, P> {
 		if (this.clientExtension == null && !(registerType && textures != null)) {
-			unsafeRunWhenOn(Dist.CLIENT, Supplier { Runnable { this.registerClientExtension() } })
+			unsafeRunWhenOn(Dist.CLIENT) { Runnable { this.registerClientExtension() } }
 		}
 		this.clientExtension = clientExtension
 		return this
@@ -87,14 +85,14 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	 */
 	open fun model(stillTexture: ResourceLocation, flowingTexture: ResourceLocation): FluidBuilder<T, P> {
 		if (textures == null && registerType && clientExtension == null) {
-			unsafeRunWhenOn(Dist.CLIENT, Supplier { Runnable { this.registerClientExtension() } })
+			unsafeRunWhenOn(Dist.CLIENT) { Runnable { this.registerClientExtension() } }
 		}
 		textures = FluidTextures(stillTexture, flowingTexture)
 		return this
 	}
 
 	protected open fun registerClientExtension() {
-		addModListener<RegisterClientExtensionsEvent>(
+		addModListener(
 			owner,
 			RegisterClientExtensionsEvent::class.java,
 			Consumer { event: RegisterClientExtensionsEvent ->
@@ -127,9 +125,9 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	private var defaultBlock: Boolean? = null
 	private var defaultBucket: Boolean? = null
 
-	private var typeProperties = NonNullConsumer { `$`: FluidType.Properties -> }
+	private var typeProperties = NonNullConsumer.noop<FluidType.Properties>()
 
-	private var fluidProperties = NonNullConsumer { `$`: BaseFlowingFluid.Properties -> }
+	private var fluidProperties = NonNullConsumer.noop<BaseFlowingFluid.Properties>()
 
 	private val registerType: Boolean
 
@@ -143,11 +141,11 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		callback: BuilderCallback,
 		typeFactory: FluidTypeFactory,
 		fluidFactory: FluidFactory<T>,
-	) : super(owner, parent, "flowing_" + name, callback, Registries.FLUID) {
+	) : super(owner, parent, "flowing_$name", callback, Registries.FLUID) {
 		this.sourceName = name
 		this.bucketName = name + "_bucket"
 		this.fluidFactory = fluidFactory
-		this.fluidType = NonNullSupplier.lazy<FluidType>(Supplier { typeFactory.create(makeTypeProperties()) })
+		this.fluidType = NonNullSupplier.lazy { typeFactory.create(makeTypeProperties()) }
 		this.registerType = true
 	}
 
@@ -158,7 +156,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		callback: BuilderCallback,
 		fluidType: NonNullSupplier<FluidType>,
 		fluidFactory: FluidFactory<T>,
-	) : super(owner, parent, "flowing_" + name, callback, Registries.FLUID) {
+	) : super(owner, parent, "flowing_$name", callback, Registries.FLUID) {
 		this.sourceName = name
 		this.bucketName = name + "_bucket"
 		this.fluidFactory = fluidFactory
@@ -201,10 +199,10 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	 *
 	 * @return this [FluidBuilder]
 	 */
-	open fun defaultLang(): FluidBuilder<T, P> = defaultLang(NonNullFunction { f: T -> f.getFluidType().getDescriptionId() }, sourceName)
+	open fun defaultLang(): FluidBuilder<T, P> = defaultLang({ f: T -> f.fluidType.descriptionId }, sourceName)
 
 	/** Configures the source text and translations of this entry.  */
-	open fun localization(configure: Consumer<LocalizationDeclaration.Builder>): FluidBuilder<T, P> = localization(NonNullFunction { fluid: T -> fluid.getFluidType().getDescriptionId() }, configure)
+	open fun localization(configure: Consumer<LocalizationDeclaration.Builder>): FluidBuilder<T, P> = localization({ fluid: T -> fluid.fluidType.descriptionId }, configure)
 
 	/**
 	 * Set the translation for this fluid.
@@ -213,7 +211,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	 * A localized English name
 	 * @return this [FluidBuilder]
 	 */
-	open fun lang(name: String): FluidBuilder<T, P> = lang(NonNullFunction { f: T -> f.getFluidType().getDescriptionId() }, name)
+	open fun lang(name: String): FluidBuilder<T, P> = lang({ f: T -> f.fluidType.descriptionId }, name)
 
 	/**
 	 * Create a standard [BaseFlowingFluid.Source] for this fluid which will be built and registered along with
@@ -266,7 +264,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	 *
 	 * @return the [BlockBuilder] for the [LiquidBlock]
 	 */
-	open fun block(): BlockBuilder<LiquidBlock, FluidBuilder<T, P>> = block<LiquidBlock>(
+	open fun block() = block(
 		NonNullBiFunction { fluid: T, properties: BlockBehaviour.Properties ->
 			LiquidBlock(
 				fluid,
@@ -289,34 +287,29 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		check(this.defaultBlock != false) { "Only one call to block/noBlock per builder allowed" }
 		this.defaultBlock = false
 		val supplier: NonNullSupplier<T> = asSupplier()
-		val lightLevel = Lazy.of<Int>(Supplier { fluidType.get().getLightLevel() })
-		val lightLevelInt = ToIntFunction { `$`: BlockState -> lightLevel.get() }
-		val ret = owner.block<B, FluidBuilder<T, P>>(
+		val lightLevel = Lazy.of { fluidType.get().lightLevel }
+		val lightLevelInt = ToIntFunction<BlockState> { lightLevel.get() }
+		val ret = owner.block(
 			this,
 			sourceName,
-			NonNullFunction { p: BlockBehaviour.Properties -> factory.apply(supplier.get(), p) },
-		)
-			.properties(
-				NonNullUnaryOperator { p: BlockBehaviour.Properties ->
-					BlockBehaviour.Properties.ofFullCopy(
-						Blocks.WATER,
-					).noLootTable()
-				},
-			)
-			.properties(NonNullUnaryOperator { p: BlockBehaviour.Properties -> p.lightLevel(lightLevelInt) })
-			.blockstate(
-				NonNullSupplier {
-					NonNullBiConsumer { ctx: DataGenContext<Block, B>, prov: RegistrateBlockModelGenerator ->
-						val model = prov.models().getBuilder("block/" + ctx.name)
-						val fluidTextures = textures
-						if (fluidTextures != null) {
-							model.texture("particle", fluidTextures.still)
-						}
-						prov.simpleBlock(ctx.get(), model)
+		) { p: BlockBehaviour.Properties -> factory.apply(supplier.get(), p) }
+			.properties {
+				BlockBehaviour.Properties.ofFullCopy(
+					Blocks.WATER,
+				).noLootTable()
+			}
+			.properties { p: BlockBehaviour.Properties -> p.lightLevel(lightLevelInt) }
+			.blockstate {
+				NonNullBiConsumer { ctx: DataGenContext<Block, B>, prov: RegistrateBlockModelGenerator ->
+					val model = prov.models().getBuilder("block/" + ctx.name)
+					val fluidTextures = textures
+					if (fluidTextures != null) {
+						model.texture("particle", fluidTextures.still)
 					}
-				},
-			)
-		this.fluidProperties(NonNullConsumer { p: BaseFlowingFluid.Properties -> p.block(ret.asSupplier()) })
+					prov.simpleBlock(ctx.get(), model)
+				}
+			}
+		this.fluidProperties { it.block(ret.asSupplier()) }
 		return ret
 	}
 
@@ -349,7 +342,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	 *
 	 * @return the [ItemBuilder] for the [BucketItem]
 	 */
-	open fun bucket(): ItemBuilder<BucketItem, FluidBuilder<T, P>> = bucket<BucketItem>(
+	open fun bucket() = bucket(
 		NonNullBiFunction { content: BaseFlowingFluid, properties: Item.Properties ->
 			BucketItem(
 				content,
@@ -373,24 +366,21 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		check(this.defaultBucket != false) { "Only one call to bucket/noBucket per builder allowed" }
 		this.defaultBucket = false
 		val source = this.source
-		val ret = owner.item<I, FluidBuilder<T, P>>(
+		val ret = owner.item(
 			this,
 			bucketName,
-			NonNullFunction { p: Item.Properties -> factory.apply(source.get(), p) },
-		)
-			.properties(NonNullUnaryOperator { p: Item.Properties -> p.craftRemainder(Items.BUCKET).stacksTo(1) })
-			.color(NonNullSupplier { Supplier { Colors() } })
-			.model(
-				NonNullSupplier {
-					NonNullBiConsumer { ctx: DataGenContext<Item, I>, prov: RegistrateItemModelGenerator ->
-						prov.generateFluidBucket(
-							ctx.entry,
-							source.get(),
-						)
-					}
-				},
-			)
-		this.fluidProperties(NonNullConsumer { p: BaseFlowingFluid.Properties -> p.bucket(ret.asSupplier()) })
+		) { p: Item.Properties -> factory.apply(source.get(), p) }
+			.properties { p: Item.Properties -> p.craftRemainder(Items.BUCKET).stacksTo(1) }
+			.color { Supplier { Colors() } }
+			.model {
+				NonNullBiConsumer { ctx: DataGenContext<Item, I>, prov: RegistrateItemModelGenerator ->
+					prov.generateFluidBucket(
+						ctx.entry,
+						source.get(),
+					)
+				}
+			}
+		this.fluidProperties { p: BaseFlowingFluid.Properties -> p.bucket(ret.asSupplier()) }
 		return ret
 	}
 
@@ -410,8 +400,8 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	 */
 	@SafeVarargs
 	fun tag(vararg tags: TagKey<Fluid>): FluidBuilder<T, P> {
-		val ret: FluidBuilder<T, P> =
-			this.tag<RegistrateTagsProvider.IntrinsicTags<Fluid>>(ProviderType.FLUID_TAGS, *tags)
+		val ret =
+			this.tag(ProviderType.FLUID_TAGS, *tags)
 		if (this.tags.isEmpty()) {
 			ret.owner.setDataGenerator<RegistrateTagsProvider.Intrinsic<Fluid>, Fluid>(
 				ret.sourceName,
@@ -436,8 +426,8 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	 */
 	@SafeVarargs
 	fun removeTag(vararg tags: TagKey<Fluid>): FluidBuilder<T, P> {
-		this.tags.removeAll(tags.asList())
-		return this.removeTag<RegistrateTagsProvider.IntrinsicTags<Fluid>>(ProviderType.FLUID_TAGS, *tags)
+		tags.forEach { this.tags.remove(it) }
+		return this.removeTag(ProviderType.FLUID_TAGS, *tags)
 	}
 
 	private fun getSource(): BaseFlowingFluid = source.get()
@@ -454,8 +444,8 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		this.typeProperties.accept(properties)
 
 		// Use the sibling block's description ID for the default FluidType when it is already registered.
-		if (block.isPresent() && block.get().isBound()) {
-			properties.descriptionId(block.get().get().getDescriptionId())
+		if (block.isPresent && block.get().isBound) {
+			properties.descriptionId(block.get().get().descriptionId)
 		} else {
 			properties.descriptionId(
 				Util.makeDescriptionId(
@@ -476,7 +466,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	 *
 	 * Additionally registers the source fluid and the fluid type (if constructed).
 	 */
-	public override fun register(): FluidEntry<T> {
+	override fun register(): FluidEntry<T> {
 		if (registerType) {
 			owner.simple(this, sourceName, NeoForgeRegistries.Keys.FLUID_TYPES, fluidType)
 		}
@@ -496,7 +486,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		return super.register() as FluidEntry<T>
 	}
 
-	override fun createEntryWrapper(delegate: DeferredHolder<Fluid, T>): RegistryEntry<Fluid, T> = FluidEntry<T>(owner, delegate)
+	override fun createEntryWrapper(delegate: DeferredHolder<Fluid, T>): RegistryEntry<Fluid, T> = FluidEntry(owner, delegate)
 
 	companion object {
 		/**
@@ -517,13 +507,13 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		 * @see .create
 		</P> */
 		@JvmStatic
-		fun <P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback): FluidBuilder<BaseFlowingFluid.Flowing, P> = create<BaseFlowingFluid.Flowing, P>(
+		fun <P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback) = create(
 			owner,
 			parent,
 			name,
 			callback,
-			FluidTypeFactory { properties: FluidType.Properties -> FluidType(properties) },
-			FluidFactory { properties: BaseFlowingFluid.Properties -> BaseFlowingFluid.Flowing(properties) },
+			{ properties: FluidType.Properties -> FluidType(properties) },
+			{ properties: BaseFlowingFluid.Properties -> BaseFlowingFluid.Flowing(properties) },
 		)
 
 		/**
@@ -546,15 +536,8 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		 * @see .create
 		</P> */
 		@JvmStatic
-		fun <P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, typeFactory: FluidTypeFactory): FluidBuilder<BaseFlowingFluid.Flowing, P> =
-			create<BaseFlowingFluid.Flowing, P>(
-				owner,
-				parent,
-				name,
-				callback,
-				typeFactory,
-				FluidFactory { properties: BaseFlowingFluid.Properties -> BaseFlowingFluid.Flowing(properties) },
-			)
+		fun <P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, typeFactory: FluidTypeFactory): FluidBuilder<Flowing, P> =
+			create(owner, parent, name, callback, typeFactory, ::Flowing)
 
 		/**
 		 * Create a new [FluidBuilder] and configure data. The created builder will use a default fluid class
@@ -576,15 +559,8 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		 * @see .create
 		</P> */
 		@JvmStatic
-		fun <P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, fluidType: NonNullSupplier<FluidType>): FluidBuilder<BaseFlowingFluid.Flowing, P> =
-			create<BaseFlowingFluid.Flowing, P>(
-				owner,
-				parent,
-				name,
-				callback,
-				FluidTypeFactory { p: FluidType.Properties -> fluidType.get() },
-				FluidFactory { properties: BaseFlowingFluid.Properties -> BaseFlowingFluid.Flowing(properties) },
-			)
+		fun <P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, fluidType: NonNullSupplier<FluidType>): FluidBuilder<Flowing, P> =
+			create(owner, parent, name, callback, fluidType, ::Flowing)
 
 		/**
 		 * Create a new [FluidBuilder] and configure data. The created builder will use a default ([FluidType])
@@ -607,14 +583,8 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		 * @return A new [FluidBuilder] with reasonable default data generators.
 		</P></T> */
 		@JvmStatic
-		fun <T : BaseFlowingFluid, P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, fluidFactory: FluidFactory<T>): FluidBuilder<T, P> = create<T, P>(
-			owner,
-			parent,
-			name,
-			callback,
-			FluidTypeFactory { properties: FluidType.Properties -> FluidType(properties) },
-			fluidFactory,
-		)
+		fun <T : BaseFlowingFluid, P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, fluidFactory: FluidFactory<T>): FluidBuilder<T, P> =
+			create(owner, parent, name, callback, ::FluidType, fluidFactory)
 
 		/**
 		 * Create a new [FluidBuilder] and configure data. Used in lieu of adding side-effects to constructor, so that
@@ -658,8 +628,8 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 			typeFactory: FluidTypeFactory,
 			fluidFactory: FluidFactory<T>,
 		): FluidBuilder<T, P> {
-			val ret: FluidBuilder<T, P> =
-				FluidBuilder<T, P>(owner, parent, name, callback, typeFactory, fluidFactory)
+			val ret =
+				FluidBuilder(owner, parent, name, callback, typeFactory, fluidFactory)
 					.defaultLang().defaultSource().defaultBlock().defaultBucket()
 			return ret
 		}
@@ -705,7 +675,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 			callback: BuilderCallback,
 			fluidType: NonNullSupplier<FluidType>,
 			fluidFactory: FluidFactory<T>,
-		): FluidBuilder<T, P> = FluidBuilder<T, P>(owner, parent, name, callback, fluidType, fluidFactory)
+		) = FluidBuilder(owner, parent, name, callback, fluidType, fluidFactory)
 			.defaultLang().defaultSource().defaultBlock().defaultBucket()
 	}
 }

@@ -895,14 +895,14 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		creator: NonNullSupplier<out T>,
 		entryFactory: NonNullFunction<DeferredHolder<R, T>, out RegistryEntry<R, T>>,
 	): RegistryEntry<R, T> {
-		val generators = datagensByEntry.row(Pair.of<String, ResourceKey<out Registry<*>>>(name, type))
+		val generators = datagensByEntry.row(Pair.of(name, type))
 		var localization: EntryLocalization? = null
 		var declarations: Collection<EntryMetadata.DataGenerator<*>> = emptyList()
 		if (builder is AbstractBuilder<*, *, *, *> && name == builder.name && type == builder.registryKey) {
 			declarations = builder.dataGenerators()
 			localization = builder.localization()
 		}
-		val entry = registrationTracker.track<R, T>(
+		val entry = registrationTracker.track(
 			name,
 			type,
 			creator,
@@ -943,7 +943,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 */
 	open fun <R : Any> makeRegistry(name: String, builder: Function<ResourceKey<Registry<R>>, RegistryBuilder<R>>): ResourceKey<Registry<R>> {
 		val registryId = ResourceKey.createRegistryKey<R>(ResourceLocation.fromNamespaceAndPath(modid, name))
-		addModListener<NewRegistryEvent>(
+		addModListener(
 			this,
 			NewRegistryEvent::class.java,
 			Consumer { e: NewRegistryEvent -> e.register<R>(builder.apply(registryId).create()) },
@@ -963,7 +963,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * @param codec The codec to be used for loading data from datapacks on servers
 	 * @see .makeDatapackRegistry
 	 */
-	open fun <R : Any> makeDatapackRegistry(name: String, codec: Codec<R>): ResourceKey<Registry<R>> = makeDatapackRegistry<R>(name, codec, null)
+	open fun <R : Any> makeDatapackRegistry(name: String, codec: Codec<R>) = makeDatapackRegistry(name, codec, null)
 
 	/**
 	 * Registers the registry key as a datapack registry, which will cause data to be loaded from
