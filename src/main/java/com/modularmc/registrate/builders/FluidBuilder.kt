@@ -560,7 +560,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		</P> */
 		@JvmStatic
 		fun <P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, fluidType: NonNullSupplier<FluidType>): FluidBuilder<Flowing, P> =
-			create(owner, parent, name, callback, fluidType, ::Flowing)
+			create(owner, parent, name, callback, FluidTypeFactory { fluidType.get() }, ::Flowing)
 
 		/**
 		 * Create a new [FluidBuilder] and configure data. The created builder will use a default ([FluidType])

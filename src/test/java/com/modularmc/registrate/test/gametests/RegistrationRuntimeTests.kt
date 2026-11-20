@@ -7,6 +7,8 @@ import net.minecraft.core.registries.Registries
 import net.minecraft.gametest.framework.GameTest
 import net.minecraft.world.item.Item
 import net.minecraft.world.level.block.Block
+import net.neoforged.neoforge.fluids.FluidType
+import net.neoforged.neoforge.registries.NeoForgeRegistries
 import net.neoforged.testframework.DynamicTest
 import net.neoforged.testframework.annotation.ForEachTest
 import net.neoforged.testframework.annotation.TestHolder
@@ -28,6 +30,11 @@ object RegistrationRuntimeTests {
 			)
 			helper.assertTrue(mod.testfluid.getBlock<Block>().isEmpty, "No block entry for the test fluid")
 			helper.assertTrue(mod.testfluid.getBucket<Item>().isEmpty, "No bucket for noBucket()")
+			val supplierFluid = mod.kotlinEntries.supplierFluid
+			helper.assertTrue(
+				mod.registrate().get<FluidType, FluidType>("test_supplier_fluid", NeoForgeRegistries.Keys.FLUID_TYPES).get() === supplierFluid.getType(),
+				"Fluid type supplied through the short overload is registered",
+			)
 			helper.succeed()
 		}
 	}
