@@ -61,8 +61,8 @@ class TranslationRegistry {
 	}
 
 	fun add(key: TranslationKey, locale: MinecraftLocale, declaration: LocalizationDeclaration, source: TranslationSource) {
-		val original = add(EntryKey(key, locale), Candidate(declaration.source(), source, null))
-		for ((target, text) in declaration.translations()) {
+		val original = add(EntryKey(key, locale), Candidate(declaration.source, source, null))
+		for ((target, text) in declaration.translations) {
 			add(EntryKey(key, target), Candidate(text, source, original))
 		}
 	}
