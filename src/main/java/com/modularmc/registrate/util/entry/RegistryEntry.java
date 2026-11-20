@@ -32,6 +32,13 @@ public class RegistryEntry<R, S extends R> extends DeferredHolder<R, S> implemen
         this.owner = owner;
     }
 
+    /**
+     * Returns the declarations saved at submission. This works before the holder is bound.
+     */
+    public EntryMetadata metadata() {
+        return owner.getEntryMetadata(getKey());
+    }
+
     public <X, Y extends X> RegistryEntry<X, Y> getSibling(ResourceKey<? extends Registry<X>> registryType) {
         return owner.get(getId().getPath(), registryType);
     }

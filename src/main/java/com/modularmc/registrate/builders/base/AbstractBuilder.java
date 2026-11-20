@@ -1,11 +1,15 @@
 package com.modularmc.registrate.builders.base;
 
 import com.modularmc.registrate.AbstractRegistrate;
+import com.modularmc.registrate.providers.DataGenContext;
 import com.modularmc.registrate.providers.RegistrateLangProvider;
 import com.modularmc.registrate.providers.RegistrateTagsProvider;
+import com.modularmc.registrate.providers.core.GeneratorType;
 import com.modularmc.registrate.providers.core.ProviderType;
+import com.modularmc.registrate.util.entry.EntryMetadata.DataGenerator;
 import com.modularmc.registrate.util.entry.LazyRegistryEntry;
 import com.modularmc.registrate.util.entry.RegistryEntry;
+import com.modularmc.registrate.util.nullness.NonNullBiConsumer;
 import com.modularmc.registrate.util.nullness.NonNullBiFunction;
 import com.modularmc.registrate.util.nullness.NonNullFunction;
 import com.modularmc.registrate.util.nullness.NonNullSupplier;
@@ -20,11 +24,13 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Base class which most builders should extend, instead of implementing [@link {@link Builder} directly.
@@ -57,6 +63,8 @@ public abstract class AbstractBuilder<R, T extends R, P, S extends AbstractBuild
     private final ResourceKey<? extends Registry<R>> registryKey;
 
     private final Multimap<ProviderType<? extends RegistrateTagsProvider<?>>, TagKey<?>> tagsByType = HashMultimap.create();
+    private final Object2ObjectLinkedOpenHashMap<GeneratorType<?>, DataGenerator<?>> dataGenerators = new Object2ObjectLinkedOpenHashMap<>(4);
+    private boolean submitted;
 
     /** A supplier for the entry that will discard the reference to this builder after it is resolved */
     private final LazyRegistryEntry<R, T> safeSupplier = new LazyRegistryEntry<>(this);
@@ -75,7 +83,34 @@ public abstract class AbstractBuilder<R, T extends R, P, S extends AbstractBuild
 
     @Override
     public RegistryEntry<R, T> register() {
-        return callback.accept(name, registryKey, this, this::createEntry, this::createEntryWrapper);
+        var entry = callback.accept(name, registryKey, this, this::createEntry, this::createEntryWrapper);
+        submitted = true;
+        dataGenerators.clear();
+        return entry;
+    }
+
+    public final List<DataGenerator<?>> dataGenerators() {
+        return List.copyOf(dataGenerators.values());
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <D> S setData(GeneratorType<? extends D> type, NonNullBiConsumer<DataGenContext<R, T>, D> consumer) {
+        if (submitted) {
+            return Builder.super.setData(type, consumer);
+        }
+        dataGenerators.putAndMoveToLast(type, new DataGenerator<>(type, provider -> consumer.accept(DataGenContext.from(this), provider)));
+        return (S) this;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <D> S removeData(GeneratorType<? extends D> type) {
+        if (submitted) {
+            return Builder.super.removeData(type);
+        }
+        dataGenerators.remove(type);
+        return (S) this;
     }
 
     protected RegistryEntry<R, T> createEntryWrapper(DeferredHolder<R, T> delegate) {
@@ -156,7 +191,7 @@ public abstract class AbstractBuilder<R, T extends R, P, S extends AbstractBuild
      * @return this {@link Builder}
      */
     public S lang(NonNullFunction<T, String> langKeyProvider) {
-        return lang(langKeyProvider, (p, t) -> p.<R>getAutomaticName(t, getRegistryKey()));
+        return lang(langKeyProvider, (p, t) -> p.getAutomaticName(t, getRegistryKey()));
     }
 
     /**

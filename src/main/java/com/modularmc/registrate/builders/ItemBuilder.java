@@ -254,8 +254,8 @@ public class ItemBuilder<T extends Item, P> extends AbstractBuilder<Item, T, P, 
      * @see #setData(GeneratorType, NonNullBiConsumer)
      */
     public ItemBuilder<T, P> model(NonNullSupplier<NonNullBiConsumer<DataGenContext<Item, T>, RegistrateItemModelGenerator>> cons) {
-        if (!getOwner().doDatagen().get()) return this;
-        return setData(ProviderType.ITEM_MODEL, cons.get());
+        var model = cons.lazy();
+        return setData(ProviderType.ITEM_MODEL, (context, generator) -> model.get().accept(context, generator));
     }
 
     /**

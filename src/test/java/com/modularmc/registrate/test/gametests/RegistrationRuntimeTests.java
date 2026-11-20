@@ -1,8 +1,11 @@
 package com.modularmc.registrate.test.gametests;
 
+import com.modularmc.registrate.providers.core.ProviderType;
 import com.modularmc.registrate.test.mod.TestMod;
 
+import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.world.item.Item;
 import net.neoforged.testframework.DynamicTest;
 import net.neoforged.testframework.annotation.ForEachTest;
 import net.neoforged.testframework.annotation.TestHolder;
@@ -40,5 +43,27 @@ public class RegistrationRuntimeTests {
                     helper.assertValueEqual("block.testmod.magic_item_model", TestMod.instance().magicItemModelTest.asStack().getItem().getDescriptionId(), "Magic item-model block description key");
                 })
                 .thenSucceed());
+    }
+
+    @GameTest
+    @EmptyTemplate(floor = true)
+    @TestHolder(description = "Reject duplicate registrations before replacing the original holder and its declarations")
+    public static void rejectDuplicateItemWithoutReplacingMetadata(final DynamicTest test) {
+        test.onGameTest(helper -> {
+            var mod = TestMod.instance();
+            var metadata = mod.testitem.metadata();
+            try {
+                mod.registrate().item("testitem", Item::new).lang("Duplicate").register();
+                throw new AssertionError("Duplicate registration succeeded");
+            } catch (IllegalArgumentException error) {
+                helper.assertTrue(error.getMessage().contains("testmod:testitem") && error.getMessage().contains("minecraft:item"), "Duplicate diagnostic: " + error.getMessage());
+            }
+
+            helper.assertTrue(mod.registrate().get("testitem", Registries.ITEM) == mod.testitem, "Original holder");
+            helper.assertTrue(mod.testitem.metadata() == metadata, "Original metadata snapshot");
+            helper.assertTrue(metadata.dataGenerators().stream().anyMatch(generator -> generator.type() == ProviderType.ITEM_MODEL), "Item model declaration");
+            helper.assertTrue(mod.testcustom.metadata().dataGenerators().isEmpty(), "Custom registry metadata");
+            helper.succeed();
+        });
     }
 }

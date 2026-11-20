@@ -3,6 +3,7 @@ package com.modularmc.registrate.test.mod;
 import com.modularmc.registrate.Registrate;
 import com.modularmc.registrate.builders.BlockBuilder;
 import com.modularmc.registrate.providers.core.ProviderType;
+import com.modularmc.registrate.providers.generators.RegistrateRecipeProvider;
 import com.modularmc.registrate.util.DataIngredient;
 import com.modularmc.registrate.util.entry.*;
 
@@ -194,7 +195,7 @@ public class TestMod {
     @VisibleForTesting
     public final ItemEntry<Item> testitem = registrate.object("testitem")
             .item(Item::new)
-            .onRegister(ignored -> sawCallback.set(true))
+            .onRegister(item -> sawCallback.set(true))
             .properties(p -> p.food(new FoodProperties.Builder().nutrition(1).saturationModifier(0.2f).build()))
             .tag(ItemTags.BEDS)
             .model(() -> (ctx, prov) -> prov.createWithExistingModel(ctx.getEntry(), prov.mcLoc("block/stone")))
@@ -220,7 +221,7 @@ public class TestMod {
                         .pattern("DDD").pattern("DED").pattern("DDD")
                         .define('D', Items.DIAMOND)
                         .define('E', Items.EGG)
-                        .unlockedBy("has_egg", prov.has(Items.EGG))
+                        .unlockedBy("has_egg", RegistrateRecipeProvider.has(Items.EGG))
                         .save(prov);
 
                 prov.food(DataIngredient.items(ctx), RecipeCategory.MISC, () -> Blocks.DIAMOND_BLOCK, 1f);
@@ -406,5 +407,10 @@ public class TestMod {
     public static TestMod instance() {
         Objects.requireNonNull(INSTANCE, "Attempting to get mod instance before mod construction");
         return INSTANCE;
+    }
+
+    @VisibleForTesting
+    public Registrate registrate() {
+        return registrate;
     }
 }

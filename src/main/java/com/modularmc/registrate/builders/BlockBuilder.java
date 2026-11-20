@@ -257,8 +257,8 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
      * @see #setData(GeneratorType, NonNullBiConsumer)
      */
     public BlockBuilder<T, P> blockstate(NonNullSupplier<NonNullBiConsumer<DataGenContext<Block, T>, RegistrateBlockModelGenerator>> cons) {
-        if (!getOwner().doDatagen().get()) return this;
-        return setData(ProviderType.BLOCKSTATE, cons.get());
+        var blockstate = cons.lazy();
+        return setData(ProviderType.BLOCKSTATE, (context, generator) -> blockstate.get().accept(context, generator));
     }
 
     /**

@@ -2,6 +2,7 @@ package com.modularmc.registrate.internal;
 
 import com.modularmc.registrate.internal.util.DebugMarkers;
 import com.modularmc.registrate.internal.util.RegistrateLogger;
+import com.modularmc.registrate.util.entry.EntryMetadata;
 import com.modularmc.registrate.util.entry.RegistryEntry;
 import com.modularmc.registrate.util.nullness.NonNullConsumer;
 import com.modularmc.registrate.util.nullness.NonNullFunction;
@@ -14,16 +15,16 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.RegisterEvent;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Table;
+import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,17 +41,20 @@ public final class RegistrationTracker {
         private final ResourceKey<? extends Registry<R>> registryKey;
         private final NonNullSupplier<? extends T> creator;
         private final RegistryEntry<R, T> delegate;
+        private final EntryMetadata metadata;
         private final List<NonNullConsumer<? super T>> callbacks = new ArrayList<>();
 
         private Registration(
                              ResourceLocation identifier,
                              ResourceKey<? extends Registry<R>> registryKey,
                              NonNullSupplier<? extends T> creator,
-                             NonNullFunction<DeferredHolder<R, T>, ? extends RegistryEntry<R, T>> entryFactory) {
+                             NonNullFunction<DeferredHolder<R, T>, ? extends RegistryEntry<R, T>> entryFactory,
+                             EntryMetadata metadata) {
             this.identifier = identifier;
             this.registryKey = registryKey;
             this.creator = creator.lazy();
             this.delegate = entryFactory.apply(DeferredHolder.create(registryKey, identifier));
+            this.metadata = metadata;
         }
 
         private ResourceLocation getIdentifier() {
@@ -62,10 +66,20 @@ public final class RegistrationTracker {
         }
 
         private void register(RegisterEvent event) {
-            T entry = creator.get();
-            event.register(registryKey, helper -> helper.register(identifier, entry));
-            callbacks.forEach(callback -> callback.accept(entry));
-            callbacks.clear();
+            String stage = "creation";
+            try {
+                T entry = creator.get();
+                stage = "registry insertion";
+                event.register(registryKey, helper -> helper.register(identifier, entry));
+                stage = "entry callback";
+                callbacks.forEach(callback -> callback.accept(entry));
+                callbacks.clear();
+            } catch (RuntimeException exception) {
+                throw new IllegalStateException(
+                        "[%s] Registration of %s in %s failed during %s"
+                                .formatted(identifier.getNamespace(), identifier, registryKey.location(), stage),
+                        exception);
+            }
         }
 
         private void addRegisterCallback(NonNullConsumer<? super T> callback) {
@@ -75,10 +89,10 @@ public final class RegistrationTracker {
     }
 
     private final String modId;
-    private final Table<ResourceKey<? extends Registry<?>>, String, Registration<?, ?>> registrations = HashBasedTable.create();
+    private final Map<ResourceKey<? extends Registry<?>>, Object2ObjectLinkedOpenHashMap<String, Registration<?, ?>>> registrations = new Object2ObjectOpenHashMap<>();
     private final Multimap<Pair<String, ResourceKey<? extends Registry<?>>>, NonNullConsumer<?>> pendingEntryCallbacks = HashMultimap.create();
     private final Multimap<ResourceKey<? extends Registry<?>>, Runnable> afterRegisterCallbacks = HashMultimap.create();
-    private final Set<ResourceKey<? extends Registry<?>>> completedRegistrations = new HashSet<>();
+    private final Set<ResourceKey<? extends Registry<?>>> completedRegistrations = new ObjectOpenHashSet<>();
 
     public RegistrationTracker(String modId) {
         this.modId = modId;
@@ -107,8 +121,8 @@ public final class RegistrationTracker {
             }
         }
 
-        Map<String, Registration<?, ?>> registrationsForType = registrations.row(registryKey);
-        if (registrationsForType.isEmpty()) {
+        var registrationsForType = registrations.get(registryKey);
+        if (registrationsForType == null) {
             return;
         }
 
@@ -118,8 +132,7 @@ public final class RegistrationTracker {
                 modId,
                 registrationsForType.size(),
                 registryKey.location());
-        for (var entry : registrationsForType.entrySet()) {
-            Registration<?, ?> registration = entry.getValue();
+        for (var registration : registrationsForType.values()) {
             try {
                 registration.register(event);
                 LOGGER.trace(
@@ -128,21 +141,11 @@ public final class RegistrationTracker {
                         modId,
                         registration.getIdentifier(),
                         registryKey.location());
-            } catch (Exception exception) {
-                if (skipErrors) {
-                    LOGGER.error(
-                            DebugMarkers.REGISTER,
-                            RegistrateLogger.modMessage("Unexpected error while registering entry {} in {}"),
-                            modId,
-                            registration.getIdentifier(),
-                            registryKey.location(),
-                            exception);
-                } else {
-                    throw new RuntimeException(
-                            "[%s] Unexpected error while registering entry %s in %s"
-                                    .formatted(modId, registration.getIdentifier(), registryKey.location()),
-                            exception);
+            } catch (IllegalStateException exception) {
+                if (!skipErrors) {
+                    throw exception;
                 }
+                LOGGER.error(DebugMarkers.REGISTER, exception.getMessage(), exception);
             }
         }
     }
@@ -153,22 +156,24 @@ public final class RegistrationTracker {
             return;
         }
 
-        Collection<Runnable> callbacks = afterRegisterCallbacks.get(registryKey);
-        callbacks.forEach(Runnable::run);
-        callbacks.clear();
         completedRegistrations.add(registryKey);
+        for (var callback : afterRegisterCallbacks.removeAll(registryKey)) {
+            callback.run();
+        }
     }
 
     public <R, T extends R> RegistryEntry<R, T> track(
                                                       String name,
                                                       ResourceKey<? extends Registry<R>> registryKey,
                                                       NonNullSupplier<? extends T> creator,
-                                                      NonNullFunction<DeferredHolder<R, T>, ? extends RegistryEntry<R, T>> entryFactory) {
-        Registration<R, T> registration = new Registration<>(
-                ResourceLocation.fromNamespaceAndPath(modId, name),
-                registryKey,
-                creator,
-                entryFactory);
+                                                      NonNullFunction<DeferredHolder<R, T>, ? extends RegistryEntry<R, T>> entryFactory,
+                                                      EntryMetadata metadata) {
+        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(modId, name);
+        var row = registrations.get(registryKey);
+        if (row != null && row.containsKey(name)) {
+            throw new IllegalArgumentException("[%s] Duplicate registration %s in %s".formatted(modId, id, registryKey.location()));
+        }
+        Registration<R, T> registration = new Registration<>(id, registryKey, creator, entryFactory, metadata);
         LOGGER.trace(
                 DebugMarkers.REGISTER,
                 RegistrateLogger.modMessage("Captured registration {} for registry {}"),
@@ -180,8 +185,15 @@ public final class RegistrationTracker {
             NonNullConsumer<? super T> unsafeCallback = (NonNullConsumer<? super T>) callback;
             registration.addRegisterCallback(unsafeCallback);
         });
-        registrations.put(registryKey, name, registration);
+        registrations.computeIfAbsent(registryKey, key -> new Object2ObjectLinkedOpenHashMap<>()).put(name, registration);
         return registration.getDelegate();
+    }
+
+    public EntryMetadata getMetadata(ResourceKey<?> key) {
+        if (!modId.equals(key.location().getNamespace())) {
+            throw new IllegalArgumentException("[%s] Entry %s belongs to another namespace".formatted(modId, key.location()));
+        }
+        return getRegistration(key.location().getPath(), key.registryKey()).metadata;
     }
 
     public <R, T extends R> void addRegisterCallback(
@@ -218,16 +230,19 @@ public final class RegistrationTracker {
 
     @SuppressWarnings("unchecked")
     public <R, T extends R> Collection<RegistryEntry<R, T>> getAll(ResourceKey<? extends Registry<R>> registryKey) {
-        return registrations.row(registryKey)
+        var row = registrations.get(registryKey);
+        if (row == null) {
+            return List.of();
+        }
+        return row
                 .values()
                 .stream()
                 .map(registration -> (RegistryEntry<R, T>) registration.getDelegate())
                 .collect(Collectors.toList());
     }
 
-    @SuppressWarnings("unchecked")
     private <R, T extends R> Registration<R, T> getRegistration(String name, ResourceKey<? extends Registry<R>> registryKey) {
-        Registration<R, T> registration = (Registration<R, T>) registrations.get(registryKey, name);
+        Registration<R, T> registration = getRegistrationUnchecked(name, registryKey);
         if (registration != null) {
             return registration;
         }
@@ -238,6 +253,7 @@ public final class RegistrationTracker {
     private <R, T extends R> Registration<R, T> getRegistrationUnchecked(
                                                                          String name,
                                                                          ResourceKey<? extends Registry<R>> registryKey) {
-        return (Registration<R, T>) registrations.get(registryKey, name);
+        var row = registrations.get(registryKey);
+        return row == null ? null : (Registration<R, T>) row.get(name);
     }
 }

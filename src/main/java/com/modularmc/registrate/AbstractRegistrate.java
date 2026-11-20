@@ -14,6 +14,8 @@ import com.modularmc.registrate.internal.util.RegistrateLogger;
 import com.modularmc.registrate.providers.*;
 import com.modularmc.registrate.providers.core.*;
 import com.modularmc.registrate.util.CreativeModeTabModifier;
+import com.modularmc.registrate.util.entry.EntryMetadata;
+import com.modularmc.registrate.util.entry.EntryMetadata.DataGenerator;
 import com.modularmc.registrate.util.entry.ItemEntry;
 import com.modularmc.registrate.util.entry.RegistryEntry;
 import com.modularmc.registrate.util.nullness.*;
@@ -143,7 +145,7 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
     private final RegistrationTracker registrationTracker;
     private final RegistrateLifecycle lifecycle;
 
-    private final Table<Pair<String, ResourceKey<? extends Registry<?>>>, GeneratorType<?>, Consumer<?>> datagensByEntry = HashBasedTable.create();
+    private final Table<Pair<String, ResourceKey<? extends Registry<?>>>, GeneratorType<?>, DataGenerator<?>> datagensByEntry = HashBasedTable.create();
     private final ListMultimap<GeneratorType<?>, NonNullConsumer<?>> datagens = ArrayListMultimap.create();
     private final Multimap<ResourceKey<CreativeModeTab>, Consumer<CreativeModeTabModifier>> creativeModeTabModifiers = ArrayListMultimap.create();
     private ResourceKey<CreativeModeTab> defaultCreativeModeTab = CreativeModeTabs.SEARCH;
@@ -505,13 +507,16 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
      * @return this {@link AbstractRegistrate}
      */
     public <P, R> S setDataGenerator(String entry, ResourceKey<? extends Registry<R>> registryType, GeneratorType<? extends P> type, NonNullConsumer<? extends P> cons) {
+        return setDataGenerator(entry, registryType, new DataGenerator<>(type, cons));
+    }
+
+    private <P, R> S setDataGenerator(String entry, ResourceKey<? extends Registry<R>> registryType, DataGenerator<P> generator) {
         if (!doDatagen.get()) return self();
-        @SuppressWarnings("null")
-        Consumer<?> existing = datagensByEntry.put(Pair.of(entry, registryType), type, cons);
+        var existing = datagensByEntry.put(Pair.of(entry, registryType), generator.type(), generator);
         if (existing != null) {
-            datagens.remove(type, existing);
+            datagens.remove(generator.type(), existing.callback());
         }
-        return addDataGenerator(type, cons);
+        return addDataGenerator(generator.type(), generator.callback());
     }
 
     /**
@@ -532,10 +537,9 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
      */
     public <P, R> S removeDataGenerator(String entry, ResourceKey<? extends Registry<R>> registryType, GeneratorType<? extends P> type) {
         if (!doDatagen.get()) return self();
-        @SuppressWarnings("null")
-        Consumer<?> existing = datagensByEntry.remove(Pair.of(entry, registryType), type);
+        var existing = datagensByEntry.remove(Pair.of(entry, registryType), type);
         if (existing != null) {
-            datagens.remove(type, existing);
+            datagens.remove(type, existing.callback());
         }
         return self();
     }
@@ -636,8 +640,8 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
 
     @SuppressWarnings("null")
     private Optional<Pair<String, ResourceKey<? extends Registry<?>>>> getEntryForGenerator(GeneratorType<?> type, NonNullConsumer<?> generator) {
-        for (Map.Entry<Pair<String, ResourceKey<? extends Registry<?>>>, Consumer<?>> e : datagensByEntry.column(type).entrySet()) {
-            if (e.getValue() == generator) {
+        for (var e : datagensByEntry.column(type).entrySet()) {
+            if (e.getValue().callback() == generator) {
                 return Optional.of(e.getKey());
             }
         }
@@ -900,7 +904,30 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
      * @return A {@link RegistryEntry} that will hold the created entry after registration is complete
      */
     protected <R, T extends R> RegistryEntry<R, T> accept(String name, ResourceKey<? extends Registry<R>> type, Builder<R, T, ?, ?> builder, NonNullSupplier<? extends T> creator, NonNullFunction<DeferredHolder<R, T>, ? extends RegistryEntry<R, T>> entryFactory) {
-        return registrationTracker.track(name, type, creator, entryFactory);
+        var existing = datagensByEntry.row(Pair.of(name, type));
+        var generators = new ArrayList<DataGenerator<?>>(existing.values());
+        if (builder instanceof AbstractBuilder<?, ?, ?, ?> base && name.equals(builder.getName())) {
+            for (var generator : base.dataGenerators()) {
+                if (!existing.containsKey(generator.type())) {
+                    generators.add(generator);
+                }
+            }
+        }
+        var metadata = new EntryMetadata(generators);
+        var entry = registrationTracker.track(name, type, creator, entryFactory, metadata);
+        for (var generator : metadata.dataGenerators()) {
+            if (!existing.containsKey(generator.type())) {
+                setDataGenerator(name, type, generator);
+            }
+        }
+        return entry;
+    }
+
+    /**
+     * Returns the snapshot for an entry submitted by this registrate instance.
+     */
+    public EntryMetadata getEntryMetadata(ResourceKey<?> key) {
+        return registrationTracker.getMetadata(key);
     }
 
     /**
