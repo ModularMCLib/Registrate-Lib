@@ -23,6 +23,7 @@ import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
 import net.minecraft.data.PackOutput
 import net.minecraft.resources.ResourceKey
+import net.minecraft.world.item.Item
 import net.neoforged.fml.LogicalSide
 import net.neoforged.neoforge.common.data.ExistingFileHelper
 import net.neoforged.neoforge.data.loading.DatagenModLoader
@@ -86,13 +87,20 @@ fun interface ProviderType<T : RegistrateProvider> : GeneratorType<T> {
 		val ENCHANTMENT_TAGS = registerDynamicTag("tags/enchantment", "enchantments", Registries.ENCHANTMENT)
 
 		@JvmField
-		val ITEM_TAGS = registerTag(
+		val ITEM_TAGS = registerTag<Item, RegistrateItemTagsProvider>(
 			"tags/item",
 			Registries.ITEM,
-			ProviderType<RegistrateItemTagsProvider> {
-				RegistrateItemTagsProvider(it.parent, it.type, "items", it.output, it.provider, it.require(BLOCK_TAGS).contentsGetter(), it.fileHelper)
-			},
-		)
+		) {
+			RegistrateItemTagsProvider(
+				it.parent,
+				it.type,
+				"items",
+				it.output,
+				it.provider,
+				it.require(BLOCK_TAGS).contentsGetter(),
+				it.fileHelper,
+			)
+		}
 
 		@JvmField
 		val FLUID_TAGS = registerIntrinsicTag("tags/fluid", "fluids", Registries.FLUID, BuiltInRegistries.FLUID)
@@ -103,10 +111,9 @@ fun interface ProviderType<T : RegistrateProvider> : GeneratorType<T> {
 		@JvmField
 		val GENERIC_SERVER = registerProvider(
 			"registrate_generic_server_provider",
-			ProviderType<RegistrateGenericProvider> {
-				RegistrateGenericProvider(it.parent, it.output, it.provider, LogicalSide.SERVER, it.type)
-			},
-		)
+		) {
+			RegistrateGenericProvider(it.parent, it.output, it.provider, LogicalSide.SERVER, it.type)
+		}
 
 		@JvmField
 		val MODEL = registerClientProvider<RegistrateModelProvider>("model") {
@@ -143,7 +150,7 @@ fun interface ProviderType<T : RegistrateProvider> : GeneratorType<T> {
 			val type = if (DatagenModLoader.isRunningDataGen()) {
 				supplier.get()
 			} else {
-				ProviderType<T> {
+				ProviderType {
 					error("Client datagen provider '$name' is unavailable outside datagen")
 				}
 			}
