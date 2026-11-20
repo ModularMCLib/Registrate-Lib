@@ -23,22 +23,36 @@ jobs:
         id: changelog
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          CONFIG: ${{ contains(github.ref_name, '1.21') && '-1.21' || '' }}
         uses: mikepenz/release-changelog-builder-action@v5
         with:
-          configuration: './.github/json/config.json'
+          configuration: './.github/json/config${{ env.CONFIG }}.json'
           ignorePreReleases: true
           fetchViaCommits: true
           failOnError: true
 
   publish-26:
-    name: '26.1'
+    name: 26.1
     needs: [ meta ]
-    if: ${{ contains(github.ref_name, '26.1') }}
+    if: ${{ contains(github.ref_name, '26.1') || !contains(github.ref_name, '1.21') }}
     secrets: inherit
     uses: ./.github/workflows/publish.yml
     with:
       simulate: ${{ startsWith(github.event.release.name, 'simulate') || github.repository_owner != 'ModularMCLib' }}
       tag-name: ${{ github.ref_name }}
       version: '26.1'
+      release-body: ${{ github.event.release.body }}
+      changelog-body: ${{ needs.meta.outputs.CHANGELOG }}
+
+  publish-21:
+    name: 1.21.1
+    needs: [ meta ]
+    if: ${{ contains(github.ref_name, '1.21') || !contains(github.ref_name, '26.1') }}
+    secrets: inherit
+    uses: ./.github/workflows/publish.yml
+    with:
+      simulate: ${{ startsWith(github.event.release.name, 'simulate') || github.repository_owner != 'ModularMCLib' }}
+      tag-name: ${{ github.ref_name }}
+      version: '1.21'
       release-body: ${{ github.event.release.body }}
       changelog-body: ${{ needs.meta.outputs.CHANGELOG }}
