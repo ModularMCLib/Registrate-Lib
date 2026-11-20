@@ -265,7 +265,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * The event
 	 */
 	protected open fun onData(event: GatherDataEvent) {
-		if (event.getMods().contains(modid)) {
+		if (event.mods.contains(modid)) {
 			val dataProvider = RegistrateDataProvider(this, modid, event)
 			provider = dataProvider
 			dataProvider.attach(event)
@@ -453,7 +453,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * @return this [AbstractRegistrate]
 	 */
 	open fun <P : Any, R : Any> setDataGenerator(builder: Builder<R, *, *, *>, type: GeneratorType<out P>, cons: NonNullConsumer<out P>): S =
-		this.setDataGenerator<P, R>(builder.getName(), builder.getRegistryKey(), type, cons)
+		this.setDataGenerator<P, R>(builder.name, builder.registryKey, type, cons)
 
 	/**
 	 * Mostly internal, removes the data generator for a certain entry/type combination if one was previously
@@ -469,7 +469,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * The [GeneratorType] to stop generating data for
 	 * @return this [AbstractRegistrate]
 	 */
-	open fun <P : Any, R : Any> removeDataGenerator(builder: Builder<R, *, *, *>, type: GeneratorType<out P>): S = this.removeDataGenerator(builder.getName(), builder.getRegistryKey(), type)
+	open fun <P : Any, R : Any> removeDataGenerator(builder: Builder<R, *, *, *>, type: GeneratorType<out P>): S = this.removeDataGenerator(builder.name, builder.registryKey, type)
 
 	/**
 	 * Mostly internal, sets the data generator for a certain entry/type combination. This will replace an existing data
@@ -565,7 +565,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	/** Returns the source locale after validating this mod's configuration.  */
 	open fun requireSourceLocale(): MinecraftLocale {
 		val locale = sourceLocale
-		requireNotNull(locale) { "[" + modid + "] Configure sourceLocale before generating languages" }
+		requireNotNull(locale) { "[$modid] Configure sourceLocale before generating languages" }
 		return locale
 	}
 
@@ -898,9 +898,9 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	): RegistryEntry<R, T> {
 		val generators = datagensByEntry.row(Pair.of<String, ResourceKey<out Registry<*>>>(name, type))
 		var localization: EntryLocalization? = null
-		var declarations: MutableCollection<EntryMetadata.DataGenerator<*>> =
+		var declarations: Collection<EntryMetadata.DataGenerator<*>> =
 			mutableListOf<EntryMetadata.DataGenerator<*>>()
-		if (builder is AbstractBuilder<*, *, *, *> && name == builder.getName() && type == builder.getRegistryKey()) {
+		if (builder is AbstractBuilder<*, *, *, *> && name == builder.name && type == builder.registryKey) {
 			declarations = builder.dataGenerators()
 			localization = builder.localization()
 		}
@@ -1346,17 +1346,11 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	open fun <T : AbstractContainerMenu, SC> menu(factory: ForgeMenuFactory<T>, screenFactory: NonNullSupplier<ScreenFactory<T, SC>>): MenuBuilder<T, SC, S> where SC : Screen, SC : MenuAccess<T> =
 		menu<T, SC>(currentName(), factory, screenFactory)
 
-	open fun <T : AbstractContainerMenu, SC> menu(
-		name: String,
-		factory: ForgeMenuFactory<T>,
-		screenFactory: NonNullSupplier<ScreenFactory<T, SC>>,
-	) where SC : Screen, SC : MenuAccess<T> = menu(self(), name, factory, screenFactory)
+	open fun <T : AbstractContainerMenu, SC> menu(name: String, factory: ForgeMenuFactory<T>, screenFactory: NonNullSupplier<ScreenFactory<T, SC>>) where SC : Screen, SC : MenuAccess<T> =
+		menu(self(), name, factory, screenFactory)
 
-	open fun <T : AbstractContainerMenu, SC, P : Any> menu(
-		parent: P,
-		factory: ForgeMenuFactory<T>,
-		screenFactory: NonNullSupplier<ScreenFactory<T, SC>>,
-	) where SC : Screen, SC : MenuAccess<T> = menu(parent, currentName(), factory, screenFactory)
+	open fun <T : AbstractContainerMenu, SC, P : Any> menu(parent: P, factory: ForgeMenuFactory<T>, screenFactory: NonNullSupplier<ScreenFactory<T, SC>>) where SC : Screen, SC : MenuAccess<T> =
+		menu(parent, currentName(), factory, screenFactory)
 
 	open fun <T : AbstractContainerMenu, SC, P : Any> menu(
 		parent: P,
@@ -1365,18 +1359,18 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		screenFactory: NonNullSupplier<ScreenFactory<T, SC>>,
 	): MenuBuilder<T, SC, P> where SC : Screen, SC : MenuAccess<T> = entry<MenuType<*>, MenuType<T>, P, MenuBuilder<T, SC, P>>(
 		name,
-    ) { callback: BuilderCallback ->
-        MenuBuilder(
-            this,
-            parent,
-            name,
-            callback,
-            factory,
-            screenFactory,
-        )
-    }
+	) { callback: BuilderCallback ->
+		MenuBuilder(
+			this,
+			parent,
+			name,
+			callback,
+			factory,
+			screenFactory,
+		)
+	}
 
-    // Creative Tab
+	// Creative Tab
 	open fun defaultCreativeTab(): NoConfigBuilder<CreativeModeTab, CreativeModeTab, S> = defaultCreativeTab(self())
 
 	open fun defaultCreativeTab(name: String): NoConfigBuilder<CreativeModeTab, CreativeModeTab, S> = defaultCreativeTab(self(), name)
@@ -1397,7 +1391,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	open fun <P : Any> defaultCreativeTab(parent: P, config: Consumer<CreativeModeTab.Builder>): NoConfigBuilder<CreativeModeTab, CreativeModeTab, P> =
 		defaultCreativeTab(parent, currentName(), config)
 
-	open fun <P : Any> defaultCreativeTab(parent: P, name: String, config: Consumer<CreativeModeTab.Builder>) : NoConfigBuilder<R, T, P>{
+	open fun <P : Any> defaultCreativeTab(parent: P, name: String, config: Consumer<CreativeModeTab.Builder>): NoConfigBuilder<CreativeModeTab, CreativeModeTab, P> {
 		this.defaultCreativeModeTab = ResourceKey.create(
 			Registries.CREATIVE_MODE_TAB,
 			ResourceLocation.fromNamespaceAndPath(this.modid, name),
@@ -1406,22 +1400,22 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 			parent,
 			name,
 			Registries.CREATIVE_MODE_TAB,
-        ) {
-            val builder = CreativeModeTab.builder()
-                .icon {
-                    getAll<Item, Item>(Registries.ITEM).firstOrNull()?.get()?.let(::ItemStack) ?: ItemStack.EMPTY
-                }
-                .title(
-                    addRawLang(
-                        Util.makeDescriptionId("itemGroup", this.defaultCreativeModeTab.location()),
-                        toEnglishName(name),
-                        TranslationSource.Kind.AUTOMATIC,
-                    ),
-                )
-            config.accept(builder)
-            builder.build()
-        }
-    }
+		) {
+			val builder = CreativeModeTab.builder()
+				.icon {
+					getAll<Item, Item>(Registries.ITEM).firstOrNull()?.get()?.let(::ItemStack) ?: ItemStack.EMPTY
+				}
+				.title(
+					addRawLang(
+						Util.makeDescriptionId("itemGroup", this.defaultCreativeModeTab.location()),
+						toEnglishName(name),
+						TranslationSource.Kind.AUTOMATIC,
+					),
+				)
+			config.accept(builder)
+			builder.build()
+		}
+	}
 
 	companion object {
 		private val LOGGER = core()
