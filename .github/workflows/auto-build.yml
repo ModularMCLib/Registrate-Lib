@@ -2,7 +2,7 @@ name: Latest Build
 
 on:
   push:
-    branches: ['26.1']
+    branches: ['26.1', '1.21']
     paths: ['src/**', '**/*.gradle', 'gradle.properties']
 
 concurrency:
@@ -27,8 +27,6 @@ jobs:
           fetch-depth: 0 # do a full checkout instead of a shallow clone of HEAD so spotless's ratchetFrom works
       - name: Setup Build
         uses: ./.github/actions/build_setup
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
       - name: Get Mod Version
         id: ver
         run: echo "version=$(./gradlew -q printVersion)" >> $GITHUB_OUTPUT
@@ -37,6 +35,9 @@ jobs:
         run: echo "VERSION_SUFFIX=$(echo "${{ github.sha }}" | cut -c 1-7)" >> $GITHUB_ENV
       - name: Build
         run: ./gradlew build
+      - name: Publish to Maven
+        if: ${{ github.repository_owner == 'ModularMCLib' && env.PUBLISH == 'true' }}
+        run: ./gradlew publish
       - name: Rename Jars
         if: ${{ env.PUBLISH == 'true' }}
         run: for file in build/libs/*; do mv "$file" "${file/SHOT/SHOT+$(date --utc '+%Y%m%d-%H%M%S')-${{ env.VERSION_SUFFIX }}}"; done;
@@ -53,7 +54,7 @@ jobs:
         if: ${{ env.PUBLISH == 'true' }}
         uses: mikepenz/release-changelog-builder-action@v5
         with:
-          configuration: "./.github/json/config-latest.json"
+          configuration: "./.github/json/config-latest${{ contains(github.ref_name, '1.21') && '-1.21' || '' }}.json"
           toTag: ${{ github.ref }}
           fetchViaCommits: true
           failOnError: false
