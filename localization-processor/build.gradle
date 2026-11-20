@@ -1,0 +1,33 @@
+plugins {
+    id 'java'
+}
+
+group = rootProject.group
+version = rootProject.version
+
+java {
+    toolchain.languageVersion.set(rootProject.java.toolchain.languageVersion)
+}
+
+dependencies {
+    compileOnly(project(':')) {
+        transitive = false
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.named('jar', Jar) {
+    archiveBaseName.set(rootProject.base.archivesName)
+    archiveClassifier = 'localization-processor'
+    destinationDirectory.set(rootProject.layout.buildDirectory.dir('libs'))
+
+    // The processor needs these types on javac's isolated processor path.
+    from(rootProject.sourceSets.main.output.classesDirs) {
+        include 'com/modularmc/registrate/localization/annotation/**'
+        include 'com/modularmc/registrate/localization/MinecraftLocale.class'
+        include 'com/modularmc/registrate/localization/index/LocalizationIndex*.class'
+    }
+}

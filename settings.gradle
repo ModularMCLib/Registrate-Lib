@@ -26,3 +26,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "${mod_id}"
+include 'localization-processor'
