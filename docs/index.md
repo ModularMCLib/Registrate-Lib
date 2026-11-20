@@ -19,7 +19,7 @@ RegistrateLib is a powerful fluent registration API wrapper for creating and reg
 
 ```java
 // 创建 Registrate 实例 / Create a Registrate instance
-public static final Registrate REGISTRATE = Registrate.create(MOD_ID);
+public static final Registrate REGISTRATE = Registrate.create(MOD_ID).sourceLocale(MinecraftLocale.EN_US);
 
 // 注册一个简单的方块 / Register a simple block
 public static final BlockEntry<Block> MY_BLOCK = REGISTRATE.block("my_block", Block::new)
@@ -38,6 +38,7 @@ public static final ItemEntry<Item> MY_ITEM = REGISTRATE.item("my_item", Item::n
 3. [注册条目](entries.md) — 注册返回的强类型句柄 / Strongly-typed registry entry handles
 4. [数据提供者](providers.md) — 数据生成系统详解 / Data generation system in detail
 5. [高级用法](advanced.md) — 自定义注册表、生命周期钩子等 / Custom registries, lifecycle hooks, and more
+6. [本地化与迁移](localization.md) / Localization and migration
 
 ## 架构概述 / Architecture Overview
 

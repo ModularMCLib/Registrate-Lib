@@ -67,8 +67,9 @@ REGISTRATE.block("my_block", MyBlock::new)
 
 ## RegistrateLangProvider —— 语言提供者 / Lang Provider
 
-自动生成 `en_us` 和 `en_ud`（上下颠倒）语言文件。  
-Automatically generates `en_us` and `en_ud` (upside-down) lang files.
+按模组的源 Locale 和显式译文生成语言文件。由 `en_us` 条目派生 `en_ud`（上下颠倒）文本。 [本地化与迁移](localization.md)
+
+Generates language files from the mod's source locale and explicit translations. Derives upside-down text from `en_us` entries.
 
 ```java
 // 通过 Registrate 添加语言条目 / Add lang entries via Registrate
