@@ -5,5 +5,7 @@
  * This package centralizes the functional interfaces and annotations used to
  * keep the fluent API ergonomic while remaining explicit about null contracts.
  */
-@org.jspecify.annotations.NullMarked
+@NullMarked
 package com.modularmc.registrate.util.nullness;
+
+import org.jspecify.annotations.NullMarked;
