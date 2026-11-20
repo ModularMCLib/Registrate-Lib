@@ -11,6 +11,7 @@ import com.modularmc.registrate.localization.terminology.LocalizationCatalog.Glo
 import com.modularmc.registrate.localization.terminology.LocalizationCatalog.Unit;
 import com.modularmc.registrate.providers.core.ProviderType;
 import com.modularmc.registrate.providers.generators.RegistrateRecipeProvider;
+import com.modularmc.registrate.test.mod.localization.EnglishLabels;
 import com.modularmc.registrate.util.DataIngredient;
 import com.modularmc.registrate.util.entry.*;
 
@@ -140,7 +141,7 @@ public class TestMod {
 
                     @Override
                     public Component getDisplayName() {
-                        return Component.literal("Test");
+                        return Component.translatable(EnglishLabels.MENU_TITLE);
                     }
                 });
             }

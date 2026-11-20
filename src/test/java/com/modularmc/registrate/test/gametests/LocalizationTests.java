@@ -7,17 +7,23 @@ import com.modularmc.registrate.localization.TextType;
 import com.modularmc.registrate.localization.TranslationKey;
 import com.modularmc.registrate.localization.TranslationSource;
 import com.modularmc.registrate.localization.TranslationSource.Kind;
+import com.modularmc.registrate.localization.index.IndexedTranslations;
 import com.modularmc.registrate.localization.resolution.TranslationRegistry;
 import com.modularmc.registrate.localization.resolution.TranslationRegistry.LanguageFile;
 import com.modularmc.registrate.localization.terminology.Domain;
+import com.modularmc.registrate.providers.core.LanguageOutput;
 import com.modularmc.registrate.test.mod.TestMod;
+import com.modularmc.registrate.test.mod.localization.ChineseLocaleTestMod;
+import com.modularmc.registrate.test.mod.localization.EnglishLabels;
 
+import net.minecraft.data.PackOutput;
 import net.minecraft.gametest.framework.GameTest;
 import net.neoforged.testframework.DynamicTest;
 import net.neoforged.testframework.annotation.ForEachTest;
 import net.neoforged.testframework.annotation.TestHolder;
 import net.neoforged.testframework.gametest.EmptyTemplate;
 
+import java.nio.file.Path;
 import java.util.List;
 
 @ForEachTest(groups = "registrate-localization")
@@ -74,6 +80,32 @@ public class LocalizationTests {
 
             var missing = new UnconfiguredRegistrate();
             helper.assertTrue(failure(missing::requireSourceLocale).contains("[missing_locale]"), "Mod with missing source locale");
+            helper.succeed();
+        });
+    }
+
+    @GameTest
+    @EmptyTemplate(floor = true)
+    @TestHolder(description = "Read both mod indexes and fail before writing when a manual declaration conflicts with an annotation")
+    public static void collectCompiledAnnotationsBeforeWriting(DynamicTest test) {
+        test.onGameTest(helper -> {
+            var registry = new TranslationRegistry();
+            IndexedTranslations.collect(TestMod.MOD_ID, MinecraftLocale.EN_US, registry);
+            IndexedTranslations.collect(ChineseLocaleTestMod.MOD_ID, MinecraftLocale.ZH_CN, registry);
+            var languages = registry.resolve();
+            var english = languages.get(new LanguageFile(TestMod.MOD_ID, MinecraftLocale.EN_US));
+            var chinese = languages.get(new LanguageFile(TestMod.MOD_ID, MinecraftLocale.ZH_CN));
+            helper.assertValueEqual("Test Container", english.get(EnglishLabels.MENU_TITLE), "Single field annotation");
+            helper.assertValueEqual("Low power", english.get("gui.testmod.power.low"), "First variant");
+            helper.assertValueEqual("高功率", chinese.get("gui.testmod.power.high"), "Second variant's target text");
+            helper.assertValueEqual("频率：%1$s Hz", chinese.get("gui.localetest.frequency"), "Chinese source in shared namespace");
+
+            registry.add(new TranslationKey(TestMod.MOD_ID, EnglishLabels.MENU_TITLE), MinecraftLocale.EN_US, LocalizationDeclaration.sourceText("Conflicting name"), MANUAL);
+            var diagnostic = failure(() -> LanguageOutput.write((file, data, hash) -> {
+                throw new AssertionError("Conflicting declarations caused a language write");
+            }, new PackOutput(Path.of("unused-language-output")), registry));
+            helper.assertTrue(diagnostic.contains("@Trans " + EnglishLabels.class.getName() + "#MENU_TITLE"), "Annotated field in conflict diagnostic");
+            helper.assertTrue(diagnostic.contains(MANUAL.location()), "Manual declaration in conflict diagnostic");
             helper.succeed();
         });
     }

@@ -3,6 +3,20 @@ jar {
     exclude "**/SimplifiedToTraditional.properties"
 }
 
+def localizationProcessorJar = tasks.register('localizationProcessorJar', Jar) {
+    archiveClassifier = 'localization-processor'
+    from sourceSets.localizationProcessor.output
+    from(sourceSets.main.output) {
+        include 'com/modularmc/registrate/localization/annotation/**'
+        include 'com/modularmc/registrate/localization/MinecraftLocale.class'
+        include 'com/modularmc/registrate/localization/index/LocalizationIndex*.class'
+    }
+}
+
+tasks.named('assemble') {
+    dependsOn(localizationProcessorJar)
+}
+
 tasks.register('slimJar', Jar) {
     dependsOn("classes")
     archiveClassifier = "slim"

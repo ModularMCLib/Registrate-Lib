@@ -3,6 +3,7 @@ dependencies {
     compileOnly(libs.jspecify)
 
     testImplementation(libs.testframework.get())
+    testAnnotationProcessor(files(tasks.named('localizationProcessorJar')))
 
     // Standard runtime mods //
     localRuntime(libs.testframework)

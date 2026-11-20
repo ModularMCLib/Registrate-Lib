@@ -5,6 +5,7 @@ import com.modularmc.registrate.localization.LocalizationDeclaration;
 import com.modularmc.registrate.localization.TranslationKey;
 import com.modularmc.registrate.localization.TranslationSource;
 import com.modularmc.registrate.localization.TranslationSource.Kind;
+import com.modularmc.registrate.localization.index.IndexedTranslations;
 import com.modularmc.registrate.localization.resolution.TranslationRegistry;
 import com.modularmc.registrate.providers.core.LanguageOutput;
 import com.modularmc.registrate.providers.core.ProviderType;
@@ -135,6 +136,7 @@ public class RegistrateLangProvider extends LanguageProvider implements Registra
         }
         operations.clear();
         owner.collectRawTranslations(registry, locale);
+        IndexedTranslations.collect(owner.getModid(), locale, registry);
     }
 
     @Override
