@@ -2,7 +2,7 @@ name: Latest Build
 
 on:
   push:
-    branches: ['26.1']
+    branches: ['26.1', '1.21']
     paths: ['src/**', '**/*.gradle', 'gradle.properties']
 
 concurrency:
@@ -14,13 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ github.token }}
-      PUBLISH: ${{ !contains(github.event.commits[0].message, '[no-snapshot]') }}
-      MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
-      MAVEN_USER: ${{ secrets.MAVEN_USER }}
+      PUBLISH: ${{ !contains(github.event.head_commit.message, '[no-snapshot]') }}
       SNAPSHOT: true
       CI: true
     permissions:
       contents: write
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,15 +30,20 @@ jobs:
         run: chmod +x gradlew
       - name: Get Mod Version
         id: ver
-        run: echo "version=$(./gradlew -q printVersion)" >> $GITHUB_OUTPUT
+        run: |
+          version=$(./gradlew -q printVersion)
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
       - name: Version Suffix
-        id: suffix
-        run: echo "VERSION_SUFFIX=$(echo "${{ github.sha }}" | cut -c 1-7)" >> $GITHUB_ENV
+        run: printf 'VERSION_SUFFIX=%s\n' "${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
       - name: Build
         run: ./gradlew build
       - name: Rename Jars
         if: ${{ env.PUBLISH == 'true' }}
-        run: for file in build/libs/*; do mv "$file" "${file/SHOT/SHOT+$(date --utc '+%Y%m%d-%H%M%S')-${{ env.VERSION_SUFFIX }}}"; done;
+        run: |
+          timestamp=$(date --utc '+%Y%m%d-%H%M%S')
+          for file in build/libs/*-SNAPSHOT*.jar; do
+            mv "$file" "${file/-SNAPSHOT/-SNAPSHOT+$timestamp-$VERSION_SUFFIX}"
+          done
       - name: Upload Artifacts
         if: ${{ env.PUBLISH == 'true' }}
         uses: actions/upload-artifact@v4
@@ -53,7 +57,7 @@ jobs:
         if: ${{ env.PUBLISH == 'true' }}
         uses: mikepenz/release-changelog-builder-action@v5
         with:
-          configuration: "./.github/json/config-latest.json"
+          configuration: "./.github/json/config-latest${{ github.ref_name == '1.21' && '-1.21' || '' }}.json"
           toTag: ${{ github.ref }}
           fetchViaCommits: true
           failOnError: false
