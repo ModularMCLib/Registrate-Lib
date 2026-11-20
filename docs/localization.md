@@ -64,4 +64,5 @@ Kotlin 中在带有后备字段的属性上使用 `@field:Trans` 或 `@field:Tra
 
 - `RegistryEntry.metadata()` 提供条目的本地化声明和 DataGen 回调视图。读取本地化声明所引用的原生 Key 时，目标 Holder 需要已绑定。
 - 已有样例沿用原注册 ID 和原生翻译 Key。BlockItem 复用方块名称时，复用同一个 Key。
+- 混合源码项目可在 Java 的 `@Mod` 入口创建 `Registrate` 并把它传给 Kotlin 注册类。测试模组用同一实例注册 `testmod:magic_item_model`，GameTest 从 Java 入口的实例查找该方块，并核对 BlockItem 的 `block.testmod.magic_item_model`。
 - 同一个 Registrate 实例内，同一注册表的重复 ID 会在提交时失败。不同注册表可以使用相同的名称。
