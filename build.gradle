@@ -104,6 +104,11 @@ tasks.withType(JavaCompile).configureEach {
     options.compilerArgs << "-Xlint:-removal"
 }
 
+tasks.named('test') {
+    // The test source set is exercised by NeoForge's GameTest server.
+    failOnNoDiscoveredTests = false
+}
+
 lombok {
     version = "1.18.38"
 }

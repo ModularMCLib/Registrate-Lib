@@ -5,6 +5,9 @@ dependencies {
     jarJar(api(libs.kotlin.stdlib.get())) {
         exclude group: 'org.jetbrains', module: 'annotations'
     }
+    additionalRuntimeClasspath(libs.kotlin.stdlib.get()) {
+        exclude group: 'org.jetbrains', module: 'annotations'
+    }
 
     testImplementation(libs.testframework.get())
     testAnnotationProcessor(project(':localization-processor'))

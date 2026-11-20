@@ -17,12 +17,14 @@ java {
     withSourcesJar()
 }
 
-// Use delombok'd files for sources
+// Include expanded Java sources alongside the Kotlin sources.
 sourcesJar {
     exclude {
-        sourceSets.main.allSource.contains it.file
+        sourceSets.main.allSource.contains(it.file) && it.file.name.endsWith('.java')
     }
-    from delombok
+    from(delombok) {
+        include '**/*.java'
+    }
 }
 
 base {

@@ -41,6 +41,8 @@ public class LocalizationTests {
             var registry = new TranslationRegistry();
             registry.add(INVENTORY, MinecraftLocale.EN_US, LocalizationDeclaration.sourceText("Automatic Name"),
                     new TranslationSource(Kind.AUTOMATIC, "Default inventory label"));
+            registry.add(INVENTORY, MinecraftLocale.EN_US, LocalizationDeclaration.sourceText("Other Automatic Name"),
+                    new TranslationSource(Kind.AUTOMATIC, "Other default inventory label"));
             var label = new LocalizationDeclaration.Builder().source("%s at %2$s (%s%%)")
                     .translation(MinecraftLocale.ZH_CN, "%2$s 上的 %1$s（%2$s%%）").build();
             registry.add(INVENTORY, MinecraftLocale.EN_US, label, BUILDER);
@@ -50,6 +52,10 @@ public class LocalizationTests {
             helper.assertValueEqual(label.source(), languages.get(new LanguageFile(TestMod.MOD_ID, MinecraftLocale.EN_US)).get(INVENTORY.value()), "Declared source");
             helper.assertValueEqual(label.translations().get(MinecraftLocale.ZH_CN), languages.get(new LanguageFile(TestMod.MOD_ID, MinecraftLocale.ZH_CN)).get(INVENTORY.value()), "Reordered indexed arguments");
             helper.assertTrue(languages.get(new LanguageFile(TestMod.MOD_ID, MinecraftLocale.EN_UD)).get(INVENTORY.value()).contains("%%%2$s"), "Variant reverses the percent and argument tokens as units");
+
+            String explicitVariant = "%1$s / %2$s / %2$s %%";
+            registry.add(INVENTORY, MinecraftLocale.EN_US, new LocalizationDeclaration.Builder().source(label.source()).translation(MinecraftLocale.EN_UD, explicitVariant).build(), MANUAL);
+            helper.assertValueEqual(explicitVariant, registry.resolve().get(new LanguageFile(TestMod.MOD_ID, MinecraftLocale.EN_UD)).get(INVENTORY.value()), "Explicit variant takes priority after adding a declaration");
 
             var metadata = TestMod.instance().testitem.metadata().localization().declaration().get();
             var catalog = TestMod.instance().registrate().localizationCatalog();
