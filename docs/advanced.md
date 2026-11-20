@@ -270,14 +270,13 @@ REGISTRATE.fluid("my_fluid", still, flow, FluidType::new)
 ```java
 // 方块着色 / Block tinting
 REGISTRATE.block("my_block", MyBlock::new)
-    .color(() -> () -> List.of(
-        BlockTintSources.constant(0xFFFF0000)  // 红色着色 / Red tint
-    ))
+    .color(() -> () -> (state, level, pos, tintIndex) -> 0xFF0000)
     .register();
 
 // 物品模型着色（通过 ItemBuilder）/ Item model tinting (via ItemBuilder)
 REGISTRATE.item("my_item", Item::new)
-    .defaultModel(new ItemTintSource("layer0", Constant.create(0xFFFF0000)))
+    .defaultModel()
+    .color(() -> () -> (stack, tintIndex) -> tintIndex == 0 ? 0xFF0000 : -1)
     .register();
 ```
 

@@ -14,14 +14,14 @@ RegistrateLib has a built-in automatic data generation system. When you register
 |--------------------|-------------------------------------------------------|----------------------------------------|
 | `DYNAMIC`          | `RegistrateDatapackProvider`                          | 动态数据包注册表 / Dynamic datapack registries |
 | `DATA_MAP`         | `RegistrateDataMapProvider`                           | 数据映射 / Data maps                       |
-| `RECIPE_RUNNER`    | `RegistrateRecipeRunner`                              | 配方（入口点）/ Recipes (entry point)         |
+| `RECIPE`          | `RegistrateRecipeProvider`                            | 配方 / Recipes                            |
 | `ADVANCEMENT`      | `RegistrateAdvancementProvider`                       | 进度 / Advancements                      |
 | `LOOT`             | `RegistrateLootTableProvider`                         | 战利品表 / Loot tables                     |
-| `BLOCK_TAGS`       | `RegistrateTagsProvider.IntrinsicImpl<Block>`         | 方块标签 / Block tags                      |
+| `BLOCK_TAGS`       | `RegistrateTagsProvider.IntrinsicTags<Block>`         | 方块标签 / Block tags                      |
 | `ITEM_TAGS`        | `RegistrateItemTagsProvider`                          | 物品标签 / Item tags                       |
-| `FLUID_TAGS`       | `RegistrateTagsProvider.IntrinsicImpl<Fluid>`         | 流体标签 / Fluid tags                      |
-| `ENTITY_TAGS`      | `RegistrateTagsProvider.IntrinsicImpl<EntityType<?>>` | 实体标签 / Entity type tags                |
-| `ENCHANTMENT_TAGS` | `RegistrateTagsProvider.Impl<Enchantment>`            | 附魔标签 / Enchantment tags                |
+| `FLUID_TAGS`       | `RegistrateTagsProvider.IntrinsicTags<Fluid>`         | 流体标签 / Fluid tags                      |
+| `ENTITY_TAGS`      | `RegistrateTagsProvider.IntrinsicTags<EntityType<?>>` | 实体标签 / Entity type tags                |
+| `ENCHANTMENT_TAGS` | `RegistrateTagsProvider.KeyTags<Enchantment>`          | 附魔标签 / Enchantment tags                |
 | `GENERIC_SERVER`   | `RegistrateGenericProvider`                           | 通用服务端提供者 / Generic server provider     |
 
 ### 客户端提供者 / Client Providers
@@ -41,7 +41,6 @@ These are finer-grained generator keys, typically used in builder `.setData()`.
 
 | 生成器 / Generator | 所属提供者 / Parent Provider | 用途 / Purpose                                   |
 |-----------------|-------------------------|------------------------------------------------|
-| `RECIPE`        | `RECIPE_RUNNER`         | 单个对象的配方生成 / Per-object recipe generation       |
 | `BLOCKSTATE`    | `MODEL`                 | 单个对象的方块状态生成 / Per-object blockstate generation |
 | `ITEM_MODEL`    | `MODEL`                 | 单个对象的物品模型生成 / Per-object item model generation |
 
@@ -56,11 +55,10 @@ Most builders provide direct methods to configure data generation:
 // 方块 — 方块状态、模型、战利品、配方、语言
 // Block — blockstate, model, loot, recipe, lang
 REGISTRATE.block("my_block", MyBlock::new)
-    .blockstate(ctx -> { /* ... */ })          // 方块状态 / blockstate
+    .blockstate(() -> (ctx, prov) -> prov.simpleBlock(ctx.getEntry()))
     .loot((prov, block) -> { /* ... */ })       // 战利品表 / loot
     .recipe((ctx, prov) -> { /* ... */ })       // 配方 / recipe
     .lang("My Block")                           // 语言 / lang
-    .defaultBlockstate()                        // 使用默认值 / use defaults
     .defaultLoot()
     .register();
 ```
@@ -149,8 +147,7 @@ REGISTRATE.block("my_block", MyBlock::new)
             .unlockedBy("has_egg", prov.has(Items.EGG))
             .save(prov);
 
-        prov.food(DataIngredient.items(ctx), RecipeCategory.MISC,
-                  CookingBookCategory.MISC, () -> Blocks.DIAMOND_BLOCK, 1f);
+        prov.food(DataIngredient.items(ctx), RecipeCategory.MISC, () -> Blocks.DIAMOND_BLOCK, 1f);
     })
     .register();
 ```
@@ -228,7 +225,7 @@ REGISTRATE.addDataGenerator(ProviderType.ADVANCEMENT, adv -> {
         .display(Items.EGG,
             adv.title(MOD_ID, "root", "Test Advancement"),
             adv.desc(MOD_ID, "root", "Get an egg."),
-            Identifier.withDefaultNamespace(
+            ResourceLocation.withDefaultNamespace(
                 "textures/gui/advancements/backgrounds/stone.png"),
             AdvancementType.TASK, true, true, false)
         .save(adv, MOD_ID + ":root");
