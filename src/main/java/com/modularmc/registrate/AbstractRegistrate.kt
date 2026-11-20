@@ -223,7 +223,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	}
 
 	/**
-	 * Called once per registry at the [lowest priority][EventPriority.LOWEST] to perform any actions that must
+	 * Called once per registry at the [lowest priority][net.neoforged.bus.api.EventPriority.LOWEST] to perform any actions that must
 	 * happen after all other entries have been registered, including from other mods. May
 	 * be overriden in custom implementations to perform additional actions upon entry registration, but *must*
 	 * call `super`.
@@ -306,7 +306,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * @throws NullPointerException
 	 * if current name has not been set via [object]
 	 */
-	open fun <R : Any, T : R> get(type: ResourceKey<out Registry<R>>): RegistryEntry<R, T> = this.get<R, T>(currentName(), type)
+	open fun <R : Any, T : R> get(type: ResourceKey<out Registry<R>>) = this.get<R, T>(currentName(), type)
 
 	/**
 	 * Allows retrieval of a previously created entry. Useful to retrieve arbitrary entries that may have been created
@@ -332,7 +332,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * @throws IllegalArgumentException
 	 * if no such registration has been done
 	 */
-	open fun <R : Any, T : R> get(name: String, type: ResourceKey<out Registry<R>>): RegistryEntry<R, T> = registrationTracker.get<R, T>(name, type)
+	open fun <R : Any, T : R> get(name: String, type: ResourceKey<out Registry<R>>) = registrationTracker.get<R, T>(name, type)
 
 	/**
 	 * Allows retrieval of a previously created entry that may or may not exist. Possibly useful in some very specific
@@ -348,7 +348,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * A class representing the registry type
 	 * @return A [RegistryEntry] which will supply the requested entry, if it exists
 	 */
-	open fun <R : Any, T : R> getOptional(name: String, type: ResourceKey<out Registry<R>>): Optional<RegistryEntry<R, T>> = registrationTracker.getOptional<R, T>(name, type)
+	open fun <R : Any, T : R> getOptional(name: String, type: ResourceKey<out Registry<R>>) = registrationTracker.getOptional<R, T>(name, type)
 
 	/**
 	 * Gather a collection of all entries registered for a certain registry
@@ -363,7 +363,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * @return A collection of [RegistryEntry] objects representing all entries in the given registry which are
 	 * known to this [AbstractRegistrate] object.
 	 */
-	open fun <R : Any, T : R> getAll(type: ResourceKey<out Registry<R>>): Collection<RegistryEntry<R, T>> = registrationTracker.getAll<R, T>(type)
+	open fun <R : Any, T : R> getAll(type: ResourceKey<out Registry<R>>) = registrationTracker.getAll<R, T>(type)
 
 	/**
 	 * Add a callback to be invoked when a certain entry has been registered. This will be invoked *immediately*
@@ -374,7 +374,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * @param T
 	 * Entry type
 	 * @param name
-	 * The name of the entry to watch (implicitly within the [modid][getModid] of this
+	 * The name of the entry to watch (implicitly within the [modid][modid] of this
 	 * instance
 	 * @param registryType
 	 * A [ResourceKey] for the registry in question
@@ -400,7 +400,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * @return This [AbstractRegistrate] instance
 	 */
 	open fun <R : Any> addRegisterCallback(registryType: ResourceKey<out Registry<R>>, callback: Runnable): S {
-		registrationTracker.addAfterRegisterCallback<R>(registryType, callback)
+		registrationTracker.addAfterRegisterCallback(registryType, callback)
 		return self()
 	}
 
@@ -413,7 +413,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * A [ResourceKey] for the registry in question
 	 * @return `true` iff the given registry has finished the registration step
 	 */
-	open fun <R : Any> isRegistered(registryType: ResourceKey<out Registry<R>>): Boolean = registrationTracker.isRegistered<R>(registryType)
+	open fun <R : Any> isRegistered(registryType: ResourceKey<out Registry<R>>) = registrationTracker.isRegistered(registryType)
 
 	/**
 	 * Get the data provider instance for a given [GeneratorType]. Only works within datagen context, not during
@@ -431,7 +431,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	open fun <P : Any> getDataProvider(type: GeneratorType<P>): Optional<P> {
 		val provider = this.provider
 		if (provider != null) {
-			return provider.getSubProvider<P>(type)
+			return provider.getSubProvider(type)
 		}
 		throw IllegalStateException("Cannot get data provider before datagen is started")
 	}
@@ -452,8 +452,8 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * A callback to be invoked during data generation
 	 * @return this [AbstractRegistrate]
 	 */
-	open fun <P : Any, R : Any> setDataGenerator(builder: Builder<R, *, *, *>, type: GeneratorType<out P>, cons: NonNullConsumer<out P>): S =
-		this.setDataGenerator<P, R>(builder.name, builder.registryKey, type, cons)
+	open fun <P : Any, R : Any> setDataGenerator(builder: Builder<R, *, *, *>, type: GeneratorType<out P>, cons: NonNullConsumer<out P>) =
+		this.setDataGenerator(builder.name, builder.registryKey, type, cons)
 
 	/**
 	 * Mostly internal, removes the data generator for a certain entry/type combination if one was previously
@@ -489,15 +489,15 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * A callback to be invoked during data generation
 	 * @return this [AbstractRegistrate]
 	 */
-	open fun <P : Any, R : Any> setDataGenerator(entry: String, registryType: ResourceKey<out Registry<R>>, type: GeneratorType<out P>, cons: NonNullConsumer<out P>): S =
-		setDataGenerator<P, R>(entry, registryType, EntryMetadata.DataGenerator<P>(type, cons))
+	open fun <P : Any, R : Any> setDataGenerator(entry: String, registryType: ResourceKey<out Registry<R>>, type: GeneratorType<out P>, cons: NonNullConsumer<out P>) =
+		setDataGenerator(entry, registryType, EntryMetadata.DataGenerator(type, cons))
 
 	private fun <P : Any, R : Any> setDataGenerator(entry: String, registryType: ResourceKey<out Registry<R>>, generator: EntryMetadata.DataGenerator<P>): S {
 		val existing = datagensByEntry.put(Pair.of(entry, registryType), generator.type, generator)
 		if (existing != null) {
 			datagens.remove(generator.type, existing.callback)
 		}
-		return addDataGenerator<P>(generator.type, generator.callback)
+		return addDataGenerator(generator.type, generator.callback)
 	}
 
 	/**
@@ -791,7 +791,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * ```
 	 *
 	 * @param func
-	 * The [function][UnaryOperator] to apply
+	 * The [function][java.util.function.UnaryOperator] to apply
 	 * @return this [AbstractRegistrate]
 	 */
 	open fun transform(func: NonNullUnaryOperator<S>): S = func.apply(self())
@@ -841,10 +841,9 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * The factory to create the builder
 	 * @return The [Builder] instance
 	 */
-	open fun <R : Any, T : R, P : Any, S2 : Builder<R, T, P, S2>> entry(factory: NonNullBiFunction<String, BuilderCallback, S2>): S2 = entry<R, T, P, S2>(
+	open fun <R : Any, T : R, P : Any, S2 : Builder<R, T, P, S2>> entry(factory: NonNullBiFunction<String, BuilderCallback, S2>) = entry(
 		currentName(),
-		NonNullFunction { callback: BuilderCallback -> factory.apply(currentName(), callback) },
-	)
+	) { callback: BuilderCallback -> factory.apply(currentName(), callback) }
 
 	/**
 	 * Create a builder for a new entry. This is typically not needed, unless you are implementing a
@@ -898,8 +897,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	): RegistryEntry<R, T> {
 		val generators = datagensByEntry.row(Pair.of<String, ResourceKey<out Registry<*>>>(name, type))
 		var localization: EntryLocalization? = null
-		var declarations: Collection<EntryMetadata.DataGenerator<*>> =
-			mutableListOf<EntryMetadata.DataGenerator<*>>()
+		var declarations: Collection<EntryMetadata.DataGenerator<*>> = emptyList()
 		if (builder is AbstractBuilder<*, *, *, *> && name == builder.name && type == builder.registryKey) {
 			declarations = builder.dataGenerators()
 			localization = builder.localization()
@@ -984,12 +982,12 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * If `networkCodec` is not null, clients must have this datapack registry/mod
 	 * when joining a server that has this datapack registry/mod.
 	 * The data will be synced using the network codec and accessible via
-	 * [ClientPacketListener.registryAccess].
+	 * [net.minecraft.client.multiplayer.ClientPacketListener.registryAccess].
 	 * @see .makeDatapackRegistry
 	 */
 	open fun <R : Any> makeDatapackRegistry(name: String, codec: Codec<R>, networkCodec: Codec<R>?): ResourceKey<Registry<R>> {
 		val registryId = ResourceKey.createRegistryKey<R>(ResourceLocation.fromNamespaceAndPath(modid, name))
-		addModListener<NewRegistry>(
+		addModListener(
 			this,
 			NewRegistry::class.java,
 			Consumer { event: NewRegistry -> event.dataPackRegistry<R>(registryId, codec, networkCodec) },
@@ -1001,8 +999,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	// Generic
 	open fun <R : Any, T : R> simple(registryType: ResourceKey<Registry<R>>, factory: NonNullSupplier<T>): RegistryEntry<R, T> = simple(currentName(), registryType, factory)
 
-	open fun <R : Any, T : R> simple(name: String, registryType: ResourceKey<Registry<R>>, factory: NonNullSupplier<T>): RegistryEntry<R, T> =
-		simple<R, T, AbstractRegistrate<S>>(this, name, registryType, factory)
+	open fun <R : Any, T : R> simple(name: String, registryType: ResourceKey<Registry<R>>, factory: NonNullSupplier<T>) = simple(this, name, registryType, factory)
 
 	open fun <R : Any, T : R, P : Any> simple(parent: P, registryType: ResourceKey<Registry<R>>, factory: NonNullSupplier<T>): RegistryEntry<R, T> =
 		simple(parent, currentName(), registryType, factory)
@@ -1020,17 +1017,16 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	open fun <R : Any, T : R, P : Any> generic(parent: P, name: String, registryType: ResourceKey<Registry<R>>, factory: NonNullSupplier<T>): NoConfigBuilder<R, T, P> =
 		entry<R, T, P, NoConfigBuilder<R, T, P>>(
 			name,
-			NonNullFunction { callback: BuilderCallback ->
-				NoConfigBuilder<R, T, P>(
-					this,
-					parent,
-					name,
-					callback,
-					registryType,
-					factory,
-				)
-			},
-		)
+		) { callback: BuilderCallback ->
+			NoConfigBuilder(
+				this,
+				parent,
+				name,
+				callback,
+				registryType,
+				factory,
+			)
+		}
 
 	// Items
 	open fun <T : Item> item(factory: NonNullFunction<Item.Properties, T>): ItemBuilder<T, S> = item(self(), factory)
@@ -1041,11 +1037,10 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 
 	open fun <T : Item, P : Any> item(parent: P, name: String, factory: NonNullFunction<Item.Properties, T>): ItemBuilder<T, P> = entry<Item, T, P, ItemBuilder<T, P>>(
 		name,
-		NonNullFunction { callback: BuilderCallback ->
-			ItemBuilder.create<T, P>(this, parent, name, callback, factory)
-				.tab(defaultCreativeModeTab)
-		},
-	)
+	) { callback: BuilderCallback ->
+		ItemBuilder.create(this, parent, name, callback, factory)
+			.tab(defaultCreativeModeTab)
+	}
 
 	// Blocks
 	open fun <T : Block> block(factory: NonNullFunction<BlockBehaviour.Properties, T>): BlockBuilder<T, S> = block(self(), factory)
@@ -1056,16 +1051,15 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 
 	open fun <T : Block, P : Any> block(parent: P, name: String, factory: NonNullFunction<BlockBehaviour.Properties, T>): BlockBuilder<T, P> = entry<Block, T, P, BlockBuilder<T, P>>(
 		name,
-		NonNullFunction { callback: BuilderCallback ->
-			BlockBuilder.create<T, P>(
-				this,
-				parent,
-				name,
-				callback,
-				factory,
-			)
-		},
-	)
+	) { callback: BuilderCallback ->
+		BlockBuilder.create(
+			this,
+			parent,
+			name,
+			callback,
+			factory,
+		)
+	}
 
 	// Entities
 	open fun <T : Entity> entity(factory: EntityFactory<T>, classification: MobCategory): EntityBuilder<T, S> = entity(self(), factory, classification)
@@ -1077,17 +1071,16 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	open fun <T : Entity, P : Any> entity(parent: P, name: String, factory: EntityFactory<T>, classification: MobCategory): EntityBuilder<T, P> =
 		entry<EntityType<*>, EntityType<T>, P, EntityBuilder<T, P>>(
 			name,
-			NonNullFunction { callback: BuilderCallback ->
-				EntityBuilder.create<T, P>(
-					this,
-					parent,
-					name,
-					callback,
-					factory,
-					classification,
-				)
-			},
-		)
+		) { callback: BuilderCallback ->
+			EntityBuilder.create(
+				this,
+				parent,
+				name,
+				callback,
+				factory,
+				classification,
+			)
+		}
 
 	// Block Entities
 	open fun <T : BlockEntity> blockEntity(factory: BlockEntityFactory<T>): BlockEntityBuilder<T, S> = blockEntity(self(), factory)
@@ -1099,16 +1092,15 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	open fun <T : BlockEntity, P : Any> blockEntity(parent: P, name: String, factory: BlockEntityFactory<T>): BlockEntityBuilder<T, P> =
 		entry<BlockEntityType<*>, BlockEntityType<T>, P, BlockEntityBuilder<T, P>>(
 			name,
-			NonNullFunction { callback: BuilderCallback ->
-				BlockEntityBuilder.create<T, P>(
-					this,
-					parent,
-					name,
-					callback,
-					factory,
-				)
-			},
-		)
+		) { callback: BuilderCallback ->
+			BlockEntityBuilder.create(
+				this,
+				parent,
+				name,
+				callback,
+				factory,
+			)
+		}
 
 	// Fluids
 	open fun fluid(): FluidBuilder<Flowing, S> = fluid(self())
@@ -1211,60 +1203,54 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 
 	open fun <P : Any> fluid(parent: P, name: String, stillTexture: ResourceLocation, flowingTexture: ResourceLocation): FluidBuilder<Flowing, P> = entry<Fluid, Flowing, P, FluidBuilder<Flowing, P>>(
 		name,
-		NonNullFunction { callback: BuilderCallback ->
-			FluidBuilder.create<P>(
-				this,
-				parent,
-				name,
-				callback,
-				FluidTypeFactory { properties: FluidType.Properties? ->
-					FluidType(properties)
-				},
-			)
-		},
-	).model(stillTexture, flowingTexture)
+	) { callback: BuilderCallback ->
+		FluidBuilder.create(
+			this,
+			parent,
+			name,
+			callback,
+			FluidTypeFactory(::FluidType),
+		)
+	}.model(stillTexture, flowingTexture)
 
 	open fun <P : Any> fluid(parent: P, name: String, stillTexture: ResourceLocation, flowingTexture: ResourceLocation, typeFactory: FluidTypeFactory): FluidBuilder<Flowing, P> =
 		entry<Fluid, Flowing, P, FluidBuilder<Flowing, P>>(
 			name,
-			NonNullFunction { callback: BuilderCallback ->
-				FluidBuilder.create<P>(
-					this,
-					parent,
-					name,
-					callback,
-					typeFactory,
-				)
-			},
-		).model(stillTexture, flowingTexture)
+		) { callback: BuilderCallback ->
+			FluidBuilder.create(
+				this,
+				parent,
+				name,
+				callback,
+				typeFactory,
+			)
+		}.model(stillTexture, flowingTexture)
 
 	open fun <P : Any> fluid(parent: P, name: String, stillTexture: ResourceLocation, flowingTexture: ResourceLocation, fluidType: NonNullSupplier<FluidType>): FluidBuilder<Flowing, P> =
 		entry<Fluid, Flowing, P, FluidBuilder<Flowing, P>>(
 			name,
-			NonNullFunction { callback: BuilderCallback ->
-				FluidBuilder.create<P>(
-					this,
-					parent,
-					name,
-					callback,
-					fluidType,
-				)
-			},
-		).model(stillTexture, flowingTexture)
+		) { callback: BuilderCallback ->
+			FluidBuilder.create(
+				this,
+				parent,
+				name,
+				callback,
+				fluidType,
+			)
+		}.model(stillTexture, flowingTexture)
 
 	open fun <T : BaseFlowingFluid, P : Any> fluid(parent: P, name: String, stillTexture: ResourceLocation, flowingTexture: ResourceLocation, fluidFactory: FluidFactory<T>): FluidBuilder<T, P> =
 		entry<Fluid, T, P, FluidBuilder<T, P>>(
 			name,
-			NonNullFunction { callback: BuilderCallback ->
-				FluidBuilder.create<T, P>(
-					this,
-					parent,
-					name,
-					callback,
-					fluidFactory,
-				)
-			},
-		).model(stillTexture, flowingTexture)
+		) { callback: BuilderCallback ->
+			FluidBuilder.create(
+				this,
+				parent,
+				name,
+				callback,
+				fluidFactory,
+			)
+		}.model(stillTexture, flowingTexture)
 
 	open fun <T : BaseFlowingFluid, P : Any> fluid(
 		parent: P,
@@ -1275,17 +1261,16 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		fluidFactory: FluidFactory<T>,
 	): FluidBuilder<T, P> = entry<Fluid, T, P, FluidBuilder<T, P>>(
 		name,
-		NonNullFunction { callback: BuilderCallback ->
-			FluidBuilder.create<T, P>(
-				this,
-				parent,
-				name,
-				callback,
-				typeFactory,
-				fluidFactory,
-			)
-		},
-	).model(stillTexture, flowingTexture)
+	) { callback: BuilderCallback ->
+		FluidBuilder.create(
+			this,
+			parent,
+			name,
+			callback,
+			typeFactory,
+			fluidFactory,
+		)
+	}.model(stillTexture, flowingTexture)
 
 	open fun <T : BaseFlowingFluid, P : Any> fluid(
 		parent: P,
@@ -1296,33 +1281,26 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		fluidFactory: FluidFactory<T>,
 	): FluidBuilder<T, P> = entry<Fluid, T, P, FluidBuilder<T, P>>(
 		name,
-		NonNullFunction { callback: BuilderCallback ->
-			FluidBuilder.create<T, P>(
-				this,
-				parent,
-				name,
-				callback,
-				fluidType,
-				fluidFactory,
-			)
-		},
-	).model(stillTexture, flowingTexture)
+	) { callback: BuilderCallback ->
+		FluidBuilder.create(
+			this,
+			parent,
+			name,
+			callback,
+			fluidType,
+			fluidFactory,
+		)
+	}.model(stillTexture, flowingTexture)
 
 	// Menu
-	open fun <T : AbstractContainerMenu, SC> menu(factory: MenuFactory<T>, screenFactory: NonNullSupplier<ScreenFactory<T, SC>>): MenuBuilder<T, SC, S> where SC : Screen, SC : MenuAccess<T> =
-		menu<T, SC>(currentName(), factory, screenFactory)
+	open fun <T : AbstractContainerMenu, SC> menu(factory: MenuFactory<T>, screenFactory: NonNullSupplier<ScreenFactory<T, SC>>) where SC : Screen, SC : MenuAccess<T> =
+		menu(currentName(), factory, screenFactory)
 
-	open fun <T : AbstractContainerMenu, SC> menu(
-		name: String,
-		factory: MenuFactory<T>,
-		screenFactory: NonNullSupplier<ScreenFactory<T, SC>>,
-	): MenuBuilder<T, SC, S> where SC : Screen, SC : MenuAccess<T> = menu<T, SC, S>(self(), name, factory, screenFactory)
+	open fun <T : AbstractContainerMenu, SC> menu(name: String, factory: MenuFactory<T>, screenFactory: NonNullSupplier<ScreenFactory<T, SC>>) where SC : Screen, SC : MenuAccess<T> =
+		menu(self(), name, factory, screenFactory)
 
-	open fun <T : AbstractContainerMenu, SC, P : Any> menu(
-		parent: P,
-		factory: MenuFactory<T>,
-		screenFactory: NonNullSupplier<ScreenFactory<T, SC>>,
-	): MenuBuilder<T, SC, P> where SC : Screen, SC : MenuAccess<T> = menu<T, SC, P>(parent, currentName(), factory, screenFactory)
+	open fun <T : AbstractContainerMenu, SC, P : Any> menu(parent: P, factory: MenuFactory<T>, screenFactory: NonNullSupplier<ScreenFactory<T, SC>>) where SC : Screen, SC : MenuAccess<T> =
+		menu(parent, currentName(), factory, screenFactory)
 
 	open fun <T : AbstractContainerMenu, SC, P : Any> menu(
 		parent: P,
@@ -1331,20 +1309,19 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		screenFactory: NonNullSupplier<ScreenFactory<T, SC>>,
 	): MenuBuilder<T, SC, P> where SC : Screen, SC : MenuAccess<T> = entry<MenuType<*>, MenuType<T>, P, MenuBuilder<T, SC, P>>(
 		name,
-		NonNullFunction { callback: BuilderCallback ->
-			MenuBuilder<T, SC, P>(
-				this,
-				parent,
-				name,
-				callback,
-				factory,
-				screenFactory,
-			)
-		},
-	)
+	) { callback: BuilderCallback ->
+		MenuBuilder(
+			this,
+			parent,
+			name,
+			callback,
+			factory,
+			screenFactory,
+		)
+	}
 
-	open fun <T : AbstractContainerMenu, SC> menu(factory: ForgeMenuFactory<T>, screenFactory: NonNullSupplier<ScreenFactory<T, SC>>): MenuBuilder<T, SC, S> where SC : Screen, SC : MenuAccess<T> =
-		menu<T, SC>(currentName(), factory, screenFactory)
+	open fun <T : AbstractContainerMenu, SC> menu(factory: ForgeMenuFactory<T>, screenFactory: NonNullSupplier<ScreenFactory<T, SC>>) where SC : Screen, SC : MenuAccess<T> =
+		menu(currentName(), factory, screenFactory)
 
 	open fun <T : AbstractContainerMenu, SC> menu(name: String, factory: ForgeMenuFactory<T>, screenFactory: NonNullSupplier<ScreenFactory<T, SC>>) where SC : Screen, SC : MenuAccess<T> =
 		menu(self(), name, factory, screenFactory)
@@ -1380,9 +1357,8 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	open fun <P : Any> defaultCreativeTab(parent: P, name: String): NoConfigBuilder<CreativeModeTab, CreativeModeTab, P> = defaultCreativeTab(
 		parent,
 		name,
-		Consumer { tab: CreativeModeTab.Builder? ->
-		},
-	)
+	) { tab: CreativeModeTab.Builder ->
+	}
 
 	open fun defaultCreativeTab(config: Consumer<CreativeModeTab.Builder>): NoConfigBuilder<CreativeModeTab, CreativeModeTab, S> = defaultCreativeTab(self(), config)
 

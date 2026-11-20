@@ -8,8 +8,9 @@ import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
 
 /** The deferred entry and the ID assigned to it for DataGen. */
-data class DataGenContext<R : Any, E : R>(private val entry: NonNullSupplier<E>, val name: String, val id: ResourceLocation) : NonNullSupplier<E> by entry {
-	fun getEntry(): E = entry.get()
+data class DataGenContext<R : Any, E : R>(private val supplier: NonNullSupplier<E>, val name: String, val id: ResourceLocation) : NonNullSupplier<E> by supplier {
+	val entry: E
+		get() = supplier.get()
 
 	companion object {
 		@JvmStatic
