@@ -4,11 +4,11 @@ import com.modularmc.registrate.providers.generators.RegistrateRecipeProvider;
 import com.modularmc.registrate.util.nullness.NonNullSupplier;
 
 import net.minecraft.advancements.Criterion;
-import net.minecraft.advancements.criterion.InventoryChangeTrigger;
-import net.minecraft.advancements.criterion.ItemPredicate;
+import net.minecraft.advancements.critereon.InventoryChangeTrigger;
+import net.minecraft.advancements.critereon.ItemPredicate;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -26,7 +26,7 @@ import java.util.function.Supplier;
  * It remembers the name of the primary ingredient for use in creating recipe names/criteria.
  * <p>
  * Create an instance of this class with the various factory methods such as {@link #items(ItemLike, ItemLike...)} and
- * {@link #tag(HolderSet.Named)} )}.
+ * {@link #tag(TagKey)}.
  * <p>
  * <strong>This class should not be used for any purpose other than data generation</strong>, it will throw an exception
  * if it is serialized to a packet buffer.
@@ -35,22 +35,22 @@ public final class DataIngredient {
 
     private final Ingredient parent;
     @Getter
-    private final Identifier id;
+    private final ResourceLocation id;
     private final Function<RegistrateRecipeProvider, Criterion<InventoryChangeTrigger.TriggerInstance>> criteriaFactory;
 
     private DataIngredient(Ingredient parent, ItemLike item) {
         this.parent = parent;
         this.id = BuiltInRegistries.ITEM.getKey(item.asItem());
-        this.criteriaFactory = prov -> prov.has(item);
+        this.criteriaFactory = ignored -> RegistrateRecipeProvider.has(item);
     }
 
     private DataIngredient(Ingredient parent, TagKey<Item> tag) {
         this.parent = parent;
         this.id = tag.location();
-        this.criteriaFactory = prov -> prov.has(tag);
+        this.criteriaFactory = ignored -> RegistrateRecipeProvider.has(tag);
     }
 
-    private DataIngredient(Ingredient parent, Identifier id, ItemPredicate... predicates) {
+    private DataIngredient(Ingredient parent, ResourceLocation id, ItemPredicate... predicates) {
         this.parent = parent;
         this.id = id;
         this.criteriaFactory = ignored -> RegistrateRecipeProvider.inventoryTrigger(predicates);
@@ -72,7 +72,11 @@ public final class DataIngredient {
     }
 
     public static DataIngredient tag(HolderSet.Named<Item> tag) {
-        return ingredient(Ingredient.of(tag), tag.key());
+        return tag(tag.key());
+    }
+
+    public static DataIngredient tag(TagKey<Item> tag) {
+        return ingredient(Ingredient.of(tag), tag);
     }
 
     public static DataIngredient ingredient(Ingredient parent, ItemLike required) {
@@ -83,7 +87,7 @@ public final class DataIngredient {
         return new DataIngredient(parent, required);
     }
 
-    public static DataIngredient ingredient(Ingredient parent, Identifier id, ItemPredicate... criteria) {
+    public static DataIngredient ingredient(Ingredient parent, ResourceLocation id, ItemPredicate... criteria) {
         return new DataIngredient(parent, id, criteria);
     }
 

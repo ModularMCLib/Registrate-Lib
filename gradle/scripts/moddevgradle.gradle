@@ -1,13 +1,14 @@
-import org.gradle.internal.os.OperatingSystem
-
-static def isJetBrainsRuntime() {
-    return System.getProperty('java.vm.vendor').contains('JetBrains')
-}
+import org.slf4j.event.Level
 
 def devTestModId = 'testmod'
 
 neoForge {
     version = libs.versions.neoForge.get()
+
+    parchment {
+        minecraftVersion = libs.versions.minecraft.get()
+        mappingsVersion = libs.versions.parchment.get()
+    }
 
     accessTransformers {
         var file = project.file('src/main/resources/META-INF/accesstransformer.cfg')
@@ -48,7 +49,6 @@ neoForge {
 
 
             gameDirectory.set(file('run/client'))
-            systemProperty('neoforge.enabledGameTestNamespaces', devTestModId)
         }
 
         server {
@@ -58,7 +58,6 @@ neoForge {
 
             gameDirectory.set(file('run/server'))
             programArguments.addAll('--nogui', '--world', 'world-extra')
-            systemProperty('neoforge.enabledGameTestNamespaces', devTestModId)
         }
 
         // This run config launches GameTestServer and runs all registered gametests, then exits.
@@ -84,27 +83,14 @@ neoForge {
             environment('TEST', 'true')
         }
 
-        data {
-            type = 'clientData'
-            sourceSet = sourceSets.main
-            ideName = "Data Generation"
-
-            gameDirectory.set(file('run/data'))
-            // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
-            programArguments.addAll('--mod', project.mod_id)
-            programArguments.addAll('--all')
-            programArguments.addAll('--output', file('src/generated/resources/').getAbsolutePath())
-            programArguments.addAll('--existing', file('src/main/resources/').getAbsolutePath())
-        }
-
         Testdata {
-            type = 'clientData'
+            data()
             sourceSet = sourceSets.test
             ideName = "Test Data Generation"
 
             gameDirectory.set(file('run/data'))
             // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
-            programArguments.addAll('--mod', "${devTestModId}")
+            programArguments.addAll('--mod', devTestModId)
             programArguments.addAll('--all')
             programArguments.addAll('--output', file('src/test/generated/resources/').getAbsolutePath())
             programArguments.addAll('--existing', file('src/test/resources/').getAbsolutePath())
@@ -125,7 +111,7 @@ neoForge {
             // Recommended logging level for the console
             // You can set various levels here.
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
-            logLevel = org.slf4j.event.Level.INFO
+            logLevel = Level.INFO
         }
     }
 }

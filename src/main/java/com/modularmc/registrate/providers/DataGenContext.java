@@ -4,8 +4,8 @@ import com.modularmc.registrate.builders.base.Builder;
 import com.modularmc.registrate.util.nullness.NonNullSupplier;
 
 import net.minecraft.core.Registry;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -28,7 +28,7 @@ public class DataGenContext<R, E extends R> implements NonNullSupplier<E> {
     @Delegate
     NonNullSupplier<E> entry;
     String name;
-    Identifier id;
+    ResourceLocation id;
 
     @SuppressWarnings("null")
     public E getEntry() {
@@ -42,6 +42,6 @@ public class DataGenContext<R, E extends R> implements NonNullSupplier<E> {
 
     public static <R, E extends R> DataGenContext<R, E> from(Builder<R, E, ?, ?> builder) {
         return new DataGenContext<>(NonNullSupplier.of(builder.getOwner().<R, E>get(builder.getName(), builder.getRegistryKey())), builder.getName(),
-                Identifier.fromNamespaceAndPath(builder.getOwner().getModid(), builder.getName()));
+                ResourceLocation.fromNamespaceAndPath(builder.getOwner().getModid(), builder.getName()));
     }
 }

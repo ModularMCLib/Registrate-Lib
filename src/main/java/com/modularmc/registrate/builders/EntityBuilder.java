@@ -29,8 +29,8 @@ import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.common.DeferredSpawnEggItem;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -87,7 +87,7 @@ public class EntityBuilder<T extends Entity, P> extends AbstractBuilder<EntityTy
 
     private NonNullConsumer<EntityType.Builder<T>> builderCallback = $ -> {};
 
-    private @Nullable NonNullSupplier<NonNullFunction<EntityRendererProvider.Context, EntityRenderer<? super T, ?>>> renderer;
+    private @Nullable NonNullSupplier<NonNullFunction<EntityRendererProvider.Context, EntityRenderer<? super T>>> renderer;
 
     private boolean attributesConfigured, spawnConfigured;
 
@@ -119,8 +119,8 @@ public class EntityBuilder<T extends Entity, P> extends AbstractBuilder<EntityTy
      *                 renderer
      * @return this {@link EntityBuilder}
      */
-    public EntityBuilder<T, P> renderer(NonNullSupplier<NonNullFunction<EntityRendererProvider.Context, EntityRenderer<? super T, ?>>> renderer) {
-        if (this.renderer == null && FMLEnvironment.getDist().isClient()) { // First call only
+    public EntityBuilder<T, P> renderer(NonNullSupplier<NonNullFunction<EntityRendererProvider.Context, EntityRenderer<? super T>>> renderer) {
+        if (this.renderer == null) {
             RegistrateDistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> this::registerRenderer);
         }
         this.renderer = renderer;
@@ -206,22 +206,28 @@ public class EntityBuilder<T extends Entity, P> extends AbstractBuilder<EntityTy
      * Create a spawn egg item for this entity and expose its builder for further customization.
      *
      * <p>
-     * The created egg uses the modern {@link net.minecraft.world.item.Item.Properties#spawnEgg(EntityType)} API and is
-     * added to {@link CreativeModeTabs#SPAWN_EGGS} by default.
-     *
-     * <p>
-     * No default item model is generated. If a consumer wants spawn egg visuals,
-     * it should provide them explicitly via the nested {@link ItemBuilder}.
+     * The egg resolves the entity after registration and uses the standard spawn egg model by default.
      *
      * @param consumer
      *                 A callback for customizing the nested egg {@link ItemBuilder}
      * @return this {@link EntityBuilder}
      */
     public EntityBuilder<T, P> spawnEgg(NonNullConsumer<ItemBuilder<SpawnEggItem, EntityBuilder<T, P>>> consumer) {
+        return spawnEgg(0xFFFFFF, 0xFFFFFF, consumer);
+    }
+
+    /**
+     * Registers a spawn egg with the given base and highlight colors and configures it before registration.
+     */
+    @SuppressWarnings("unchecked")
+    public EntityBuilder<T, P> spawnEgg(int baseColor, int highlightColor, NonNullConsumer<ItemBuilder<SpawnEggItem, EntityBuilder<T, P>>> consumer) {
         NonNullSupplier<EntityType<T>> entityType = asSupplier();
+        // NeoForge's deferred egg API accepts a mob factory. Registrate resolves the type after the item registry runs.
+        Supplier<? extends EntityType<? extends Mob>> mobType = (Supplier<? extends EntityType<? extends Mob>>) (Supplier<?>) entityType;
         ItemBuilder<SpawnEggItem, EntityBuilder<T, P>> eggBuilder = getOwner()
-                .item(this, getName() + "_spawn_egg", SpawnEggItem::new)
-                .properties(properties -> properties.spawnEgg(entityType.get()))
+                .<SpawnEggItem, EntityBuilder<T, P>>item(this, getName() + "_spawn_egg",
+                        properties -> new DeferredSpawnEggItem(mobType, baseColor, highlightColor, properties))
+                .model(() -> (ctx, prov) -> prov.createWithExistingModel(ctx.get(), prov.mcLoc("item/template_spawn_egg")))
                 .tab(CreativeModeTabs.SPAWN_EGGS);
         consumer.accept(eggBuilder);
         return eggBuilder.build();
@@ -279,7 +285,7 @@ public class EntityBuilder<T extends Entity, P> extends AbstractBuilder<EntityTy
     protected EntityType<T> createEntry() {
         EntityType.Builder<T> builder = this.builder.get();
         builderCallback.accept(builder);
-        return builder.build(getResourceKey());
+        return builder.build(getResourceKey().location().toString());
     }
 
     @Override

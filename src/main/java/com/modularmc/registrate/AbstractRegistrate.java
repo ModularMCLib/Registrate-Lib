@@ -18,6 +18,7 @@ import com.modularmc.registrate.util.entry.ItemEntry;
 import com.modularmc.registrate.util.entry.RegistryEntry;
 import com.modularmc.registrate.util.nullness.*;
 
+import net.minecraft.Util;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.MenuAccess;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -25,9 +26,8 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.util.Util;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType.EntityFactory;
 import net.minecraft.world.entity.MobCategory;
@@ -36,6 +36,7 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.data.event.GatherDataEvent;
@@ -95,10 +96,10 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
     /**
      * Checks if Minecraft is running from a dev environment. Enables certain debug logging.
      *
-     * @return {@code true} when in a dev environment (specifically, {@link FMLEnvironment#isProduction()} == false)
+     * @return {@code true} when {@link FMLEnvironment#production} is false
      */
     public static boolean isDevEnvironment() {
-        return !FMLEnvironment.isProduction();
+        return !FMLEnvironment.production;
     }
 
     private final class LifecycleHooks implements RegistrateLifecycle.Hooks {
@@ -580,24 +581,25 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
     });
 
     /**
-     * Add a custom translation mapping using the vanilla style of Identifier -&gt; translation key conversion.
+     * Add a custom translation mapping using the vanilla style of ResourceLocation -&gt; translation key conversion.
      *
      * @param type
      *                      Type of the object, this is used as a prefix (e.g.
      *                      {@code ["block", "mymod:myblock"] -> "block.mymod.myblock"})
      * @param id
      *                      ID of the object, which will be converted to a lang key via
-     *                      {@link Util#makeDescriptionId(String, Identifier)}
+     *                      {@link Util#makeDescriptionId(String, ResourceLocation)}
      * @param localizedName
      *                      (English) translation value
      * @return A {@link MutableComponent} representing the translated text
      */
-    public MutableComponent addLang(String type, Identifier id, String localizedName) {
+    public MutableComponent addLang(String type, ResourceLocation id, String localizedName) {
         return addRawLang(Util.makeDescriptionId(type, id), localizedName);
     }
 
     /**
-     * Add a custom translation mapping using the vanilla style of Identifier -&gt; translation key conversion. Also
+     * Add a custom translation mapping using the vanilla style of ResourceLocation -&gt; translation key conversion.
+     * Also
      * appends a suffix to the key.
      *
      * @param type
@@ -605,14 +607,14 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
      *                      {@code ["block", "mymod:myblock"] -> "block.mymod.myblock"})
      * @param id
      *                      ID of the object, which will be converted to a lang key via
-     *                      {@link Util#makeDescriptionId(String, Identifier)}
+     *                      {@link Util#makeDescriptionId(String, ResourceLocation)}
      * @param suffix
      *                      A suffix which will be appended to the generated key (separated by a dot)
      * @param localizedName
      *                      (English) translation value
      * @return A {@link MutableComponent} representing the translated text
      */
-    public MutableComponent addLang(String type, Identifier id, String suffix, String localizedName) {
+    public MutableComponent addLang(String type, ResourceLocation id, String suffix, String localizedName) {
         return addRawLang(Util.makeDescriptionId(type, id) + "." + suffix, localizedName);
     }
 
@@ -669,7 +671,7 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
                             modid,
                             RegistrateDataProvider.getTypeName(type),
                             entry.get().getLeft(),
-                            entry.get().getRight().identifier());
+                            entry.get().getRight().location());
                 } else {
                     DATAGEN_LOGGER.debug(
                             DebugMarkers.DATA,
@@ -692,7 +694,7 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
                             modid,
                             RegistrateDataProvider.getTypeName(type),
                             entry.get().getLeft(),
-                            entry.get().getRight().identifier());
+                            entry.get().getRight().location());
                 } else {
                     err = DATAGEN_LOGGER.getMessageFactory().newMessage(
                             RegistrateLogger.modMessage("Unexpected error while running unassociated data generator of type {} ({})"),
@@ -921,7 +923,7 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
      * @return A {@link ResourceKey resource key} referencing the to-be-created registry.
      */
     public <R> ResourceKey<Registry<R>> makeRegistry(String name, Function<ResourceKey<Registry<R>>, RegistryBuilder<R>> builder) {
-        final ResourceKey<Registry<R>> registryId = ResourceKey.createRegistryKey(Identifier.fromNamespaceAndPath(getModid(), name));
+        final ResourceKey<Registry<R>> registryId = ResourceKey.createRegistryKey(ResourceLocation.fromNamespaceAndPath(getModid(), name));
         OneTimeEventReceiver.addModListener(this, NewRegistryEvent.class, e -> e.register(builder.apply(registryId).create()));
         return registryId;
     }
@@ -963,7 +965,7 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
      * @see #makeDatapackRegistry(String, Codec)
      */
     public <R> ResourceKey<Registry<R>> makeDatapackRegistry(String name, Codec<R> codec, @Nullable Codec<R> networkCodec) {
-        final ResourceKey<Registry<R>> registryId = ResourceKey.createRegistryKey(Identifier.fromNamespaceAndPath(getModid(), name));
+        final ResourceKey<Registry<R>> registryId = ResourceKey.createRegistryKey(ResourceLocation.fromNamespaceAndPath(getModid(), name));
         OneTimeEventReceiver.addModListener(this, DataPackRegistryEvent.NewRegistry.class, event -> event.dataPackRegistry(registryId, codec, networkCodec));
         return registryId;
     }
@@ -1091,29 +1093,29 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
         return fluid(self(), fluidType);
     }
 
-    public FluidBuilder<BaseFlowingFluid.Flowing, S> fluid(Identifier stillTexture, Identifier flowingTexture) {
+    public FluidBuilder<BaseFlowingFluid.Flowing, S> fluid(ResourceLocation stillTexture, ResourceLocation flowingTexture) {
         return fluid(self(), stillTexture, flowingTexture);
     }
 
-    public FluidBuilder<BaseFlowingFluid.Flowing, S> fluid(Identifier stillTexture, Identifier flowingTexture, FluidBuilder.FluidTypeFactory typeFactory) {
+    public FluidBuilder<BaseFlowingFluid.Flowing, S> fluid(ResourceLocation stillTexture, ResourceLocation flowingTexture, FluidBuilder.FluidTypeFactory typeFactory) {
         return fluid(self(), stillTexture, flowingTexture, typeFactory);
     }
 
-    public FluidBuilder<BaseFlowingFluid.Flowing, S> fluid(Identifier stillTexture, Identifier flowingTexture, NonNullSupplier<FluidType> fluidType) {
+    public FluidBuilder<BaseFlowingFluid.Flowing, S> fluid(ResourceLocation stillTexture, ResourceLocation flowingTexture, NonNullSupplier<FluidType> fluidType) {
         return fluid(self(), stillTexture, flowingTexture, fluidType);
     }
 
-    public <T extends BaseFlowingFluid> FluidBuilder<T, S> fluid(Identifier stillTexture, Identifier flowingTexture,
+    public <T extends BaseFlowingFluid> FluidBuilder<T, S> fluid(ResourceLocation stillTexture, ResourceLocation flowingTexture,
                                                                  FluidBuilder.FluidFactory<T> fluidFactory) {
         return fluid(self(), stillTexture, flowingTexture, fluidFactory);
     }
 
-    public <T extends BaseFlowingFluid> FluidBuilder<T, S> fluid(Identifier stillTexture, Identifier flowingTexture,
+    public <T extends BaseFlowingFluid> FluidBuilder<T, S> fluid(ResourceLocation stillTexture, ResourceLocation flowingTexture,
                                                                  FluidBuilder.FluidTypeFactory typeFactory, FluidBuilder.FluidFactory<T> fluidFactory) {
         return fluid(self(), stillTexture, flowingTexture, typeFactory, fluidFactory);
     }
 
-    public <T extends BaseFlowingFluid> FluidBuilder<T, S> fluid(Identifier stillTexture, Identifier flowingTexture,
+    public <T extends BaseFlowingFluid> FluidBuilder<T, S> fluid(ResourceLocation stillTexture, ResourceLocation flowingTexture,
                                                                  NonNullSupplier<FluidType> fluidType, FluidBuilder.FluidFactory<T> fluidFactory) {
         return fluid(self(), stillTexture, flowingTexture, fluidType, fluidFactory);
     }
@@ -1130,29 +1132,29 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
         return fluid(self(), name, fluidType);
     }
 
-    public FluidBuilder<BaseFlowingFluid.Flowing, S> fluid(String name, Identifier stillTexture, Identifier flowingTexture) {
+    public FluidBuilder<BaseFlowingFluid.Flowing, S> fluid(String name, ResourceLocation stillTexture, ResourceLocation flowingTexture) {
         return fluid(self(), name, stillTexture, flowingTexture);
     }
 
-    public FluidBuilder<BaseFlowingFluid.Flowing, S> fluid(String name, Identifier stillTexture, Identifier flowingTexture, FluidBuilder.FluidTypeFactory typeFactory) {
+    public FluidBuilder<BaseFlowingFluid.Flowing, S> fluid(String name, ResourceLocation stillTexture, ResourceLocation flowingTexture, FluidBuilder.FluidTypeFactory typeFactory) {
         return fluid(self(), name, stillTexture, flowingTexture, typeFactory);
     }
 
-    public FluidBuilder<BaseFlowingFluid.Flowing, S> fluid(String name, Identifier stillTexture, Identifier flowingTexture, NonNullSupplier<FluidType> fluidType) {
+    public FluidBuilder<BaseFlowingFluid.Flowing, S> fluid(String name, ResourceLocation stillTexture, ResourceLocation flowingTexture, NonNullSupplier<FluidType> fluidType) {
         return fluid(self(), name, stillTexture, flowingTexture, fluidType);
     }
 
-    public <T extends BaseFlowingFluid> FluidBuilder<T, S> fluid(String name, Identifier stillTexture, Identifier flowingTexture,
+    public <T extends BaseFlowingFluid> FluidBuilder<T, S> fluid(String name, ResourceLocation stillTexture, ResourceLocation flowingTexture,
                                                                  FluidBuilder.FluidFactory<T> fluidFactory) {
         return fluid(self(), name, stillTexture, flowingTexture, fluidFactory);
     }
 
-    public <T extends BaseFlowingFluid> FluidBuilder<T, S> fluid(String name, Identifier stillTexture, Identifier flowingTexture,
+    public <T extends BaseFlowingFluid> FluidBuilder<T, S> fluid(String name, ResourceLocation stillTexture, ResourceLocation flowingTexture,
                                                                  FluidBuilder.FluidTypeFactory typeFactory, FluidBuilder.FluidFactory<T> fluidFactory) {
         return fluid(self(), name, stillTexture, flowingTexture, typeFactory, fluidFactory);
     }
 
-    public <T extends BaseFlowingFluid> FluidBuilder<T, S> fluid(String name, Identifier stillTexture, Identifier flowingTexture,
+    public <T extends BaseFlowingFluid> FluidBuilder<T, S> fluid(String name, ResourceLocation stillTexture, ResourceLocation flowingTexture,
                                                                  NonNullSupplier<FluidType> fluidType, FluidBuilder.FluidFactory<T> fluidFactory) {
         return fluid(self(), name, stillTexture, flowingTexture, fluidType, fluidFactory);
     }
@@ -1169,29 +1171,29 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
         return fluid(parent, currentName(), fluidType);
     }
 
-    public <P> FluidBuilder<BaseFlowingFluid.Flowing, P> fluid(P parent, Identifier stillTexture, Identifier flowingTexture) {
+    public <P> FluidBuilder<BaseFlowingFluid.Flowing, P> fluid(P parent, ResourceLocation stillTexture, ResourceLocation flowingTexture) {
         return fluid(parent, currentName(), stillTexture, flowingTexture);
     }
 
-    public <P> FluidBuilder<BaseFlowingFluid.Flowing, P> fluid(P parent, Identifier stillTexture, Identifier flowingTexture, FluidBuilder.FluidTypeFactory typeFactory) {
+    public <P> FluidBuilder<BaseFlowingFluid.Flowing, P> fluid(P parent, ResourceLocation stillTexture, ResourceLocation flowingTexture, FluidBuilder.FluidTypeFactory typeFactory) {
         return fluid(parent, currentName(), stillTexture, flowingTexture, typeFactory);
     }
 
-    public <P> FluidBuilder<BaseFlowingFluid.Flowing, P> fluid(P parent, Identifier stillTexture, Identifier flowingTexture, NonNullSupplier<FluidType> fluidType) {
+    public <P> FluidBuilder<BaseFlowingFluid.Flowing, P> fluid(P parent, ResourceLocation stillTexture, ResourceLocation flowingTexture, NonNullSupplier<FluidType> fluidType) {
         return fluid(parent, currentName(), stillTexture, flowingTexture, fluidType);
     }
 
-    public <T extends BaseFlowingFluid, P> FluidBuilder<T, P> fluid(P parent, Identifier stillTexture, Identifier flowingTexture,
+    public <T extends BaseFlowingFluid, P> FluidBuilder<T, P> fluid(P parent, ResourceLocation stillTexture, ResourceLocation flowingTexture,
                                                                     FluidBuilder.FluidFactory<T> fluidFactory) {
         return fluid(parent, currentName(), stillTexture, flowingTexture, fluidFactory);
     }
 
-    public <T extends BaseFlowingFluid, P> FluidBuilder<T, P> fluid(P parent, Identifier stillTexture, Identifier flowingTexture,
+    public <T extends BaseFlowingFluid, P> FluidBuilder<T, P> fluid(P parent, ResourceLocation stillTexture, ResourceLocation flowingTexture,
                                                                     FluidBuilder.FluidTypeFactory typeFactory, FluidBuilder.FluidFactory<T> fluidFactory) {
         return fluid(parent, currentName(), stillTexture, flowingTexture, typeFactory, fluidFactory);
     }
 
-    public <T extends BaseFlowingFluid, P> FluidBuilder<T, P> fluid(P parent, Identifier stillTexture, Identifier flowingTexture,
+    public <T extends BaseFlowingFluid, P> FluidBuilder<T, P> fluid(P parent, ResourceLocation stillTexture, ResourceLocation flowingTexture,
                                                                     NonNullSupplier<FluidType> fluidType, FluidBuilder.FluidFactory<T> fluidFactory) {
         return fluid(parent, currentName(), stillTexture, flowingTexture, fluidType, fluidFactory);
     }
@@ -1208,37 +1210,37 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
         return fluid(parent, name, defaultStillTexture(), defaultFlowingTexture(), fluidType);
     }
 
-    private Identifier defaultStillTexture() {
-        return Identifier.fromNamespaceAndPath(getModid(), "block/" + currentName() + "_still");
+    private ResourceLocation defaultStillTexture() {
+        return ResourceLocation.fromNamespaceAndPath(getModid(), "block/" + currentName() + "_still");
     }
 
-    private Identifier defaultFlowingTexture() {
-        return Identifier.fromNamespaceAndPath(getModid(), "block/" + currentName() + "_flow");
+    private ResourceLocation defaultFlowingTexture() {
+        return ResourceLocation.fromNamespaceAndPath(getModid(), "block/" + currentName() + "_flow");
     }
 
-    public <P> FluidBuilder<BaseFlowingFluid.Flowing, P> fluid(P parent, String name, Identifier stillTexture, Identifier flowingTexture) {
+    public <P> FluidBuilder<BaseFlowingFluid.Flowing, P> fluid(P parent, String name, ResourceLocation stillTexture, ResourceLocation flowingTexture) {
         return entry(name, callback -> FluidBuilder.create(this, parent, name, callback, FluidType::new)).model(stillTexture, flowingTexture);
     }
 
-    public <P> FluidBuilder<BaseFlowingFluid.Flowing, P> fluid(P parent, String name, Identifier stillTexture, Identifier flowingTexture, FluidBuilder.FluidTypeFactory typeFactory) {
+    public <P> FluidBuilder<BaseFlowingFluid.Flowing, P> fluid(P parent, String name, ResourceLocation stillTexture, ResourceLocation flowingTexture, FluidBuilder.FluidTypeFactory typeFactory) {
         return entry(name, callback -> FluidBuilder.create(this, parent, name, callback, typeFactory)).model(stillTexture, flowingTexture);
     }
 
-    public <P> FluidBuilder<BaseFlowingFluid.Flowing, P> fluid(P parent, String name, Identifier stillTexture, Identifier flowingTexture, NonNullSupplier<FluidType> fluidType) {
+    public <P> FluidBuilder<BaseFlowingFluid.Flowing, P> fluid(P parent, String name, ResourceLocation stillTexture, ResourceLocation flowingTexture, NonNullSupplier<FluidType> fluidType) {
         return entry(name, callback -> FluidBuilder.create(this, parent, name, callback, fluidType)).model(stillTexture, flowingTexture);
     }
 
-    public <T extends BaseFlowingFluid, P> FluidBuilder<T, P> fluid(P parent, String name, Identifier stillTexture, Identifier flowingTexture,
+    public <T extends BaseFlowingFluid, P> FluidBuilder<T, P> fluid(P parent, String name, ResourceLocation stillTexture, ResourceLocation flowingTexture,
                                                                     FluidBuilder.FluidFactory<T> fluidFactory) {
         return entry(name, callback -> FluidBuilder.create(this, parent, name, callback, fluidFactory)).model(stillTexture, flowingTexture);
     }
 
-    public <T extends BaseFlowingFluid, P> FluidBuilder<T, P> fluid(P parent, String name, Identifier stillTexture, Identifier flowingTexture,
+    public <T extends BaseFlowingFluid, P> FluidBuilder<T, P> fluid(P parent, String name, ResourceLocation stillTexture, ResourceLocation flowingTexture,
                                                                     FluidBuilder.FluidTypeFactory typeFactory, FluidBuilder.FluidFactory<T> fluidFactory) {
         return entry(name, callback -> FluidBuilder.create(this, parent, name, callback, typeFactory, fluidFactory)).model(stillTexture, flowingTexture);
     }
 
-    public <T extends BaseFlowingFluid, P> FluidBuilder<T, P> fluid(P parent, String name, Identifier stillTexture, Identifier flowingTexture,
+    public <T extends BaseFlowingFluid, P> FluidBuilder<T, P> fluid(P parent, String name, ResourceLocation stillTexture, ResourceLocation flowingTexture,
                                                                     NonNullSupplier<FluidType> fluidType, FluidBuilder.FluidFactory<T> fluidFactory) {
         return entry(name, callback -> FluidBuilder.create(this, parent, name, callback, fluidType, fluidFactory)).model(stillTexture, flowingTexture);
     }
@@ -1308,11 +1310,11 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
     }
 
     public <P> NoConfigBuilder<CreativeModeTab, CreativeModeTab, P> defaultCreativeTab(P parent, String name, Consumer<CreativeModeTab.Builder> config) {
-        this.defaultCreativeModeTab = ResourceKey.create(Registries.CREATIVE_MODE_TAB, Identifier.fromNamespaceAndPath(this.modid, name));
+        this.defaultCreativeModeTab = ResourceKey.create(Registries.CREATIVE_MODE_TAB, ResourceLocation.fromNamespaceAndPath(this.modid, name));
         return this.generic(parent, name, Registries.CREATIVE_MODE_TAB, () -> {
             var builder = CreativeModeTab.builder()
                     .icon(() -> getAll(Registries.ITEM).stream().findFirst().map(ItemEntry::cast).map(ItemEntry::asStack).orElse(new ItemStack(Items.AIR)))
-                    .title(this.addLang("itemGroup", this.defaultCreativeModeTab.identifier(), RegistrateLangProvider.toEnglishName(name)));
+                    .title(this.addLang("itemGroup", this.defaultCreativeModeTab.location(), RegistrateLangProvider.toEnglishName(name)));
             config.accept(builder);
             return builder.build();
         });

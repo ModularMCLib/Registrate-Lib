@@ -22,9 +22,7 @@ import com.modularmc.registrate.util.nullness.NonNullFunction;
 import com.modularmc.registrate.util.nullness.NonNullSupplier;
 import com.modularmc.registrate.util.nullness.NonNullUnaryOperator;
 
-import net.minecraft.client.color.block.BlockTintSource;
-import net.minecraft.client.renderer.block.dispatch.SingleVariant;
-import net.minecraft.client.renderer.block.dispatch.Variant;
+import net.minecraft.client.color.block.BlockColor;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.BlockItem;
@@ -32,6 +30,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.storage.loot.BuiltInLootTables;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions;
@@ -40,7 +39,6 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 
 import org.jspecify.annotations.Nullable;
 
-import java.util.List;
 import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
@@ -94,7 +92,7 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
     private NonNullSupplier<BlockBehaviour.Properties> initialProperties;
     private NonNullFunction<BlockBehaviour.Properties, BlockBehaviour.Properties> propertiesCallback = NonNullUnaryOperator.identity();
 
-    private @Nullable NonNullSupplier<Supplier<List<BlockTintSource>>> tintSources;
+    private @Nullable NonNullSupplier<Supplier<BlockColor>> colorHandler;
 
     protected BlockBuilder(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback, NonNullFunction<BlockBehaviour.Properties, T> factory, NonNullSupplier<BlockBehaviour.Properties> initialProperties) {
         super(owner, parent, name, callback, Registries.BLOCK);
@@ -171,20 +169,17 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
      * @return the {@link ItemBuilder} for the {@link BlockItem}
      */
     public <I extends Item> ItemBuilder<I, BlockBuilder<T, P>> item(NonNullBiFunction<? super T, Item.Properties, ? extends I> factory) {
-        return getOwner().<I, BlockBuilder<T, P>>item(this, getName(), p -> factory.apply(getEntry(), p.useBlockDescriptionPrefix()))
+        return getOwner().<I, BlockBuilder<T, P>>item(this, getName(), p -> factory.apply(getEntry(), p))
                 .removeData(ProviderType.LANG)
                 .model(() -> (ctx, prov) -> {
-                    getOwner().getDataProvider(ProviderType.BLOCKSTATE)
-                            .map(g -> g.seenBlockstates.get(getEntry()))
-                            .flatMap(b -> b.simpleModels())
-                            .map(b -> b.models().get(""))
-                            .map(unbaked -> {
-                                if (unbaked instanceof SingleVariant.Unbaked(Variant variant)) {
-                                    return variant.modelLocation();
-                                }
-                                return null;
-                            })
-                            .ifPresent(model -> prov.createWithExistingModel(ctx.get(), model));
+                    if (prov.hasModel(ctx.get())) {
+                        return;
+                    }
+                    var block = getEntry();
+                    var model = getOwner().getDataProvider(ProviderType.BLOCKSTATE)
+                            .flatMap(generator -> generator.getSingleVariantModel(block))
+                            .orElseGet(() -> RegistrateBlockModelGenerator.modelLocation(block));
+                    prov.createWithExistingModel(ctx.get(), model);
                 });
     }
 
@@ -219,25 +214,24 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
     }
 
     /**
-     * Register a set of block tint sources for this block. The {@link BlockTintSource} instances can be shared across
-     * many blocks.
+     * Registers the client color handler for all tint indices of this block.
      *
-     * @param tintSources The tint sources to register for this block, indexed by tint index
+     * @param colorHandler A side-safe supplier of the client color handler
      * @return this {@link BlockBuilder}
      */
-    public BlockBuilder<T, P> color(NonNullSupplier<Supplier<List<BlockTintSource>>> tintSources) {
-        if (this.tintSources == null) {
+    public BlockBuilder<T, P> color(NonNullSupplier<Supplier<BlockColor>> colorHandler) {
+        if (this.colorHandler == null) {
             RegistrateDistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> this::registerBlockColor);
         }
-        this.tintSources = tintSources;
+        this.colorHandler = colorHandler;
         return this;
     }
 
     protected void registerBlockColor() {
-        OneTimeEventReceiver.addModListener(getOwner(), RegisterColorHandlersEvent.BlockTintSources.class, e -> {
-            NonNullSupplier<Supplier<List<BlockTintSource>>> tintSources = this.tintSources;
-            if (tintSources != null) {
-                e.register(tintSources.get().get(), getEntry());
+        OneTimeEventReceiver.addModListener(getOwner(), RegisterColorHandlersEvent.Block.class, event -> {
+            var colorHandler = this.colorHandler;
+            if (colorHandler != null) {
+                event.register(colorHandler.get().get(), getEntry());
             }
         });
     }
@@ -315,7 +309,7 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
      */
     public BlockBuilder<T, P> loot(NonNullBiConsumer<RegistrateBlockLootTables, T> cons) {
         return setData(ProviderType.LOOT, (ctx, prov) -> prov.addLootAction(LootType.BLOCK, tb -> {
-            if (ctx.getEntry().getLootTable().isPresent()) {
+            if (ctx.getEntry().getLootTable() != BuiltInLootTables.EMPTY) {
                 cons.accept(tb, ctx.getEntry());
             }
         }));
@@ -377,7 +371,7 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
         @Nonnull
         BlockBehaviour.Properties properties = this.initialProperties.get();
         properties = propertiesCallback.apply(properties);
-        return factory.apply(properties.setId(getResourceKey()));
+        return factory.apply(properties);
     }
 
     @Override

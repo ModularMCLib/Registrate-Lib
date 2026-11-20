@@ -12,14 +12,10 @@ import com.modularmc.registrate.util.entry.FluidEntry;
 import com.modularmc.registrate.util.entry.RegistryEntry;
 import com.modularmc.registrate.util.nullness.*;
 
-import net.minecraft.client.data.models.model.ModelTemplates;
-import net.minecraft.client.data.models.model.TextureMapping;
-import net.minecraft.client.renderer.block.FluidModel;
-import net.minecraft.client.resources.model.sprite.Material;
+import net.minecraft.Util;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
-import net.minecraft.util.Util;
 import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
@@ -30,10 +26,9 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.neoforge.client.event.RegisterFluidModelsEvent;
-import net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
+import net.neoforged.neoforge.client.model.DynamicFluidContainerModel.Colors;
 import net.neoforged.neoforge.common.util.Lazy;
 import net.neoforged.neoforge.fluids.BaseFlowingFluid;
 import net.neoforged.neoforge.fluids.FluidType;
@@ -65,65 +60,56 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
         T create(BaseFlowingFluid.Properties properties);
     }
 
-    private @Nullable NonNullSupplier<Supplier<FluidModel.Unbaked>> model;
-    private @Nullable Material blockParticleTexture;
+    private record FluidTextures(ResourceLocation still, ResourceLocation flowing) {}
 
+    private @Nullable FluidTextures textures;
     private @Nullable NonNullSupplier<Supplier<IClientFluidTypeExtensions>> clientExtension;
 
     /**
-     * Register a client extension for this block. The {@link IClientBlockExtensions} instance can be shared across many
-     * items.
+     * Supplies the client extension for this fluid type. The extension controls its textures, tint and overlays.
      *
-     * @param clientExtension
-     *                        The client extension to register for this block
-     * @return this {@link BlockBuilder}
+     * @param clientExtension the side-safe supplier of the client extension
+     * @return this fluid builder
      */
     public FluidBuilder<T, P> clientExtension(NonNullSupplier<Supplier<IClientFluidTypeExtensions>> clientExtension) {
-        if (this.clientExtension == null) {
+        if (this.clientExtension == null && !(registerType && textures != null)) {
             RegistrateDistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> this::registerClientExtension);
         }
         this.clientExtension = clientExtension;
         return this;
     }
 
-    public FluidBuilder<T, P> model(Identifier stillTexture, Identifier flowingTexture) {
-        this.blockParticleTexture = new Material(stillTexture);
-        return model(() -> () -> new FluidModel.Unbaked(new Material(stillTexture), new Material(flowingTexture), null, null));
-    }
-
-    public FluidBuilder<T, P> model(NonNullSupplier<Supplier<FluidModel.Unbaked>> model) {
-        if (this.model == null) {
-            RegistrateDistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> this::registerModel);
+    /**
+     * Sets the block particle texture and the default client textures for a fluid type registered by this builder.
+     * A shared fluid type supplied to the builder uses its own client extension.
+     */
+    public FluidBuilder<T, P> model(ResourceLocation stillTexture, ResourceLocation flowingTexture) {
+        if (textures == null && registerType && clientExtension == null) {
+            RegistrateDistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> this::registerClientExtension);
         }
-        this.model = model;
+        textures = new FluidTextures(stillTexture, flowingTexture);
         return this;
     }
 
-    protected void registerModel() {
-        var modEventBus = getOwner().getModEventBus();
-        java.util.function.Consumer<RegisterFluidModelsEvent> listener = e -> {
-            NonNullSupplier<Supplier<FluidModel.Unbaked>> model = this.model;
-            if (model != null) {
-                NonNullSupplier<? extends BaseFlowingFluid> source = this.source;
-                if (source != null) {
-                    e.register(model.get().get(), source.get(), getEntry());
-                } else {
-                    e.register(model.get().get(), getEntry());
-                }
-            }
-        };
-        if (modEventBus != null) {
-            modEventBus.addListener(listener);
-        } else {
-            OneTimeEventReceiver.addModListener(getOwner(), RegisterFluidModelsEvent.class, listener);
-        }
-    }
-
     protected void registerClientExtension() {
-        OneTimeEventReceiver.addModListener(getOwner(), RegisterClientExtensionsEvent.class, e -> {
-            NonNullSupplier<Supplier<IClientFluidTypeExtensions>> clientExtension = this.clientExtension;
-            if (clientExtension != null) {
-                e.registerFluidType(clientExtension.get().get(), fluidType.get());
+        OneTimeEventReceiver.addModListener(getOwner(), RegisterClientExtensionsEvent.class, event -> {
+            var custom = clientExtension;
+            var fluidTextures = textures;
+            if (custom != null) {
+                event.registerFluidType(custom.get().get(), fluidType.get());
+            } else if (fluidTextures != null) {
+                event.registerFluidType(new IClientFluidTypeExtensions() {
+
+                    @Override
+                    public ResourceLocation getStillTexture() {
+                        return fluidTextures.still();
+                    }
+
+                    @Override
+                    public ResourceLocation getFlowingTexture() {
+                        return fluidTextures.flowing();
+                    }
+                }, fluidType.get());
             }
         });
     }
@@ -301,7 +287,7 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
 
     private final FluidFactory<T> fluidFactory;
 
-    private @Nullable final NonNullSupplier<FluidType> fluidType;
+    private final NonNullSupplier<FluidType> fluidType;
 
     private @Nullable Boolean defaultSource, defaultBlock, defaultBucket;
 
@@ -309,7 +295,7 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
 
     private NonNullConsumer<BaseFlowingFluid.Properties> fluidProperties = $ -> {};
 
-    private boolean registerType;
+    private final boolean registerType;
 
     private @Nullable NonNullSupplier<? extends BaseFlowingFluid> source;
     private final List<TagKey<Fluid>> tags = new ArrayList<>();
@@ -459,16 +445,16 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
         final NonNullSupplier<T> supplier = asSupplier();
         final var lightLevel = Lazy.of(() -> fluidType.get().getLightLevel());
         final ToIntFunction<BlockState> lightLevelInt = $ -> lightLevel.get();
-        final Material particleTexture = this.blockParticleTexture;
         final var ret = getOwner().<B, FluidBuilder<T, P>>block(this, sourceName, p -> factory.apply(supplier.get(), p))
                 .properties(p -> BlockBehaviour.Properties.ofFullCopy(Blocks.WATER).noLootTable())
                 .properties(p -> p.lightLevel(lightLevelInt))
                 .blockstate(() -> (ctx, prov) -> {
-                    if (particleTexture != null) {
-                        prov.generateWithTemplate(ctx.get(), ModelTemplates.PARTICLE_ONLY, TextureMapping.particle(particleTexture));
-                    } else {
-                        prov.createNonTemplateModelBlock(ctx.get());
+                    var model = prov.models().getBuilder("block/" + ctx.getName());
+                    var fluidTextures = textures;
+                    if (fluidTextures != null) {
+                        model.texture("particle", fluidTextures.still());
                     }
+                    prov.simpleBlock(ctx.get(), model);
                 });
         this.fluidProperties(p -> p.block(ret.asSupplier()));
         return ret;
@@ -533,6 +519,7 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
         }
         final var ret = getOwner().<I, FluidBuilder<T, P>>item(this, bucketName, p -> factory.apply(source.get(), p))
                 .properties(p -> p.craftRemainder(Items.BUCKET).stacksTo(1))
+                .color(() -> Colors::new)
                 .model(() -> (ctx, prov) -> prov.generateFluidBucket(ctx.getEntry(), source.get()));
         this.fluidProperties(p -> p.bucket(ret.asSupplier()));
         return ret;
@@ -604,7 +591,7 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
             properties.descriptionId(block.get().get().getDescriptionId());
             removeData(ProviderType.LANG);
         } else {
-            properties.descriptionId(Util.makeDescriptionId("fluid", Identifier.fromNamespaceAndPath(getOwner().getModid(), sourceName)));
+            properties.descriptionId(Util.makeDescriptionId("fluid", ResourceLocation.fromNamespaceAndPath(getOwner().getModid(), sourceName)));
         }
 
         return properties;

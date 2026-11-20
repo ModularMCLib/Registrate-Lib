@@ -1,6 +1,7 @@
 package com.modularmc.registrate.providers;
 
 import com.modularmc.registrate.AbstractRegistrate;
+import com.modularmc.registrate.providers.RegistrateTagsProvider.IntrinsicTags;
 import com.modularmc.registrate.providers.core.ProviderType;
 
 import net.minecraft.core.HolderLookup;
@@ -12,20 +13,21 @@ import net.minecraft.tags.TagBuilder;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
+import net.neoforged.neoforge.common.data.ExistingFileHelper;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-public class RegistrateItemTagsProvider extends RegistrateTagsProvider.IntrinsicImpl<Item> {
+public class RegistrateItemTagsProvider extends IntrinsicTags<Item> {
 
     private final CompletableFuture<TagsProvider.TagLookup<Block>> blockTags;
     private final Map<TagKey<Block>, TagKey<Item>> tagsToCopy = new HashMap<>();
 
-    public RegistrateItemTagsProvider(AbstractRegistrate<?> owner, ProviderType<RegistrateItemTagsProvider> type, String name, PackOutput output, CompletableFuture<HolderLookup.Provider> registriesLookup, CompletableFuture<TagsProvider.TagLookup<Block>> blockTags) {
+    public RegistrateItemTagsProvider(AbstractRegistrate<?> owner, ProviderType<RegistrateItemTagsProvider> type, String name, PackOutput output, CompletableFuture<HolderLookup.Provider> registriesLookup, CompletableFuture<TagsProvider.TagLookup<Block>> blockTags, ExistingFileHelper fileHelper) {
         super(owner, type, name, output, Registries.ITEM, registriesLookup, item -> BuiltInRegistries.ITEM.getResourceKey(item)
-                .orElseThrow(() -> new IllegalStateException("Cannot generate tags for unregistered item: " + item)));
+                .orElseThrow(() -> new IllegalStateException("Cannot generate tags for unregistered item: " + item)), fileHelper);
         this.blockTags = blockTags;
     }
 

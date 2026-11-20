@@ -19,15 +19,14 @@ import com.modularmc.registrate.util.nullness.NonNullFunction;
 import com.modularmc.registrate.util.nullness.NonNullSupplier;
 import com.modularmc.registrate.util.nullness.NonNullUnaryOperator;
 
-import net.minecraft.client.color.item.ItemTintSource;
-import net.minecraft.client.data.models.model.ModelTemplates;
-import net.minecraft.client.data.models.model.TextureMapping;
+import net.minecraft.client.color.item.ItemColor;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -88,6 +87,7 @@ public class ItemBuilder<T extends Item, P> extends AbstractBuilder<Item, T, P, 
 
     private NonNullSupplier<Item.Properties> initialProperties = Item.Properties::new;
     private NonNullFunction<Item.Properties, Item.Properties> propertiesCallback = NonNullUnaryOperator.identity();
+    private @Nullable NonNullSupplier<Supplier<ItemColor>> colorHandler;
 
     private Map<ResourceKey<CreativeModeTab>, NonNullBiConsumer<DataGenContext<Item, T>, CreativeModeTabModifier>> creativeModeTabs = Maps.newLinkedHashMap();
 
@@ -219,18 +219,30 @@ public class ItemBuilder<T extends Item, P> extends AbstractBuilder<Item, T, P, 
      * @return this {@link ItemBuilder}
      */
     public ItemBuilder<T, P> defaultModel() {
-        return defaultModel(new ItemTintSource[0]);
+        return model(() -> (ctx, prov) -> prov.generateFlatItem(ctx.get(), prov.modItemTexture(ctx.getName())));
     }
 
     /**
-     * Assign the default generated model to this item and apply the supplied item tint sources to its layers.
+     * Registers the client color handler for the tint indices used by the item model.
      *
-     * @param tints
-     *              Tint sources to apply to the generated model layers
+     * @param colorHandler A side-safe supplier of the client color handler
      * @return this {@link ItemBuilder}
      */
-    public ItemBuilder<T, P> defaultModel(ItemTintSource... tints) {
-        return model(() -> (ctx, prov) -> prov.generateFlatItem(ctx.get(), ModelTemplates.FLAT_ITEM, TextureMapping.layer0(ctx.get()), tints));
+    public ItemBuilder<T, P> color(NonNullSupplier<Supplier<ItemColor>> colorHandler) {
+        if (this.colorHandler == null) {
+            RegistrateDistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> this::registerItemColor);
+        }
+        this.colorHandler = colorHandler;
+        return this;
+    }
+
+    protected void registerItemColor() {
+        OneTimeEventReceiver.addModListener(getOwner(), RegisterColorHandlersEvent.Item.class, event -> {
+            var colorHandler = this.colorHandler;
+            if (colorHandler != null) {
+                event.register(colorHandler.get().get(), getEntry());
+            }
+        });
     }
 
     /**
@@ -342,7 +354,7 @@ public class ItemBuilder<T extends Item, P> extends AbstractBuilder<Item, T, P, 
     protected T createEntry() {
         Item.Properties properties = this.initialProperties.get();
         properties = propertiesCallback.apply(properties);
-        return factory.apply(properties.setId(getResourceKey()));
+        return factory.apply(properties);
     }
 
     @Override

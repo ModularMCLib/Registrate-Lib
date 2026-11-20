@@ -2,11 +2,11 @@ package com.modularmc.registrate.test.gametests;
 
 import com.modularmc.registrate.test.mod.TestMod;
 
+import net.minecraft.gametest.framework.GameTest;
 import net.neoforged.testframework.DynamicTest;
 import net.neoforged.testframework.annotation.ForEachTest;
 import net.neoforged.testframework.annotation.TestHolder;
 import net.neoforged.testframework.gametest.EmptyTemplate;
-import net.neoforged.testframework.gametest.GameTest;
 
 @ForEachTest(groups = "custom-item")
 @SuppressWarnings("unused")

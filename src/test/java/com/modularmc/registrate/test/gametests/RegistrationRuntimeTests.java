@@ -2,12 +2,11 @@ package com.modularmc.registrate.test.gametests;
 
 import com.modularmc.registrate.test.mod.TestMod;
 
-import net.minecraft.world.item.SpawnEggItem;
+import net.minecraft.gametest.framework.GameTest;
 import net.neoforged.testframework.DynamicTest;
 import net.neoforged.testframework.annotation.ForEachTest;
 import net.neoforged.testframework.annotation.TestHolder;
 import net.neoforged.testframework.gametest.EmptyTemplate;
-import net.neoforged.testframework.gametest.GameTest;
 
 @ForEachTest(groups = "registrate-runtime")
 @SuppressWarnings("unused")
@@ -34,7 +33,7 @@ public class RegistrationRuntimeTests {
                 .thenExecute(menuId -> {
                     helper.assertValueEqual("testmenu", menuId, "Menu registration path");
                     helper.assertValueEqual("entity.testmod.testentity", TestMod.instance().testentity.get().getDescriptionId(), "Entity translation key");
-                    helper.assertValueEqual(TestMod.instance().testentity.get(), SpawnEggItem.getType(TestMod.instance().testentitySpawnEgg.asStack()), "Spawn egg should resolve to the registered entity type");
+                    helper.assertValueEqual(TestMod.instance().testentity.get(), TestMod.instance().testentitySpawnEgg.get().getType(TestMod.instance().testentitySpawnEgg.asStack()), "Spawn egg should resolve to the registered entity type");
                     helper.assertValueEqual("testitem", TestMod.instance().testduplicatename.getId().getPath(), "Duplicate-name entity registration path");
                     helper.assertValueEqual("testblockentity", TestMod.instance().testblockentity.getId().getPath(), "Standalone block entity registration path");
                     helper.assertValueEqual("testcustom", TestMod.instance().testcustom.getId().getPath(), "Custom registry entry path");

@@ -4,7 +4,6 @@ plugins {
     id 'eclipse'
     id 'idea'
     id 'maven-publish'
-    id 'jacoco'
     alias libs.plugins.modDevGradle
     //alias libs.plugins.shadow
     alias libs.plugins.spotless
@@ -18,7 +17,7 @@ version = "${mod_version}" + (isSnapshot ? "-SNAPSHOT" : "")
 boolean isCI = System.getenv("CI") != null
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(25)
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
 }
 
 sourceSets {
@@ -91,39 +90,4 @@ tasks.named('test') {
 
 lombok {
     version = "1.18.38"
-}
-
-jacoco {
-    applyTo runGameTestServer
-}
-
-tasks.named('runGameTestServer') {
-    jacoco.excludes = ['com.mojang.*', 'net.minecraft.*', 'net.neoforged.*']
-}
-
-jacocoTestReport {
-    doFirst {
-        try {
-            runGameTestServer.exec()
-        } catch (RuntimeException ignored) {}
-    }
-    doLast {
-        println "Coverage report location:"
-        println " - file://${layout.buildDirectory.dir('coverage').map(a -> a.file('index.html')).get()}"
-        println " - file://${layout.buildDirectory.dir('coverage').map(a -> a.file('coverage.xml')).get()}"
-    }
-    executionData runGameTestServer
-    sourceSets sourceSets.test
-    reports {
-        csv.required = false
-        xml.required = true
-        html.outputLocation = layout.buildDirectory.dir('coverage')
-        xml.outputLocation = layout.buildDirectory.dir('coverage').map(a -> a.file('coverage.xml'))
-    }
-    afterEvaluate {
-        classDirectories.setFrom(files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: '**/client/**')
-            fileTree(dir: it, exclude: '**/mixins/**')
-        }))
-    }
 }

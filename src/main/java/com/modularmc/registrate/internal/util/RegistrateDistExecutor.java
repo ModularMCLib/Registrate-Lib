@@ -10,7 +10,7 @@ public final class RegistrateDistExecutor {
     private RegistrateDistExecutor() {}
 
     public static void unsafeRunWhenOn(Dist dist, Supplier<Runnable> toRun) {
-        if (dist == FMLEnvironment.getDist()) {
+        if (dist == FMLEnvironment.dist) {
             toRun.get().run();
         }
     }

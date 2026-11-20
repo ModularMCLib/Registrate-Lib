@@ -2,32 +2,19 @@ package com.modularmc.registrate.test.mod;
 
 import com.modularmc.registrate.Registrate;
 import com.modularmc.registrate.builders.BlockBuilder;
-import com.modularmc.registrate.providers.DataGenContext;
 import com.modularmc.registrate.providers.core.ProviderType;
-import com.modularmc.registrate.providers.generators.RegistrateItemModelGenerator;
 import com.modularmc.registrate.util.DataIngredient;
 import com.modularmc.registrate.util.entry.*;
 
 import net.minecraft.advancements.Advancement;
 import net.minecraft.advancements.AdvancementType;
-import net.minecraft.advancements.criterion.InventoryChangeTrigger;
-import net.minecraft.client.color.block.BlockTintSources;
-import net.minecraft.client.color.item.Constant;
-import net.minecraft.client.data.models.model.ModelTemplates;
-import net.minecraft.client.data.models.model.TextureMapping;
+import net.minecraft.advancements.critereon.InventoryChangeTrigger;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
-import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.entity.PigRenderer;
-import net.minecraft.client.renderer.entity.state.EntityRenderState;
-import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
-import net.minecraft.client.renderer.item.ItemModelResolver;
-import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.renderer.state.level.CameraRenderState;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
@@ -35,26 +22,21 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.RegistrySetBuilder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.recipes.RecipeCategory;
-import net.minecraft.data.worldgen.biome.OverworldBiomes;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.tags.TimelineTags;
-import net.minecraft.util.ARGB;
 import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
-import net.minecraft.world.attribute.*;
-import net.minecraft.world.clock.WorldClocks;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.animal.pig.Pig;
+import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodProperties;
@@ -62,8 +44,6 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.*;
-import net.minecraft.world.item.crafting.CookingBookCategory;
-import net.minecraft.world.level.CardinalLighting;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.biome.FixedBiomeSource;
@@ -77,6 +57,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition.Builder;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -90,7 +71,6 @@ import net.minecraft.world.level.storage.loot.functions.SetItemCountFunction;
 import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -112,9 +92,8 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -169,36 +148,21 @@ public class TestMod {
         }
     }
 
-    private static class TestBlockEntityRenderer implements BlockEntityRenderer<TestBlockEntity, TestBlockEntityRenderer.RenderState> {
+    private static class TestBlockEntityRenderer implements BlockEntityRenderer<TestBlockEntity> {
 
-        private final ItemModelResolver itemModelResolver;
+        private final ItemRenderer itemRenderer;
 
-        public TestBlockEntityRenderer(BlockEntityRendererProvider.Context ctx) {
-            itemModelResolver = ctx.itemModelResolver();
+        public TestBlockEntityRenderer(BlockEntityRendererProvider.Context context) {
+            itemRenderer = context.getItemRenderer();
         }
 
         @Override
-        public RenderState createRenderState() {
-            return new RenderState();
-        }
-
-        @Override
-        public void extractRenderState(TestBlockEntity blockEntity, RenderState state, float partialTicks, Vec3 cameraPosition, @Nullable ModelFeatureRenderer.CrumblingOverlay breakProgress) {
-            BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTicks, cameraPosition, breakProgress);
-            itemModelResolver.updateForTopItem(state.item, new ItemStack(Items.DIAMOND), ItemDisplayContext.GROUND, blockEntity.getLevel(), null, 0);
-        }
-
-        @Override
-        public void submit(RenderState state, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState camera) {
+        public void render(TestBlockEntity blockEntity, float partialTicks, PoseStack poseStack, MultiBufferSource buffers, int light, int overlay) {
             poseStack.pushPose();
             poseStack.translate(0.5, 0.5, 0.5);
-            state.item.submit(poseStack, submitNodeCollector, state.lightCoords, OverlayTexture.NO_OVERLAY, EntityRenderState.NO_OUTLINE);
+            itemRenderer.renderStatic(new ItemStack(Items.DIAMOND), ItemDisplayContext.GROUND,
+                    light, overlay, poseStack, buffers, blockEntity.getLevel(), 0);
             poseStack.popPose();
-        }
-
-        private static class RenderState extends BlockEntityRenderState {
-
-            private final ItemStackRenderState item = new ItemStackRenderState();
         }
     }
 
@@ -259,13 +223,14 @@ public class TestMod {
                         .unlockedBy("has_egg", prov.has(Items.EGG))
                         .save(prov);
 
-                prov.food(DataIngredient.items(ctx), RecipeCategory.MISC, CookingBookCategory.MISC, () -> Blocks.DIAMOND_BLOCK, 1f);
+                prov.food(DataIngredient.items(ctx), RecipeCategory.MISC, () -> Blocks.DIAMOND_BLOCK, 1f);
             })
-            .tag(BlockTags.SUPPORTS_BAMBOO, BlockTags.DRAGON_IMMUNE)
+            .tag(BlockTags.BAMBOO_PLANTABLE_ON, BlockTags.DRAGON_IMMUNE)
             .tag(BlockTags.WITHER_IMMUNE)
-            .color(() -> () -> List.of(BlockTintSources.constant(0xFFFF0000)))
+            .color(() -> () -> (state, level, pos, tintIndex) -> 0xFFFF0000)
             .item()
-            .model(() -> Client::testBlockModel)
+            .model(() -> (ctx, prov) -> prov.createWithExistingModel(ctx.get(), prov.mcLoc("item/egg")))
+            .color(() -> () -> (stack, tintIndex) -> 0xFFFF0000)
             .build()
             .blockEntity(TestBlockEntity::new)
             .renderer(() -> TestBlockEntityRenderer::new)
@@ -277,10 +242,7 @@ public class TestMod {
             .block(Block::new)
             .blockstate(() -> (ctx, prov) -> prov.create(
                     ctx.getEntry(),
-                    ModelTemplates.CUBE_ALL.create(
-                            prov.modLoc("block/subfolder/" + ctx.getName()),
-                            TextureMapping.cube(prov.mcBlockTexture("gold_block")),
-                            prov.modelOutput)))
+                    prov.models().cubeAll("block/subfolder/" + ctx.getName(), prov.mcBlockTexture("gold_block")).getLocation()))
             .simpleItem()
             .register();
 
@@ -295,7 +257,7 @@ public class TestMod {
             .attributes(Pig::createAttributes)
             .renderer(() -> PigRenderer::new)
             .spawnPlacement(SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Animal::checkAnimalSpawnRules, RegisterSpawnPlacementsEvent.Operation.OR)
-            .spawnEgg(egg -> egg.model(() -> (ctx, prov) -> prov.generateFlatItem(ctx.getEntry(), new Material(Identifier.fromNamespaceAndPath(MOD_ID, "item/testentity_spawn_egg")))))
+            .spawnEgg(egg -> egg.model(() -> (ctx, prov) -> prov.generateFlatItem(ctx.getEntry(), prov.modItemTexture(ctx.getName()))))
             .loot((prov, type) -> prov.add(type, LootTable.lootTable()
                     .withPool(LootPool.lootPool()
                             .setRolls(ConstantValue.exactly(1))
@@ -316,8 +278,8 @@ public class TestMod {
     @VisibleForTesting
     public final FluidEntry<BaseFlowingFluid.Flowing> testfluid = registrate.object("testfluid")
             .fluid(
-                    Identifier.withDefaultNamespace("block/water_flow"),
-                    Identifier.withDefaultNamespace("block/lava_still"),
+                    ResourceLocation.withDefaultNamespace("block/water_flow"),
+                    ResourceLocation.withDefaultNamespace("block/lava_still"),
                     FluidType::new)
             .properties(p -> p.lightLevel(15).canConvertToSource(true))
             .noBucket()
@@ -326,8 +288,8 @@ public class TestMod {
     @VisibleForTesting
     public final FluidEntry<BaseFlowingFluid.Flowing> testbucketfluid = registrate.object("testbucketfluid")
             .fluid(
-                    Identifier.withDefaultNamespace("block/water_still"),
-                    Identifier.withDefaultNamespace("block/water_flow"),
+                    ResourceLocation.withDefaultNamespace("block/water_still"),
+                    ResourceLocation.withDefaultNamespace("block/water_flow"),
                     FluidType::new)
             .properties(p -> p.lightLevel(7).canConvertToSource(true))
             .register();
@@ -363,7 +325,7 @@ public class TestMod {
                 .addCriterion("has_egg", InventoryChangeTrigger.TriggerInstance.hasItems(Items.EGG))
                 .display(Items.EGG,
                         adv.title(registrate.getModid(), "root", "Test Advancement"), adv.desc(registrate.getModid(), "root", "Get an egg."),
-                        Identifier.withDefaultNamespace("textures/gui/advancements/backgrounds/stone.png"), AdvancementType.TASK, true, true, false)
+                        ResourceLocation.withDefaultNamespace("textures/gui/advancements/backgrounds/stone.png"), AdvancementType.TASK, true, true, false)
                 .save(adv, registrate.getModid() + ":root"));
         registrate.addDataGenerator(ProviderType.GENERIC_SERVER, provider -> provider.add(data -> {
             // generic server side provider to generate custom dimension
@@ -371,7 +333,7 @@ public class TestMod {
             // /execute as @s in testmod:test_dimension run tp @s 0 64 0
             // you can validate you are in this dimension by checking the debug screen
             // right underneath the `Chunks[C]` and `Chunk[S]` should be the dimension name
-            var testDimensionTypeKey = ResourceKey.create(Registries.DIMENSION_TYPE, Identifier.fromNamespaceAndPath("testmod", "test_dimension_type"));
+            var testDimensionTypeKey = ResourceKey.create(Registries.DIMENSION_TYPE, ResourceLocation.fromNamespaceAndPath("testmod", "test_dimension_type"));
 
             return new DatapackBuiltinEntriesProvider(
                     data.output(),
@@ -381,35 +343,10 @@ public class TestMod {
                             .add(Registries.DIMENSION_TYPE, context -> context.register(
                                     testDimensionTypeKey,
                                     new DimensionType(
-                                            /* hasFixedTime */ false,
-                                            /* hasSky */ true,
-                                            /* hasCeiling */ false,
-                                            /* hasEnderDragonFight */ false,
-                                            /* coordinateScale */ 1D,
-                                            /* minY */ -64,
-                                            /* height */ 384,
-                                            /* localHeight */ 384,
-                                            /* infiniBurn */ BlockTags.INFINIBURN_OVERWORLD,
-                                            /* ambientLight */ 0F,
-                                            new DimensionType.MonsterSettings(
-                                                    /* monsterSpawnLightTest */ UniformInt.of(0, 7),
-                                                    /* monsterSpawnBlockLightLimit */ 0),
-                                            DimensionType.Skybox.OVERWORLD,
-                                            CardinalLighting.Type.DEFAULT,
-                                            EnvironmentAttributeMap.builder()
-                                                    .set(EnvironmentAttributes.FOG_COLOR, 0xffc0d8ff)
-                                                    .set(EnvironmentAttributes.SKY_COLOR, OverworldBiomes.calculateSkyColor(0.8F))
-                                                    .set(EnvironmentAttributes.AMBIENT_LIGHT_COLOR, 0xff0a0a0a)
-                                                    .set(EnvironmentAttributes.CLOUD_COLOR, ARGB.white(0.8F))
-                                                    .set(EnvironmentAttributes.CLOUD_HEIGHT, 192.33f)
-                                                    .set(EnvironmentAttributes.BACKGROUND_MUSIC, BackgroundMusic.OVERWORLD)
-                                                    .set(EnvironmentAttributes.BED_RULE, BedRule.CAN_SLEEP_WHEN_DARK)
-                                                    .set(EnvironmentAttributes.RESPAWN_ANCHOR_WORKS, false)
-                                                    .set(EnvironmentAttributes.NETHER_PORTAL_SPAWNS_PIGLINS, true)
-                                                    .set(EnvironmentAttributes.AMBIENT_SOUNDS, AmbientSounds.LEGACY_CAVE_SETTINGS)
-                                                    .build(),
-                                            context.lookup(Registries.TIMELINE).getOrThrow(TimelineTags.IN_OVERWORLD),
-                                            Optional.of(context.lookup(Registries.WORLD_CLOCK).getOrThrow(WorldClocks.OVERWORLD)))))
+                                            OptionalLong.empty(), true, false, false, true, 1D, true, false,
+                                            -64, 384, 384, BlockTags.INFINIBURN_OVERWORLD,
+                                            BuiltinDimensionTypes.OVERWORLD_EFFECTS, 0F,
+                                            new DimensionType.MonsterSettings(false, true, UniformInt.of(0, 7), 0))))
                             // register custom dimension for the dimension type
                             // simple single biome (plains) dimension
                             .add(Registries.LEVEL_STEM, context -> {
@@ -418,7 +355,7 @@ public class TestMod {
                                 var overworldNoiseSettings = context.lookup(Registries.NOISE_SETTINGS).getOrThrow(NoiseGeneratorSettings.OVERWORLD);
 
                                 context.register(
-                                        ResourceKey.create(Registries.LEVEL_STEM, Identifier.fromNamespaceAndPath("testmod", "test_dimension")),
+                                        ResourceKey.create(Registries.LEVEL_STEM, ResourceLocation.fromNamespaceAndPath("testmod", "test_dimension")),
                                         new LevelStem(
                                                 testDimensionType,
                                                 new NoiseBasedChunkGenerator(
@@ -432,7 +369,7 @@ public class TestMod {
 
         // Setup gametests for normal run config
         final MutableTestFramework framework = FrameworkConfiguration
-                .builder(Identifier.fromNamespaceAndPath(MOD_ID, "tests"))
+                .builder(ResourceLocation.fromNamespaceAndPath(MOD_ID, "tests"))
                 .clientConfiguration(() -> ClientConfiguration.builder()
                         .toggleOverlayKey(GLFW.GLFW_KEY_O)
                         .openManagerKey(GLFW.GLFW_KEY_M)
@@ -455,7 +392,6 @@ public class TestMod {
             throw new IllegalStateException("Register callback not fired!");
         }
 
-        testblock.asStackTemplate();
         testitem.is(Items.SNOWBALL);
         testblockitem.is(Items.STONE);
         testblockbe.is(BlockEntityType.CHEST);
@@ -465,13 +401,6 @@ public class TestMod {
         if (testfluid.getBlock().isPresent()) throw new IllegalStateException("Expected no block sibling for test fluid");
         if (testfluid.getSource().getSource() != testfluid.getSource()) throw new IllegalStateException("Expected canonical fluid source");
         if (testbucketfluid.getBucket().isEmpty()) throw new IllegalStateException("Expected a generated bucket entry for test bucket fluid");
-    }
-
-    private static class Client {
-
-        private static void testBlockModel(DataGenContext<Item, BlockItem> ctx, RegistrateItemModelGenerator prov) {
-            prov.generateTintedModel(ctx.get(), prov.mcLoc("item/egg"), new Constant(0xFFFF0000));
-        }
     }
 
     public static TestMod instance() {

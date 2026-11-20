@@ -1,13 +1,13 @@
 package com.modularmc.registrate.providers.core;
 
 import net.minecraft.data.DataProvider;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 public interface RegistrateProviderDelegate<R, T extends R> extends DataProvider {
 
     String getName();
 
-    Identifier getId();
+    ResourceLocation getId();
 
     T getEntry();
 }

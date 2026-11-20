@@ -4,101 +4,80 @@ import com.modularmc.registrate.AbstractRegistrate;
 import com.modularmc.registrate.providers.core.ProviderType;
 import com.modularmc.registrate.util.nullness.NonNullSupplier;
 
-import net.minecraft.client.color.item.ItemTintSource;
-import net.minecraft.client.data.models.ItemModelGenerators;
-import net.minecraft.client.data.models.ItemModelOutput;
-import net.minecraft.client.data.models.model.ItemModelUtils;
-import net.minecraft.client.data.models.model.ModelInstance;
-import net.minecraft.client.data.models.model.ModelLocationUtils;
-import net.minecraft.client.data.models.model.ModelTemplate;
-import net.minecraft.client.data.models.model.ModelTemplates;
-import net.minecraft.client.data.models.model.TextureMapping;
-import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.data.PackOutput;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.client.model.item.DynamicFluidContainerModel;
+import net.neoforged.neoforge.client.model.generators.ItemModelBuilder;
+import net.neoforged.neoforge.client.model.generators.ItemModelProvider;
+import net.neoforged.neoforge.client.model.generators.loaders.DynamicFluidContainerModelBuilder;
+import net.neoforged.neoforge.common.data.ExistingFileHelper;
 
-import java.util.Optional;
-import java.util.function.BiConsumer;
 import java.util.function.UnaryOperator;
 
-public class RegistrateItemModelGenerator extends ItemModelGenerators {
+public class RegistrateItemModelGenerator extends ItemModelProvider {
 
     private final AbstractRegistrate<?> parent;
 
-    public RegistrateItemModelGenerator(AbstractRegistrate<?> parent, ItemModelOutput output, BiConsumer<Identifier, ModelInstance> model) {
-        super(output, model);
+    public RegistrateItemModelGenerator(AbstractRegistrate<?> parent, PackOutput output, ExistingFileHelper fileHelper) {
+        super(output, parent.getModid(), fileHelper);
         this.parent = parent;
     }
 
     @Override
-    public void run() {
+    protected void registerModels() {
         parent.genData(ProviderType.ITEM_MODEL, this);
     }
 
-    public void createWithExistingModel(Item item, Identifier id) {
-        itemModelOutput.accept(item, ItemModelUtils.plainModel(id));
+    public boolean hasModel(Item item) {
+        return generatedModels.containsKey(itemLocation(item));
     }
 
-    public void generateWithTemplate(Item item, ModelTemplate template, TextureMapping textures) {
-        itemModelOutput.accept(item, ItemModelUtils.plainModel(template.create(item, textures, modelOutput)));
+    public ItemModelBuilder createWithExistingModel(Item item, ResourceLocation model) {
+        return withExistingParent(itemLocation(item).toString(), model);
     }
 
-    public void generateFlatItem(Item item, Material layer0) {
-        generateFlatItem(item, ModelTemplates.FLAT_ITEM, layer0);
+    public ItemModelBuilder generateFlatItem(Item item, ResourceLocation texture) {
+        return generateFlatItem(item, mcLoc("item/generated"), texture);
     }
 
-    public void generateFlatItem(Item item, ModelTemplate template, Material layer0) {
-        itemModelOutput.accept(item, ItemModelUtils.plainModel(template.create(item, TextureMapping.layer0(layer0), modelOutput)));
+    public ItemModelBuilder generateFlatItem(Item item, ResourceLocation parentModel, ResourceLocation texture) {
+        return createWithExistingModel(item, parentModel).texture("layer0", texture);
     }
 
-    public void generateFlatItem(Item item, ModelTemplate template, TextureMapping textures, ItemTintSource... tints) {
-        Identifier model = template.create(item, textures, modelOutput);
-        itemModelOutput.accept(item, tints.length == 0 ? ItemModelUtils.plainModel(model) : ItemModelUtils.tintedModel(model, tints));
+    public ItemModelBuilder generateFlatBlockItem(BlockItem item) {
+        return generateFlatBlockItem(item, "");
     }
 
-    public void generateFlatBlockItem(BlockItem item) {
-        generateFlatItem(item, TextureMapping.getBlockTexture(item.getBlock()));
+    public ItemModelBuilder generateFlatBlockItem(BlockItem item, String suffix) {
+        return generateFlatItem(item, RegistrateBlockModelGenerator.modelLocation(item.getBlock()).withSuffix(suffix));
     }
 
-    public void generateFlatBlockItem(BlockItem item, String suffix) {
-        generateFlatItem(item, TextureMapping.getBlockTexture(item.getBlock(), suffix));
+    public ItemModelBuilder generateBlockItem(BlockItem item, UnaryOperator<ResourceLocation> modelMapper) {
+        return createWithExistingModel(item, modelMapper.apply(RegistrateBlockModelGenerator.modelLocation(item.getBlock())));
     }
 
-    public void generateBlockItem(BlockItem item, UnaryOperator<Identifier> modelMapper) {
-        itemModelOutput.accept(item, ItemModelUtils.plainModel(modelMapper.apply(ModelLocationUtils.getModelLocation(item.getBlock()))));
+    public ItemModelBuilder generateBlockItem(BlockItem item, String suffix) {
+        return generateBlockItem(item, model -> model.withSuffix(suffix));
     }
 
-    public void generateBlockItem(BlockItem item, String suffix) {
-        generateBlockItem(item, model -> model.withSuffix(suffix));
+    public ResourceLocation mcBlockTexture(String path) {
+        return mcLoc("block/" + path);
     }
 
-    public Identifier mcLoc(String id) {
-        return Identifier.withDefaultNamespace(id);
+    public ResourceLocation modBlockTexture(String path) {
+        return modLoc("block/" + path);
     }
 
-    public Identifier modLoc(String id) {
-        return Identifier.fromNamespaceAndPath(parent.getModid(), id);
+    public ResourceLocation mcItemTexture(String path) {
+        return mcLoc("item/" + path);
     }
 
-    public Material mcBlockTexture(String path) {
-        return new Material(mcLoc("block/" + path));
-    }
-
-    public Material modBlockTexture(String path) {
-        return new Material(modLoc("block/" + path));
-    }
-
-    public Material mcItemTexture(String path) {
-        return new Material(mcLoc("item/" + path));
-    }
-
-    public Material modItemTexture(String path) {
-        return new Material(modLoc("item/" + path));
+    public ResourceLocation modItemTexture(String path) {
+        return modLoc("item/" + path);
     }
 
     public String modid(NonNullSupplier<? extends ItemLike> item) {
@@ -109,20 +88,19 @@ public class RegistrateItemModelGenerator extends ItemModelGenerators {
         return BuiltInRegistries.ITEM.getKey(item.get().asItem()).getPath();
     }
 
-    public void generateTintedModel(Item entry, Identifier model, ItemTintSource tint) {
-        this.itemModelOutput.accept(entry, ItemModelUtils.tintedModel(model, tint));
+    public void generateFluidBucket(Item item, Fluid fluid) {
+        getBuilder(itemLocation(item).toString())
+                .texture("particle", mcItemTexture("bucket"))
+                .texture("base", mcItemTexture("bucket"))
+                .texture("fluid", ResourceLocation.fromNamespaceAndPath("neoforge", "item/mask/bucket_fluid"))
+                .customLoader(DynamicFluidContainerModelBuilder::begin)
+                .fluid(fluid)
+                .flipGas(true)
+                .applyFluidLuminosity(true)
+                .end();
     }
 
-    public void generateFluidBucket(Item item, Fluid fluid) {
-        itemModelOutput.accept(item, new DynamicFluidContainerModel.Unbaked(
-                new DynamicFluidContainerModel.Textures(
-                        Optional.of(mcItemTexture("bucket")),
-                        Optional.of(mcItemTexture("bucket")),
-                        Optional.of(new Material(Identifier.fromNamespaceAndPath("neoforge", "item/mask/bucket_fluid"))),
-                        Optional.empty()),
-                fluid,
-                true,
-                true,
-                true));
+    private static ResourceLocation itemLocation(Item item) {
+        return BuiltInRegistries.ITEM.getKey(item).withPrefix("item/");
     }
 }

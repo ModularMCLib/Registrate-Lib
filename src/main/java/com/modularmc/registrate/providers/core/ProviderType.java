@@ -8,7 +8,12 @@ import com.modularmc.registrate.providers.RegistrateGenericProvider;
 import com.modularmc.registrate.providers.RegistrateItemTagsProvider;
 import com.modularmc.registrate.providers.RegistrateLangProvider;
 import com.modularmc.registrate.providers.RegistrateTagsProvider;
-import com.modularmc.registrate.providers.generators.*;
+import com.modularmc.registrate.providers.RegistrateTagsProvider.IntrinsicTags;
+import com.modularmc.registrate.providers.RegistrateTagsProvider.KeyTags;
+import com.modularmc.registrate.providers.generators.RegistrateBlockModelGenerator;
+import com.modularmc.registrate.providers.generators.RegistrateItemModelGenerator;
+import com.modularmc.registrate.providers.generators.RegistrateModelProvider;
+import com.modularmc.registrate.providers.generators.RegistrateRecipeProvider;
 import com.modularmc.registrate.providers.loot.RegistrateLootTableProvider;
 import com.modularmc.registrate.util.nullness.NonNullSupplier;
 
@@ -23,6 +28,7 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.fml.LogicalSide;
+import net.neoforged.neoforge.common.data.ExistingFileHelper;
 import net.neoforged.neoforge.data.loading.DatagenModLoader;
 
 import java.util.Map;
@@ -46,29 +52,29 @@ public interface ProviderType<T extends RegistrateProvider> extends GeneratorTyp
     // SERVER DATA
     ProviderType<RegistrateDatapackProvider> DYNAMIC = registerServerData("dynamic", RegistrateDatapackProvider::new);
     ProviderType<RegistrateDataMapProvider> DATA_MAP = registerServerData("data_map", RegistrateDataMapProvider::new);
-    ProviderType<RegistrateRecipeRunner> RECIPE_RUNNER = registerServerData("recipe_runner", RegistrateRecipeRunner::new);
+    ProviderType<RegistrateRecipeProvider> RECIPE = registerServerData("recipe", RegistrateRecipeProvider::new);
     ProviderType<RegistrateAdvancementProvider> ADVANCEMENT = registerServerData("advancement", RegistrateAdvancementProvider::new);
     ProviderType<RegistrateLootTableProvider> LOOT = registerServerData("loot", RegistrateLootTableProvider::new);
-    ProviderType<RegistrateTagsProvider.IntrinsicImpl<Block>> BLOCK_TAGS = registerIntrinsicTag("tags/block", "blocks", Registries.BLOCK, BuiltInRegistries.BLOCK);
-    ProviderType<RegistrateTagsProvider.Impl<Enchantment>> ENCHANTMENT_TAGS = registerDynamicTag("tags/enchantment", "enchantments", Registries.ENCHANTMENT);
-    ProviderType<RegistrateItemTagsProvider> ITEM_TAGS = registerTag("tags/item", Registries.ITEM, c -> new RegistrateItemTagsProvider(c.parent(), c.type(), "items", c.output(), c.provider(), c.require(BLOCK_TAGS).contentsGetter()));
-    ProviderType<RegistrateTagsProvider.IntrinsicImpl<Fluid>> FLUID_TAGS = registerIntrinsicTag("tags/fluid", "fluids", Registries.FLUID, BuiltInRegistries.FLUID);
-    ProviderType<RegistrateTagsProvider.IntrinsicImpl<EntityType<?>>> ENTITY_TAGS = registerIntrinsicTag("tags/entity", "entity_types", Registries.ENTITY_TYPE, BuiltInRegistries.ENTITY_TYPE);
+    ProviderType<IntrinsicTags<Block>> BLOCK_TAGS = registerIntrinsicTag("tags/block", "blocks", Registries.BLOCK, BuiltInRegistries.BLOCK);
+    ProviderType<KeyTags<Enchantment>> ENCHANTMENT_TAGS = registerDynamicTag("tags/enchantment", "enchantments", Registries.ENCHANTMENT);
+    ProviderType<RegistrateItemTagsProvider> ITEM_TAGS = registerTag("tags/item", Registries.ITEM, c -> new RegistrateItemTagsProvider(c.parent(), c.type(), "items", c.output(), c.provider(), c.require(BLOCK_TAGS).contentsGetter(), c.fileHelper()));
+    ProviderType<IntrinsicTags<Fluid>> FLUID_TAGS = registerIntrinsicTag("tags/fluid", "fluids", Registries.FLUID, BuiltInRegistries.FLUID);
+    ProviderType<IntrinsicTags<EntityType<?>>> ENTITY_TAGS = registerIntrinsicTag("tags/entity", "entity_types", Registries.ENTITY_TYPE, BuiltInRegistries.ENTITY_TYPE);
     ProviderType<RegistrateGenericProvider> GENERIC_SERVER = registerProvider("registrate_generic_server_provider", c -> new RegistrateGenericProvider(c.parent(), c.output(), c.provider(), LogicalSide.SERVER, c.type()));
 
     // CLIENT DATA
-    ProviderType<RegistrateModelProvider> MODEL = registerClientProvider("model", () -> c -> new RegistrateModelProvider(c.parent(), c.output()));
+    ProviderType<RegistrateModelProvider> MODEL = registerClientProvider("model", () -> c -> new RegistrateModelProvider(c.parent(), c.output(), c.fileHelper()));
     ProviderType<RegistrateLangProvider> LANG = registerClientProvider("lang", () -> c -> new RegistrateLangProvider(c.parent(), c.output()));
     ProviderType<RegistrateGenericProvider> GENERIC_CLIENT = registerClientProvider("registrate_generic_client_provider", () -> c -> new RegistrateGenericProvider(c.parent(), c.output(), c.provider(), LogicalSide.CLIENT, c.type()));
 
-    GeneratorType<RegistrateRecipeProvider> RECIPE = RECIPE_RUNNER.createGenerator("recipe");
     GeneratorType<RegistrateBlockModelGenerator> BLOCKSTATE = MODEL.createGenerator("blockstate");
     GeneratorType<RegistrateItemModelGenerator> ITEM_MODEL = MODEL.createGenerator("item_model");
 
     record Context<T extends RegistrateProvider>(ProviderType<T> type, AbstractRegistrate<?> parent,
                                                  Map<ProviderType<?>, RegistrateProvider> existing,
                                                  PackOutput output,
-                                                 CompletableFuture<HolderLookup.Provider> provider) {
+                                                 CompletableFuture<HolderLookup.Provider> provider,
+                                                 ExistingFileHelper fileHelper) {
 
         public <R extends RegistrateProvider> R require(ProviderType<R> other) {
             return other.cast(Objects.requireNonNull(
@@ -134,16 +140,16 @@ public interface ProviderType<T extends RegistrateProvider> extends GeneratorTyp
         return type;
     }
 
-    static <T> ProviderType<RegistrateTagsProvider.IntrinsicImpl<T>> registerIntrinsicTag(String providerName, String typeName, ResourceKey<? extends Registry<T>> registryKey, Registry<T> registry) {
-        return registerTag(providerName, registryKey, c -> new RegistrateTagsProvider.IntrinsicImpl<>(c.parent(), c.type(), typeName, c.output(), registryKey, c.provider(), keyExtractor(registry, typeName)));
+    static <T> ProviderType<IntrinsicTags<T>> registerIntrinsicTag(String providerName, String typeName, ResourceKey<? extends Registry<T>> registryKey, Registry<T> registry) {
+        return registerTag(providerName, registryKey, c -> new IntrinsicTags<>(c.parent(), c.type(), typeName, c.output(), registryKey, c.provider(), keyExtractor(registry, typeName), c.fileHelper()));
     }
 
-    static <T> ProviderType<RegistrateTagsProvider.Impl<T>> registerDynamicTag(String providerName, String typeName, ResourceKey<Registry<T>> registry) {
-        return registerTag(providerName, registry, c -> new RegistrateTagsProvider.Impl<>(c.parent(), c.type(), typeName, c.output(), registry, c.provider()));
+    static <T> ProviderType<KeyTags<T>> registerDynamicTag(String providerName, String typeName, ResourceKey<Registry<T>> registry) {
+        return registerTag(providerName, registry, c -> new KeyTags<>(c.parent(), c.type(), typeName, c.output(), registry, c.provider(), c.fileHelper()));
     }
 
-    static <T extends RegistrateProvider> T create(ProviderType<T> type, AbstractRegistrate<?> parent, Map<ProviderType<?>, RegistrateProvider> existing, PackOutput output, CompletableFuture<HolderLookup.Provider> provider) {
-        return type.create(new Context<>(type, parent, existing, output, provider));
+    static <T extends RegistrateProvider> T create(ProviderType<T> type, AbstractRegistrate<?> parent, Map<ProviderType<?>, RegistrateProvider> existing, PackOutput output, CompletableFuture<HolderLookup.Provider> provider, ExistingFileHelper fileHelper) {
+        return type.create(new Context<>(type, parent, existing, output, provider, fileHelper));
     }
 
     private static <T> Function<T, ResourceKey<T>> keyExtractor(Registry<T> registry, String typeName) {

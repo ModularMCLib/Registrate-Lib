@@ -44,7 +44,7 @@ public class BlockEntityBuilder<T extends BlockEntity, P> extends AbstractBuilde
 
     public interface BlockEntityFactory<T extends BlockEntity> {
 
-        public T create(BlockEntityType<T> type, BlockPos pos, BlockState state);
+        T create(BlockEntityType<T> type, BlockPos pos, BlockState state);
     }
 
     /**
@@ -75,7 +75,7 @@ public class BlockEntityBuilder<T extends BlockEntity, P> extends AbstractBuilde
 
     private final BlockEntityFactory<T> factory;
     private final Set<NonNullSupplier<? extends Block>> validBlocks = new HashSet<>();
-    private @Nullable NonNullSupplier<NonNullFunction<BlockEntityRendererProvider.Context, BlockEntityRenderer<? super T, ?>>> renderer;
+    private @Nullable NonNullSupplier<NonNullFunction<BlockEntityRendererProvider.Context, BlockEntityRenderer<T>>> renderer;
 
     protected BlockEntityBuilder(AbstractRegistrate<?> owner, P parent, String name, BuilderCallback callback, BlockEntityFactory<T> factory) {
         super(owner, parent, name, callback, Registries.BLOCK_ENTITY_TYPE);
@@ -119,7 +119,7 @@ public class BlockEntityBuilder<T extends BlockEntity, P> extends AbstractBuilde
      *                 given the renderer dispatcher
      * @return this {@link BlockEntityBuilder}
      */
-    public BlockEntityBuilder<T, P> renderer(NonNullSupplier<NonNullFunction<BlockEntityRendererProvider.Context, BlockEntityRenderer<? super T, ?>>> renderer) {
+    public BlockEntityBuilder<T, P> renderer(NonNullSupplier<NonNullFunction<BlockEntityRendererProvider.Context, BlockEntityRenderer<T>>> renderer) {
         if (this.renderer == null) { // First call only
             RegistrateDistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> this::registerRenderer);
         }
@@ -151,7 +151,9 @@ public class BlockEntityBuilder<T extends BlockEntity, P> extends AbstractBuilde
     protected BlockEntityType<T> createEntry() {
         BlockEntityFactory<T> factory = this.factory;
         final var supplier = asSupplier();
-        return new BlockEntityType<>((pos, state) -> factory.create(supplier.get(), pos, state), validBlocks.stream().map(NonNullSupplier::get).toArray(Block[]::new));
+        return BlockEntityType.Builder.of(
+                (pos, state) -> factory.create(supplier.get(), pos, state),
+                validBlocks.stream().map(NonNullSupplier::get).toArray(Block[]::new)).build(null);
     }
 
     @Override

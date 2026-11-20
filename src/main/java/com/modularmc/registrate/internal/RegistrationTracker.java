@@ -8,8 +8,8 @@ import com.modularmc.registrate.util.nullness.NonNullFunction;
 import com.modularmc.registrate.util.nullness.NonNullSupplier;
 
 import net.minecraft.core.Registry;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.RegisterEvent;
 
@@ -36,14 +36,14 @@ public final class RegistrationTracker {
 
     private static final class Registration<R, T extends R> {
 
-        private final Identifier identifier;
+        private final ResourceLocation identifier;
         private final ResourceKey<? extends Registry<R>> registryKey;
         private final NonNullSupplier<? extends T> creator;
         private final RegistryEntry<R, T> delegate;
         private final List<NonNullConsumer<? super T>> callbacks = new ArrayList<>();
 
         private Registration(
-                             Identifier identifier,
+                             ResourceLocation identifier,
                              ResourceKey<? extends Registry<R>> registryKey,
                              NonNullSupplier<? extends T> creator,
                              NonNullFunction<DeferredHolder<R, T>, ? extends RegistryEntry<R, T>> entryFactory) {
@@ -53,7 +53,7 @@ public final class RegistrationTracker {
             this.delegate = entryFactory.apply(DeferredHolder.create(registryKey, identifier));
         }
 
-        private Identifier getIdentifier() {
+        private ResourceLocation getIdentifier() {
             return identifier;
         }
 
@@ -100,7 +100,7 @@ public final class RegistrationTracker {
                     modId,
                     callbacks.size(),
                     entryKey.getLeft(),
-                    entryKey.getRight().identifier()));
+                    entryKey.getRight().location()));
             pendingEntryCallbacks.clear();
             if (devEnvironment) {
                 throw new IllegalStateException("Found unused register callbacks, see logs");
@@ -117,7 +117,7 @@ public final class RegistrationTracker {
                 RegistrateLogger.modMessage("Registering {} captured object(s) in {}"),
                 modId,
                 registrationsForType.size(),
-                registryKey.identifier());
+                registryKey.location());
         for (var entry : registrationsForType.entrySet()) {
             Registration<?, ?> registration = entry.getValue();
             try {
@@ -127,7 +127,7 @@ public final class RegistrationTracker {
                         RegistrateLogger.modMessage("Registered {} in {}"),
                         modId,
                         registration.getIdentifier(),
-                        registryKey.identifier());
+                        registryKey.location());
             } catch (Exception exception) {
                 if (skipErrors) {
                     LOGGER.error(
@@ -135,12 +135,12 @@ public final class RegistrationTracker {
                             RegistrateLogger.modMessage("Unexpected error while registering entry {} in {}"),
                             modId,
                             registration.getIdentifier(),
-                            registryKey.identifier(),
+                            registryKey.location(),
                             exception);
                 } else {
                     throw new RuntimeException(
                             "[%s] Unexpected error while registering entry %s in %s"
-                                    .formatted(modId, registration.getIdentifier(), registryKey.identifier()),
+                                    .formatted(modId, registration.getIdentifier(), registryKey.location()),
                             exception);
                 }
             }
@@ -165,7 +165,7 @@ public final class RegistrationTracker {
                                                       NonNullSupplier<? extends T> creator,
                                                       NonNullFunction<DeferredHolder<R, T>, ? extends RegistryEntry<R, T>> entryFactory) {
         Registration<R, T> registration = new Registration<>(
-                Identifier.fromNamespaceAndPath(modId, name),
+                ResourceLocation.fromNamespaceAndPath(modId, name),
                 registryKey,
                 creator,
                 entryFactory);
@@ -174,7 +174,7 @@ public final class RegistrationTracker {
                 RegistrateLogger.modMessage("Captured registration {} for registry {}"),
                 modId,
                 registration.getIdentifier(),
-                registryKey.identifier());
+                registryKey.location());
         pendingEntryCallbacks.removeAll(Pair.of(name, registryKey)).forEach(callback -> {
             @SuppressWarnings("unchecked")
             NonNullConsumer<? super T> unsafeCallback = (NonNullConsumer<? super T>) callback;
@@ -231,7 +231,7 @@ public final class RegistrationTracker {
         if (registration != null) {
             return registration;
         }
-        throw new IllegalArgumentException("Unknown registration " + name + " for type " + registryKey.identifier());
+        throw new IllegalArgumentException("Unknown registration " + name + " for type " + registryKey.location());
     }
 
     @SuppressWarnings("unchecked")
