@@ -59,7 +59,7 @@ interface RegistrateTagsProvider<T : Any> : RegistrateLookupFillerProvider {
 
 		override fun rawBuilder(key: TagKey<T>): TagBuilder = super.getOrCreateRawBuilder(key)
 
-		public override fun tag(key: TagKey<T>): TagAppender<T> = super.tag(key)
+		override fun tag(key: TagKey<T>): TagAppender<T> = super.tag(key)
 
 		override fun getFilledProvider(): CompletableFuture<HolderLookup.Provider> = createContentsProvider()
 
@@ -87,7 +87,7 @@ interface RegistrateTagsProvider<T : Any> : RegistrateLookupFillerProvider {
 
 		override fun rawBuilder(key: TagKey<T>): TagBuilder = super.getOrCreateRawBuilder(key)
 
-		public override fun tag(key: TagKey<T>): IntrinsicTagAppender<T> = super.tag(key)
+		override fun tag(key: TagKey<T>): IntrinsicTagAppender<T> = super.tag(key)
 
 		override fun getFilledProvider(): CompletableFuture<HolderLookup.Provider> = createContentsProvider()
 
