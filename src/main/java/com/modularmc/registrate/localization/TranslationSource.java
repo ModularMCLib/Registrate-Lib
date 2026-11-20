@@ -4,7 +4,6 @@ package com.modularmc.registrate.localization;
 public record TranslationSource(Kind kind, String location) {
 
     public enum Kind {
-        VARIANT,
         AUTOMATIC,
         DECLARED
     }

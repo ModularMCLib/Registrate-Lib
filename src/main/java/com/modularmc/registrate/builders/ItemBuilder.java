@@ -5,6 +5,7 @@ import com.modularmc.registrate.builders.base.AbstractBuilder;
 import com.modularmc.registrate.builders.base.BuilderCallback;
 import com.modularmc.registrate.internal.event.OneTimeEventReceiver;
 import com.modularmc.registrate.internal.util.RegistrateDistExecutor;
+import com.modularmc.registrate.localization.LocalizationDeclaration;
 import com.modularmc.registrate.providers.DataGenContext;
 import com.modularmc.registrate.providers.RegistrateLangProvider;
 import com.modularmc.registrate.providers.core.GeneratorType;
@@ -268,6 +269,11 @@ public class ItemBuilder<T extends Item, P> extends AbstractBuilder<Item, T, P, 
      */
     public ItemBuilder<T, P> defaultLang() {
         return lang(Item::getDescriptionId);
+    }
+
+    /** Configures the source text and translations of this entry. */
+    public ItemBuilder<T, P> localization(Consumer<LocalizationDeclaration.Builder> configure) {
+        return localization(Item::getDescriptionId, configure);
     }
 
     /**

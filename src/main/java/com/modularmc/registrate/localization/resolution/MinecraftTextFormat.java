@@ -31,34 +31,28 @@ final class MinecraftTextFormat {
             return PLAIN;
         }
 
+        var matcher = TOKEN.matcher(text);
+        if (!matcher.find(percent)) {
+            return PLAIN;
+        }
         var tokens = new ArrayList<Token>();
         var arguments = new Int2IntOpenHashMap();
-        var matcher = TOKEN.matcher(text);
         int nextArgument = 1;
-        while (percent >= 0) {
-            if (!matcher.region(percent, text.length()).lookingAt()) {
-                throw new IllegalArgumentException("Invalid Minecraft placeholder at index %d in %s".formatted(percent, location));
-            }
-
+        do {
             int argument;
-            if (matcher.end() - percent == 2 && text.charAt(percent + 1) == '%') {
+            if (text.charAt(matcher.start() + 1) == '%') {
                 argument = 0;
             } else if (matcher.group(1) == null) {
                 argument = nextArgument++;
             } else {
-                try {
-                    argument = Integer.parseInt(matcher.group(1));
-                } catch (NumberFormatException error) {
-                    throw new IllegalArgumentException("Invalid Minecraft argument index in " + location, error);
-                }
+                argument = Integer.parseInt(matcher.group(1));
                 if (argument < 1) {
                     throw new IllegalArgumentException("Minecraft argument indices start at 1 in " + location);
                 }
             }
             arguments.addTo(argument, 1);
-            tokens.add(new Token(percent, matcher.end(), argument));
-            percent = text.indexOf('%', matcher.end());
-        }
+            tokens.add(new Token(matcher.start(), matcher.end(), argument));
+        } while (matcher.find());
         return new Parsed(tokens, arguments);
     }
 

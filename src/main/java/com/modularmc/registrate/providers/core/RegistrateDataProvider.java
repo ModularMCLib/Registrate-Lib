@@ -48,7 +48,6 @@ public class RegistrateDataProvider implements DataProvider {
     }
 
     private final String mod;
-    private final AbstractRegistrate<?> owner;
     private final PackOutput output;
     private final Map<ProviderType<?>, RegistrateProvider> subProviders = new Object2ObjectLinkedOpenHashMap<>();
     private final Map<ProviderType<?>, ProviderType<?>> prerequisites = new Object2ObjectOpenHashMap<>();
@@ -57,7 +56,6 @@ public class RegistrateDataProvider implements DataProvider {
 
     public RegistrateDataProvider(AbstractRegistrate<?> parent, String modid, GatherDataEvent event) {
         this.mod = modid;
-        this.owner = parent;
         this.output = event.getGenerator().getPackOutput();
         this.registriesLookup = event.getLookupProvider();
 
@@ -120,7 +118,6 @@ public class RegistrateDataProvider implements DataProvider {
     void collectTranslations(TranslationRegistry registry) {
         if (subProviders.get(ProviderType.LANG) instanceof RegistrateLangProvider language) {
             language.collect(registry);
-            owner.collectRawTranslations(registry);
         }
     }
 

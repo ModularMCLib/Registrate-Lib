@@ -33,7 +33,7 @@ public class RegistryEntry<R, S extends R> extends DeferredHolder<R, S> implemen
     }
 
     /**
-     * Returns the declarations saved at submission. This works before the holder is bound.
+     * Returns this entry's declarations. This works before the holder is bound.
      */
     public EntryMetadata metadata() {
         return owner.getEntryMetadata(getKey());

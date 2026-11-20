@@ -11,10 +11,14 @@ import com.modularmc.registrate.internal.event.OneTimeEventReceiver;
 import com.modularmc.registrate.internal.lifecycle.RegistrateLifecycle;
 import com.modularmc.registrate.internal.util.DebugMarkers;
 import com.modularmc.registrate.internal.util.RegistrateLogger;
+import com.modularmc.registrate.localization.EntryLocalization;
+import com.modularmc.registrate.localization.LocalizationDeclaration;
+import com.modularmc.registrate.localization.MinecraftLocale;
 import com.modularmc.registrate.localization.TranslationKey;
 import com.modularmc.registrate.localization.TranslationSource;
 import com.modularmc.registrate.localization.TranslationSource.Kind;
 import com.modularmc.registrate.localization.resolution.TranslationRegistry;
+import com.modularmc.registrate.localization.terminology.LocalizationCatalog;
 import com.modularmc.registrate.providers.*;
 import com.modularmc.registrate.providers.core.*;
 import com.modularmc.registrate.util.CreativeModeTabModifier;
@@ -519,7 +523,6 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
     }
 
     private <P, R> S setDataGenerator(String entry, ResourceKey<? extends Registry<R>> registryType, DataGenerator<P> generator) {
-        if (!doDatagen.get()) return self();
         var existing = datagensByEntry.put(Pair.of(entry, registryType), generator.type(), generator);
         if (existing != null) {
             datagens.remove(generator.type(), existing.callback());
@@ -544,7 +547,6 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
      * @return this {@link AbstractRegistrate}
      */
     public <P, R> S removeDataGenerator(String entry, ResourceKey<? extends Registry<R>> registryType, GeneratorType<? extends P> type) {
-        if (!doDatagen.get()) return self();
         var existing = datagensByEntry.remove(Pair.of(entry, registryType), type);
         if (existing != null) {
             datagens.remove(type, existing.callback());
@@ -586,36 +588,44 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
         return initializer;
     }
 
-    private record RawTranslation(TranslationKey key, String text, TranslationSource source) {}
+    private record RawTranslation(TranslationKey key, LocalizationDeclaration declaration, TranslationSource source) {}
 
     private final List<RawTranslation> extraLang = new ArrayList<>();
     private final Queue<RawTranslation> generatedLang = new ConcurrentLinkedQueue<>();
-    private @Nullable String sourceLocale;
+    private @Nullable MinecraftLocale sourceLocale;
+    private final LocalizationCatalog localizationCatalog = new LocalizationCatalog();
 
     /** Configures the source locale for this mod before data generation. */
-    public S sourceLocale(String locale) {
+    public S sourceLocale(MinecraftLocale locale) {
         sourceLocale = locale;
         return self();
     }
 
     /** Returns the source locale after validating this mod's configuration. */
-    public String requireSourceLocale() {
-        return TranslationRegistry.requireLocale(sourceLocale, "[" + modid + "] sourceLocale");
+    public MinecraftLocale requireSourceLocale() {
+        var locale = sourceLocale;
+        if (locale == null) {
+            throw new IllegalArgumentException("[" + modid + "] Configure sourceLocale before generating languages");
+        }
+        return locale;
     }
 
-    public void collectRawTranslations(TranslationRegistry registry) {
+    public LocalizationCatalog localizationCatalog() {
+        return localizationCatalog;
+    }
+
+    public void collectRawTranslations(TranslationRegistry registry, MinecraftLocale locale) {
         for (var translation : extraLang) {
-            collectRawTranslation(registry, translation);
+            collectRawTranslation(registry, locale, translation);
         }
         for (RawTranslation translation; (translation = generatedLang.poll()) != null;) {
-            collectRawTranslation(registry, translation);
+            collectRawTranslation(registry, locale, translation);
         }
     }
 
-    private void collectRawTranslation(TranslationRegistry registry, RawTranslation translation) {
-        String locale = requireSourceLocale();
-        if (translation.source().kind() != Kind.AUTOMATIC || "en_us".equals(locale)) {
-            registry.add(translation.key(), locale, translation.text(), null, translation.source());
+    private void collectRawTranslation(TranslationRegistry registry, MinecraftLocale locale, RawTranslation translation) {
+        if (translation.source().kind() != Kind.AUTOMATIC || locale == MinecraftLocale.EN_US) {
+            registry.add(translation.key(), locale, translation.declaration(), translation.source());
         }
     }
 
@@ -672,14 +682,39 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
 
     private MutableComponent addRawLang(String key, String value, Kind kind) {
         if (doDatagen.get()) {
-            var declaration = new RawTranslation(new TranslationKey(modid, key), value, new TranslationSource(kind, "[" + modid + "] addRawLang(" + key + ")"));
-            if (provider == null) {
-                extraLang.add(declaration);
-            } else {
-                generatedLang.add(declaration);
-            }
+            addLocalization(new TranslationKey(modid, key), LocalizationDeclaration.sourceText(value), kind);
         }
         return Component.translatable(key);
+    }
+
+    /** Declares independent text and returns a component that uses its exact translation key. */
+    public MutableComponent addLocalization(TranslationKey key, Consumer<LocalizationDeclaration.Builder> configure) {
+        if (doDatagen.get()) {
+            var builder = new LocalizationDeclaration.Builder();
+            configure.accept(builder);
+            addLocalization(key, builder.build(), Kind.DECLARED);
+        }
+        return Component.translatable(key.value());
+    }
+
+    private void addLocalization(TranslationKey key, LocalizationDeclaration declaration, Kind kind) {
+        var translation = new RawTranslation(key, declaration, new TranslationSource(kind, "[" + modid + "] manual declaration of " + key.value()));
+        if (provider == null) {
+            extraLang.add(translation);
+        } else {
+            generatedLang.add(translation);
+        }
+    }
+
+    public void collectEntryTranslations(TranslationRegistry registry, MinecraftLocale locale) {
+        registrationTracker.forEachLocalization((entry, localization) -> {
+            if (localization.kind() == Kind.AUTOMATIC && locale != MinecraftLocale.EN_US) {
+                return;
+            }
+            var key = new TranslationKey(modid, localization.key().get());
+            var source = new TranslationSource(localization.kind(), "Builder " + entry.getId() + " in " + entry.getKey().registry());
+            registry.add(key, locale, localization.declaration().get(), source);
+        });
     }
 
     @SuppressWarnings("null")
@@ -948,19 +983,16 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
      * @return A {@link RegistryEntry} that will hold the created entry after registration is complete
      */
     protected <R, T extends R> RegistryEntry<R, T> accept(String name, ResourceKey<? extends Registry<R>> type, Builder<R, T, ?, ?> builder, NonNullSupplier<? extends T> creator, NonNullFunction<DeferredHolder<R, T>, ? extends RegistryEntry<R, T>> entryFactory) {
-        var existing = datagensByEntry.row(Pair.of(name, type));
-        var generators = new ArrayList<DataGenerator<?>>(existing.values());
-        if (builder instanceof AbstractBuilder<?, ?, ?, ?> base && name.equals(builder.getName())) {
-            for (var generator : base.dataGenerators()) {
-                if (!existing.containsKey(generator.type())) {
-                    generators.add(generator);
-                }
-            }
+        var generators = datagensByEntry.row(Pair.of(name, type));
+        EntryLocalization localization = null;
+        Collection<DataGenerator<?>> declarations = List.of();
+        if (builder instanceof AbstractBuilder<?, ?, ?, ?> base && name.equals(builder.getName()) && type.equals(builder.getRegistryKey())) {
+            declarations = base.dataGenerators();
+            localization = base.localization();
         }
-        var metadata = new EntryMetadata(generators);
-        var entry = registrationTracker.track(name, type, creator, entryFactory, metadata);
-        for (var generator : metadata.dataGenerators()) {
-            if (!existing.containsKey(generator.type())) {
+        var entry = registrationTracker.track(name, type, creator, entryFactory, new EntryMetadata(generators.values(), localization));
+        for (var generator : declarations) {
+            if (!generators.containsKey(generator.type())) {
                 setDataGenerator(name, type, generator);
             }
         }
@@ -968,7 +1000,7 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
     }
 
     /**
-     * Returns the snapshot for an entry submitted by this registrate instance.
+     * Returns the declarations for an entry submitted by this Registrate instance.
      */
     public EntryMetadata getEntryMetadata(ResourceKey<?> key) {
         return registrationTracker.getMetadata(key);

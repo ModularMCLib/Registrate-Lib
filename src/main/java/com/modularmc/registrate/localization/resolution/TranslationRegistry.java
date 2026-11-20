@@ -1,5 +1,7 @@
 package com.modularmc.registrate.localization.resolution;
 
+import com.modularmc.registrate.localization.LocalizationDeclaration;
+import com.modularmc.registrate.localization.MinecraftLocale;
 import com.modularmc.registrate.localization.TranslationKey;
 import com.modularmc.registrate.localization.TranslationSource;
 import com.modularmc.registrate.localization.TranslationSource.Kind;
@@ -11,27 +13,24 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.regex.Pattern;
 
 /**
  * Collects the language declarations for one generation output and resolves them before any language file is written.
  */
 public final class TranslationRegistry {
 
-    private static final Pattern LOCALE = Pattern.compile("[a-z]{2,3}(?:_[a-z0-9]{2,8})*");
-
     private final Map<EntryKey, Selection> selections = new Object2ObjectLinkedOpenHashMap<>();
 
-    public record LanguageFile(String namespace, String locale) {}
+    public record LanguageFile(String namespace, MinecraftLocale locale) {}
 
-    private record EntryKey(TranslationKey key, String locale) {
+    private record EntryKey(TranslationKey key, MinecraftLocale locale) {
 
         private String describe() {
-            return "%s/%s (%s)".formatted(key.namespace(), key.value(), locale);
+            return "%s/%s (%s)".formatted(key.namespace(), key.value(), locale.code());
         }
     }
 
-    private record Candidate(String text, @Nullable String sourceLocale, TranslationSource source) {}
+    private record Candidate(String text, @Nullable MinecraftLocale sourceLocale, TranslationSource source) {}
 
     private static final class Selection {
 
@@ -55,19 +54,16 @@ public final class TranslationRegistry {
         }
     }
 
-    public static String requireLocale(@Nullable String locale, String location) {
-        if (locale == null || !LOCALE.matcher(locale).matches()) {
-            throw new IllegalArgumentException("Missing or invalid Minecraft locale '%s' for %s".formatted(locale, location));
-        }
-        return locale;
+    public void add(TranslationKey key, MinecraftLocale locale, LocalizationDeclaration declaration, TranslationSource source) {
+        add(key, locale, declaration.source(), null, source);
+        declaration.translations().forEach((target, text) -> add(key, target, text, locale, source));
     }
 
     /**
      * Adds a candidate. An explicit translation identifies the source locale of its declaration so the final
      * translation can be checked against the selected source text for the same key.
      */
-    public void add(TranslationKey key, String locale, String text, @Nullable String sourceLocale, TranslationSource source) {
-        requireLocale(locale, source.location());
+    private void add(TranslationKey key, MinecraftLocale locale, String text, @Nullable MinecraftLocale sourceLocale, TranslationSource source) {
         var entry = new EntryKey(key, locale);
         var candidate = new Candidate(text, sourceLocale, source);
         var selection = selections.get(entry);
@@ -102,8 +98,8 @@ public final class TranslationRegistry {
                     }
                 }
             }
-            if ("en_us".equals(key.locale())) {
-                var upsideDown = new EntryKey(key.key(), "en_ud");
+            if (key.locale() == MinecraftLocale.EN_US) {
+                var upsideDown = new EntryKey(key.key(), MinecraftLocale.EN_UD);
                 if (!selections.containsKey(upsideDown)) {
                     put(files, upsideDown, MinecraftTextFormat.upsideDown(selection.candidates.getFirst().text(), formats.get(key)));
                 }

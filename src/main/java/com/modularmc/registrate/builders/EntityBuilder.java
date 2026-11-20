@@ -5,6 +5,7 @@ import com.modularmc.registrate.builders.base.AbstractBuilder;
 import com.modularmc.registrate.builders.base.BuilderCallback;
 import com.modularmc.registrate.internal.event.OneTimeEventReceiver;
 import com.modularmc.registrate.internal.util.RegistrateDistExecutor;
+import com.modularmc.registrate.localization.LocalizationDeclaration;
 import com.modularmc.registrate.providers.DataGenContext;
 import com.modularmc.registrate.providers.RegistrateLangProvider;
 import com.modularmc.registrate.providers.core.ProviderType;
@@ -37,6 +38,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -243,6 +245,11 @@ public class EntityBuilder<T extends Entity, P> extends AbstractBuilder<EntityTy
      */
     public EntityBuilder<T, P> defaultLang() {
         return lang(EntityType::getDescriptionId);
+    }
+
+    /** Configures the source text and translations of this entry. */
+    public EntityBuilder<T, P> localization(Consumer<LocalizationDeclaration.Builder> configure) {
+        return localization(EntityType::getDescriptionId, configure);
     }
 
     /**

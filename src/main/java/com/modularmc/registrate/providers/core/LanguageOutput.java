@@ -20,7 +20,7 @@ public final class LanguageOutput {
         var paths = output.createPathProvider(Target.RESOURCE_PACK, "lang");
         var files = registry.resolve().entrySet().stream().map(entry -> {
             var file = entry.getKey();
-            var path = paths.json(ResourceLocation.fromNamespaceAndPath(file.namespace(), file.locale()));
+            var path = paths.json(ResourceLocation.fromNamespaceAndPath(file.namespace(), file.locale().code()));
             var language = new JsonObject();
             entry.getValue().forEach(language::addProperty);
             return DataProvider.saveStable(cache, language, path);

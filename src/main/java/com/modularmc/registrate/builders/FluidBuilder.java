@@ -5,7 +5,7 @@ import com.modularmc.registrate.builders.base.AbstractBuilder;
 import com.modularmc.registrate.builders.base.BuilderCallback;
 import com.modularmc.registrate.internal.event.OneTimeEventReceiver;
 import com.modularmc.registrate.internal.util.RegistrateDistExecutor;
-import com.modularmc.registrate.localization.TranslationSource.Kind;
+import com.modularmc.registrate.localization.LocalizationDeclaration;
 import com.modularmc.registrate.providers.RegistrateLangProvider;
 import com.modularmc.registrate.providers.RegistrateTagsProvider;
 import com.modularmc.registrate.providers.core.ProviderType;
@@ -44,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
 
@@ -355,7 +356,12 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
      * @return this {@link FluidBuilder}
      */
     public FluidBuilder<T, P> defaultLang() {
-        return lang(f -> f.getFluidType().getDescriptionId(), RegistrateLangProvider.toEnglishName(sourceName), Kind.AUTOMATIC);
+        return defaultLang(f -> f.getFluidType().getDescriptionId(), sourceName);
+    }
+
+    /** Configures the source text and translations of this entry. */
+    public FluidBuilder<T, P> localization(Consumer<LocalizationDeclaration.Builder> configure) {
+        return localization(fluid -> fluid.getFluidType().getDescriptionId(), configure);
     }
 
     /**
@@ -584,13 +590,9 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
         Optional<RegistryEntry<Block, Block>> block = getOwner().getOptional(sourceName, Registries.BLOCK);
         this.typeProperties.accept(properties);
 
-        // Force the translation key after the user callback runs
-        // This is done because we need to remove the lang data generator if using the block key,
-        // and if it was possible to undo this change, it might result in the user translation getting
-        // silently lost, as there's no good way to check whether the translation key was changed.
+        // Use the sibling block's description ID for the default FluidType when it is already registered.
         if (block.isPresent() && block.get().isBound()) {
             properties.descriptionId(block.get().get().getDescriptionId());
-            removeData(ProviderType.LANG);
         } else {
             properties.descriptionId(Util.makeDescriptionId("fluid", ResourceLocation.fromNamespaceAndPath(getOwner().getModid(), sourceName)));
         }

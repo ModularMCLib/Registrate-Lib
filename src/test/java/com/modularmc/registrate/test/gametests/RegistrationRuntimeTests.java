@@ -60,7 +60,7 @@ public class RegistrationRuntimeTests {
             }
 
             helper.assertTrue(mod.registrate().get("testitem", Registries.ITEM) == mod.testitem, "Original holder");
-            helper.assertTrue(mod.testitem.metadata() == metadata, "Original metadata snapshot");
+            helper.assertTrue(mod.testitem.metadata() == metadata, "Original entry metadata");
             helper.assertTrue(metadata.dataGenerators().stream().anyMatch(generator -> generator.type() == ProviderType.ITEM_MODEL), "Item model declaration");
             helper.assertTrue(mod.testcustom.metadata().dataGenerators().isEmpty(), "Custom registry metadata");
             helper.succeed();

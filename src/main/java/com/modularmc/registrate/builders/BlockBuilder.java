@@ -6,6 +6,7 @@ import com.modularmc.registrate.builders.base.AbstractBuilder;
 import com.modularmc.registrate.builders.base.BuilderCallback;
 import com.modularmc.registrate.internal.event.OneTimeEventReceiver;
 import com.modularmc.registrate.internal.util.RegistrateDistExecutor;
+import com.modularmc.registrate.localization.LocalizationDeclaration;
 import com.modularmc.registrate.providers.DataGenContext;
 import com.modularmc.registrate.providers.RegistrateLangProvider;
 import com.modularmc.registrate.providers.core.GeneratorType;
@@ -39,6 +40,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
@@ -271,6 +273,11 @@ public class BlockBuilder<T extends Block, P> extends AbstractBuilder<Block, T, 
      */
     public BlockBuilder<T, P> defaultLang() {
         return lang(Block::getDescriptionId);
+    }
+
+    /** Configures the source text and translations of this entry. */
+    public BlockBuilder<T, P> localization(Consumer<LocalizationDeclaration.Builder> configure) {
+        return localization(Block::getDescriptionId, configure);
     }
 
     /**

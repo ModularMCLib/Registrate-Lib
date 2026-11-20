@@ -9,6 +9,7 @@
   "entity.testmod.testitem": "Testitem",
   "fluid.testmod.testbucketfluid": "Testbucketfluid",
   "fluid.testmod.testfluid": "Testfluid",
+  "gui.testmod.voltage": "Voltage: %s V",
   "item.testmod.testbucketfluid_bucket": "Testbucketfluid Bucket",
   "item.testmod.testentity_spawn_egg": "Testentity Spawn Egg",
   "item.testmod.testitem": "Testitem",

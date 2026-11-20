@@ -1,7 +1,8 @@
 package com.modularmc.registrate.builders.base;
 
 import com.modularmc.registrate.AbstractRegistrate;
-import com.modularmc.registrate.localization.TranslationSource;
+import com.modularmc.registrate.localization.EntryLocalization;
+import com.modularmc.registrate.localization.LocalizationDeclaration;
 import com.modularmc.registrate.localization.TranslationSource.Kind;
 import com.modularmc.registrate.providers.DataGenContext;
 import com.modularmc.registrate.providers.RegistrateLangProvider;
@@ -12,7 +13,6 @@ import com.modularmc.registrate.util.entry.EntryMetadata.DataGenerator;
 import com.modularmc.registrate.util.entry.LazyRegistryEntry;
 import com.modularmc.registrate.util.entry.RegistryEntry;
 import com.modularmc.registrate.util.nullness.NonNullBiConsumer;
-import com.modularmc.registrate.util.nullness.NonNullBiFunction;
 import com.modularmc.registrate.util.nullness.NonNullFunction;
 import com.modularmc.registrate.util.nullness.NonNullSupplier;
 
@@ -30,9 +30,11 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collection;
+import java.util.function.Consumer;
 
 /**
  * Base class which most builders should extend, instead of implementing [@link {@link Builder} directly.
@@ -66,6 +68,7 @@ public abstract class AbstractBuilder<R, T extends R, P, S extends AbstractBuild
 
     private final Multimap<ProviderType<? extends RegistrateTagsProvider<?>>, TagKey<?>> tagsByType = HashMultimap.create();
     private final Object2ObjectLinkedOpenHashMap<GeneratorType<?>, DataGenerator<?>> dataGenerators = new Object2ObjectLinkedOpenHashMap<>(4);
+    private @Nullable EntryLocalization localization;
     private boolean submitted;
 
     /** A supplier for the entry that will discard the reference to this builder after it is resolved */
@@ -91,8 +94,12 @@ public abstract class AbstractBuilder<R, T extends R, P, S extends AbstractBuild
         return entry;
     }
 
-    public final List<DataGenerator<?>> dataGenerators() {
-        return List.copyOf(dataGenerators.values());
+    public final Collection<DataGenerator<?>> dataGenerators() {
+        return dataGenerators.values();
+    }
+
+    public final @Nullable EntryLocalization localization() {
+        return localization;
     }
 
     @Override
@@ -100,6 +107,9 @@ public abstract class AbstractBuilder<R, T extends R, P, S extends AbstractBuild
     public <D> S setData(GeneratorType<? extends D> type, NonNullBiConsumer<DataGenContext<R, T>, D> consumer) {
         if (submitted) {
             return Builder.super.setData(type, consumer);
+        }
+        if (type == ProviderType.LANG) {
+            localization = null;
         }
         dataGenerators.putAndMoveToLast(type, new DataGenerator<>(type, provider -> consumer.accept(DataGenContext.from(this), provider)));
         return (S) this;
@@ -110,6 +120,9 @@ public abstract class AbstractBuilder<R, T extends R, P, S extends AbstractBuild
     public <D> S removeData(GeneratorType<? extends D> type) {
         if (submitted) {
             return Builder.super.removeData(type);
+        }
+        if (type == ProviderType.LANG) {
+            localization = null;
         }
         dataGenerators.remove(type);
         return (S) this;
@@ -193,7 +206,7 @@ public abstract class AbstractBuilder<R, T extends R, P, S extends AbstractBuild
      * @return this {@link Builder}
      */
     public S lang(NonNullFunction<T, String> langKeyProvider) {
-        return lang(langKeyProvider, (p, t) -> p.getAutomaticName(t, getRegistryKey()), Kind.AUTOMATIC);
+        return defaultLang(langKeyProvider, getName());
     }
 
     /**
@@ -207,16 +220,28 @@ public abstract class AbstractBuilder<R, T extends R, P, S extends AbstractBuild
      * @return this {@link Builder}
      */
     public S lang(NonNullFunction<T, String> langKeyProvider, String name) {
-        return lang(langKeyProvider, (p, s) -> name, Kind.DECLARED);
+        return localization(langKeyProvider, () -> LocalizationDeclaration.sourceText(name), Kind.DECLARED);
     }
 
-    protected S lang(NonNullFunction<T, String> langKeyProvider, String name, Kind kind) {
-        return lang(langKeyProvider, (provider, entry) -> name, kind);
+    protected S defaultLang(NonNullFunction<T, String> key, String path) {
+        return localization(key, () -> LocalizationDeclaration.sourceText(RegistrateLangProvider.toEnglishName(path)), Kind.AUTOMATIC);
     }
 
-    private S lang(NonNullFunction<T, String> langKeyProvider, NonNullBiFunction<RegistrateLangProvider, NonNullSupplier<? extends T>, String> localizedNameProvider, Kind kind) {
-        return setData(ProviderType.LANG, (ctx, prov) -> prov.add(langKeyProvider.apply(ctx.getEntry()), localizedNameProvider.apply(prov, ctx::getEntry),
-                new TranslationSource(kind, "Builder " + ctx.getId() + " in " + getRegistryKey().location())));
+    /**
+     * Configures a declaration whose key is obtained from the registered object during DataGen.
+     */
+    public S localization(NonNullFunction<T, String> key, Consumer<LocalizationDeclaration.Builder> configure) {
+        var declaration = new LocalizationDeclaration.Builder();
+        configure.accept(declaration);
+        var configured = declaration.build();
+        return localization(key, () -> configured, Kind.DECLARED);
+    }
+
+    private S localization(NonNullFunction<T, String> key, NonNullSupplier<LocalizationDeclaration> declaration, Kind kind) {
+        S builder = removeData(ProviderType.LANG);
+        var entry = asSupplier();
+        localization = new EntryLocalization(() -> key.apply(entry.get()), declaration, kind);
+        return builder;
     }
 
     public ResourceKey<R> getResourceKey() {

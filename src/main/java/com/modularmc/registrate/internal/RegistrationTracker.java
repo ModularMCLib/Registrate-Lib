@@ -2,6 +2,7 @@ package com.modularmc.registrate.internal;
 
 import com.modularmc.registrate.internal.util.DebugMarkers;
 import com.modularmc.registrate.internal.util.RegistrateLogger;
+import com.modularmc.registrate.localization.EntryLocalization;
 import com.modularmc.registrate.util.entry.EntryMetadata;
 import com.modularmc.registrate.util.entry.RegistryEntry;
 import com.modularmc.registrate.util.nullness.NonNullConsumer;
@@ -18,8 +19,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.Logger;
 
@@ -29,11 +30,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 public final class RegistrationTracker {
 
     private static final Logger LOGGER = RegistrateLogger.registration();
+
+    @RequiredArgsConstructor
+    private enum Stage {
+
+        CREATION("creation"),
+        INSERTION("registry insertion"),
+        CALLBACK("entry callback");
+
+        private final String description;
+    }
 
     private static final class Registration<R, T extends R> {
 
@@ -66,18 +78,18 @@ public final class RegistrationTracker {
         }
 
         private void register(RegisterEvent event) {
-            String stage = "creation";
+            Stage stage = Stage.CREATION;
             try {
                 T entry = creator.get();
-                stage = "registry insertion";
+                stage = Stage.INSERTION;
                 event.register(registryKey, helper -> helper.register(identifier, entry));
-                stage = "entry callback";
+                stage = Stage.CALLBACK;
                 callbacks.forEach(callback -> callback.accept(entry));
                 callbacks.clear();
             } catch (RuntimeException exception) {
                 throw new IllegalStateException(
                         "[%s] Registration of %s in %s failed during %s"
-                                .formatted(identifier.getNamespace(), identifier, registryKey.location(), stage),
+                                .formatted(identifier.getNamespace(), identifier, registryKey.location(), stage.description),
                         exception);
             }
         }
@@ -89,7 +101,7 @@ public final class RegistrationTracker {
     }
 
     private final String modId;
-    private final Map<ResourceKey<? extends Registry<?>>, Object2ObjectLinkedOpenHashMap<String, Registration<?, ?>>> registrations = new Object2ObjectOpenHashMap<>();
+    private final Map<ResourceKey<? extends Registry<?>>, Object2ObjectLinkedOpenHashMap<String, Registration<?, ?>>> registrations = new Object2ObjectLinkedOpenHashMap<>();
     private final Multimap<Pair<String, ResourceKey<? extends Registry<?>>>, NonNullConsumer<?>> pendingEntryCallbacks = HashMultimap.create();
     private final Multimap<ResourceKey<? extends Registry<?>>, Runnable> afterRegisterCallbacks = HashMultimap.create();
     private final Set<ResourceKey<? extends Registry<?>>> completedRegistrations = new ObjectOpenHashSet<>();
@@ -191,6 +203,17 @@ public final class RegistrationTracker {
 
     public EntryMetadata getMetadata(ResourceKey<?> key) {
         return getRegistration(key.location().getPath(), key.registryKey()).metadata;
+    }
+
+    public void forEachLocalization(BiConsumer<RegistryEntry<?, ?>, EntryLocalization> action) {
+        for (var row : registrations.values()) {
+            for (var registration : row.values()) {
+                var localization = registration.metadata.localization();
+                if (localization != null) {
+                    action.accept(registration.delegate, localization);
+                }
+            }
+        }
     }
 
     public <R, T extends R> void addRegisterCallback(

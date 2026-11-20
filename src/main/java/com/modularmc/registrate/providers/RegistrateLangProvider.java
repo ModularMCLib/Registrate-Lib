@@ -1,6 +1,7 @@
 package com.modularmc.registrate.providers;
 
 import com.modularmc.registrate.AbstractRegistrate;
+import com.modularmc.registrate.localization.LocalizationDeclaration;
 import com.modularmc.registrate.localization.TranslationKey;
 import com.modularmc.registrate.localization.TranslationSource;
 import com.modularmc.registrate.localization.TranslationSource.Kind;
@@ -122,29 +123,24 @@ public class RegistrateLangProvider extends LanguageProvider implements Registra
 
     @Override
     public void add(String key, String value) {
-        add(key, value, new TranslationSource(Kind.DECLARED, "[" + owner.getModid() + "] ProviderType.LANG (" + key + ")"));
-    }
-
-    public void add(String key, String value, TranslationSource source) {
-        operations.add(new Operation(key, value, source));
+        operations.add(new Operation(key, value, new TranslationSource(Kind.DECLARED, "[" + owner.getModid() + "] ProviderType.LANG (" + key + ")")));
     }
 
     public void collect(TranslationRegistry registry) {
+        var locale = owner.requireSourceLocale();
+        owner.collectEntryTranslations(registry, locale);
         addTranslations();
         for (var operation : operations) {
-            String locale = owner.requireSourceLocale();
-            if (operation.source().kind() != Kind.AUTOMATIC || "en_us".equals(locale)) {
-                registry.add(new TranslationKey(owner.getModid(), operation.key()), locale, operation.value(), null, operation.source());
-            }
+            registry.add(new TranslationKey(owner.getModid(), operation.key()), locale, LocalizationDeclaration.sourceText(operation.value()), operation.source());
         }
         operations.clear();
+        owner.collectRawTranslations(registry, locale);
     }
 
     @Override
     public CompletableFuture<?> run(CachedOutput cache) {
         var registry = new TranslationRegistry();
         collect(registry);
-        owner.collectRawTranslations(registry);
         return LanguageOutput.write(cache, packOutput, registry);
     }
 }
