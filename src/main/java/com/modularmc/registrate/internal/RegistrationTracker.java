@@ -190,9 +190,6 @@ public final class RegistrationTracker {
     }
 
     public EntryMetadata getMetadata(ResourceKey<?> key) {
-        if (!modId.equals(key.location().getNamespace())) {
-            throw new IllegalArgumentException("[%s] Entry %s belongs to another namespace".formatted(modId, key.location()));
-        }
         return getRegistration(key.location().getPath(), key.registryKey()).metadata;
     }
 

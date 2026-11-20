@@ -11,6 +11,10 @@ import com.modularmc.registrate.internal.event.OneTimeEventReceiver;
 import com.modularmc.registrate.internal.lifecycle.RegistrateLifecycle;
 import com.modularmc.registrate.internal.util.DebugMarkers;
 import com.modularmc.registrate.internal.util.RegistrateLogger;
+import com.modularmc.registrate.localization.TranslationKey;
+import com.modularmc.registrate.localization.TranslationSource;
+import com.modularmc.registrate.localization.TranslationSource.Kind;
+import com.modularmc.registrate.localization.resolution.TranslationRegistry;
 import com.modularmc.registrate.providers.*;
 import com.modularmc.registrate.providers.core.*;
 import com.modularmc.registrate.util.CreativeModeTabModifier;
@@ -60,6 +64,7 @@ import org.apache.logging.log4j.message.Message;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
@@ -259,7 +264,10 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
      *              The event
      */
     protected void onData(GatherDataEvent event) {
-        event.getGenerator().addProvider(true, provider = new RegistrateDataProvider(this, modid, event));
+        if (event.getMods().contains(modid)) {
+            provider = new RegistrateDataProvider(this, modid, event);
+            provider.attach(event);
+        }
     }
 
     /**
@@ -578,11 +586,38 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
         return initializer;
     }
 
-    private final NonNullSupplier<List<Pair<String, String>>> extraLang = NonNullSupplier.lazy(() -> {
-        final List<Pair<String, String>> ret = new ArrayList<>();
-        addDataGenerator(ProviderType.LANG, prov -> ret.forEach(p -> prov.add(p.getKey(), p.getValue())));
-        return ret;
-    });
+    private record RawTranslation(TranslationKey key, String text, TranslationSource source) {}
+
+    private final List<RawTranslation> extraLang = new ArrayList<>();
+    private final Queue<RawTranslation> generatedLang = new ConcurrentLinkedQueue<>();
+    private @Nullable String sourceLocale;
+
+    /** Configures the source locale for this mod before data generation. */
+    public S sourceLocale(String locale) {
+        sourceLocale = locale;
+        return self();
+    }
+
+    /** Returns the source locale after validating this mod's configuration. */
+    public String requireSourceLocale() {
+        return TranslationRegistry.requireLocale(sourceLocale, "[" + modid + "] sourceLocale");
+    }
+
+    public void collectRawTranslations(TranslationRegistry registry) {
+        for (var translation : extraLang) {
+            collectRawTranslation(registry, translation);
+        }
+        for (RawTranslation translation; (translation = generatedLang.poll()) != null;) {
+            collectRawTranslation(registry, translation);
+        }
+    }
+
+    private void collectRawTranslation(TranslationRegistry registry, RawTranslation translation) {
+        String locale = requireSourceLocale();
+        if (translation.source().kind() != Kind.AUTOMATIC || "en_us".equals(locale)) {
+            registry.add(translation.key(), locale, translation.text(), null, translation.source());
+        }
+    }
 
     /**
      * Add a custom translation mapping using the vanilla style of ResourceLocation -&gt; translation key conversion.
@@ -632,8 +667,17 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
      * @return A {@link MutableComponent} representing the translated text
      */
     public MutableComponent addRawLang(String key, String value) {
+        return addRawLang(key, value, Kind.DECLARED);
+    }
+
+    private MutableComponent addRawLang(String key, String value, Kind kind) {
         if (doDatagen.get()) {
-            extraLang.get().add(Pair.of(key, value));
+            var declaration = new RawTranslation(new TranslationKey(modid, key), value, new TranslationSource(kind, "[" + modid + "] addRawLang(" + key + ")"));
+            if (provider == null) {
+                extraLang.add(declaration);
+            } else {
+                generatedLang.add(declaration);
+            }
         }
         return Component.translatable(key);
     }
@@ -1341,7 +1385,7 @@ public abstract class AbstractRegistrate<S extends AbstractRegistrate<S>> {
         return this.generic(parent, name, Registries.CREATIVE_MODE_TAB, () -> {
             var builder = CreativeModeTab.builder()
                     .icon(() -> getAll(Registries.ITEM).stream().findFirst().map(ItemEntry::cast).map(ItemEntry::asStack).orElse(new ItemStack(Items.AIR)))
-                    .title(this.addLang("itemGroup", this.defaultCreativeModeTab.location(), RegistrateLangProvider.toEnglishName(name)));
+                    .title(addRawLang(Util.makeDescriptionId("itemGroup", this.defaultCreativeModeTab.location()), RegistrateLangProvider.toEnglishName(name), Kind.AUTOMATIC));
             config.accept(builder);
             return builder.build();
         });

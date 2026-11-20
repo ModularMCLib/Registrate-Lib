@@ -1,6 +1,8 @@
 package com.modularmc.registrate.builders.base;
 
 import com.modularmc.registrate.AbstractRegistrate;
+import com.modularmc.registrate.localization.TranslationSource;
+import com.modularmc.registrate.localization.TranslationSource.Kind;
 import com.modularmc.registrate.providers.DataGenContext;
 import com.modularmc.registrate.providers.RegistrateLangProvider;
 import com.modularmc.registrate.providers.RegistrateTagsProvider;
@@ -191,7 +193,7 @@ public abstract class AbstractBuilder<R, T extends R, P, S extends AbstractBuild
      * @return this {@link Builder}
      */
     public S lang(NonNullFunction<T, String> langKeyProvider) {
-        return lang(langKeyProvider, (p, t) -> p.getAutomaticName(t, getRegistryKey()));
+        return lang(langKeyProvider, (p, t) -> p.getAutomaticName(t, getRegistryKey()), Kind.AUTOMATIC);
     }
 
     /**
@@ -205,11 +207,16 @@ public abstract class AbstractBuilder<R, T extends R, P, S extends AbstractBuild
      * @return this {@link Builder}
      */
     public S lang(NonNullFunction<T, String> langKeyProvider, String name) {
-        return lang(langKeyProvider, (p, s) -> name);
+        return lang(langKeyProvider, (p, s) -> name, Kind.DECLARED);
     }
 
-    private S lang(NonNullFunction<T, String> langKeyProvider, NonNullBiFunction<RegistrateLangProvider, NonNullSupplier<? extends T>, String> localizedNameProvider) {
-        return setData(ProviderType.LANG, (ctx, prov) -> prov.add(langKeyProvider.apply(ctx.getEntry()), localizedNameProvider.apply(prov, ctx::getEntry)));
+    protected S lang(NonNullFunction<T, String> langKeyProvider, String name, Kind kind) {
+        return lang(langKeyProvider, (provider, entry) -> name, kind);
+    }
+
+    private S lang(NonNullFunction<T, String> langKeyProvider, NonNullBiFunction<RegistrateLangProvider, NonNullSupplier<? extends T>, String> localizedNameProvider, Kind kind) {
+        return setData(ProviderType.LANG, (ctx, prov) -> prov.add(langKeyProvider.apply(ctx.getEntry()), localizedNameProvider.apply(prov, ctx::getEntry),
+                new TranslationSource(kind, "Builder " + ctx.getId() + " in " + getRegistryKey().location())));
     }
 
     public ResourceKey<R> getResourceKey() {

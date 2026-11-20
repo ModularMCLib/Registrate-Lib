@@ -5,6 +5,7 @@ import com.modularmc.registrate.builders.base.AbstractBuilder;
 import com.modularmc.registrate.builders.base.BuilderCallback;
 import com.modularmc.registrate.internal.event.OneTimeEventReceiver;
 import com.modularmc.registrate.internal.util.RegistrateDistExecutor;
+import com.modularmc.registrate.localization.TranslationSource.Kind;
 import com.modularmc.registrate.providers.RegistrateLangProvider;
 import com.modularmc.registrate.providers.RegistrateTagsProvider;
 import com.modularmc.registrate.providers.core.ProviderType;
@@ -354,7 +355,7 @@ public class FluidBuilder<T extends BaseFlowingFluid, P> extends AbstractBuilder
      * @return this {@link FluidBuilder}
      */
     public FluidBuilder<T, P> defaultLang() {
-        return lang(f -> f.getFluidType().getDescriptionId(), RegistrateLangProvider.toEnglishName(sourceName));
+        return lang(f -> f.getFluidType().getDescriptionId(), RegistrateLangProvider.toEnglishName(sourceName), Kind.AUTOMATIC);
     }
 
     /**

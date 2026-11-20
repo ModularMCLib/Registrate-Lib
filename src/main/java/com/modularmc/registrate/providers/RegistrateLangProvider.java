@@ -1,6 +1,11 @@
 package com.modularmc.registrate.providers;
 
 import com.modularmc.registrate.AbstractRegistrate;
+import com.modularmc.registrate.localization.TranslationKey;
+import com.modularmc.registrate.localization.TranslationSource;
+import com.modularmc.registrate.localization.TranslationSource.Kind;
+import com.modularmc.registrate.localization.resolution.TranslationRegistry;
+import com.modularmc.registrate.providers.core.LanguageOutput;
 import com.modularmc.registrate.providers.core.ProviderType;
 import com.modularmc.registrate.providers.core.RegistrateProvider;
 import com.modularmc.registrate.util.nullness.NonNullSupplier;
@@ -21,7 +26,6 @@ import net.neoforged.fml.LogicalSide;
 import net.neoforged.neoforge.common.data.LanguageProvider;
 
 import org.apache.commons.lang3.StringUtils;
-import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,29 +36,16 @@ import java.util.stream.Collectors;
 
 public class RegistrateLangProvider extends LanguageProvider implements RegistrateProvider {
 
-    private static class AccessibleLanguageProvider extends LanguageProvider {
-
-        public AccessibleLanguageProvider(PackOutput packOutput, String modid, String locale) {
-            super(packOutput, modid, locale);
-        }
-
-        @Override
-        public void add(@Nullable String key, @Nullable String value) {
-            super.add(key, value);
-        }
-
-        @Override
-        protected void addTranslations() {}
-    }
-
     private final AbstractRegistrate<?> owner;
+    private final PackOutput packOutput;
+    private final List<Operation> operations = new ArrayList<>();
 
-    private final AccessibleLanguageProvider upsideDown;
+    private record Operation(String key, String value, TranslationSource source) {}
 
     public RegistrateLangProvider(AbstractRegistrate<?> owner, PackOutput packOutput) {
         super(packOutput, owner.getModid(), "en_us");
         this.owner = owner;
-        this.upsideDown = new AccessibleLanguageProvider(packOutput, owner.getModid(), "en_ud");
+        this.packOutput = packOutput;
     }
 
     @Override
@@ -64,7 +55,7 @@ public class RegistrateLangProvider extends LanguageProvider implements Registra
 
     @Override
     public String getName() {
-        return "Lang (en_us/en_ud)";
+        return "Registrate language declarations";
     }
 
     @Override
@@ -129,76 +120,31 @@ public class RegistrateLangProvider extends LanguageProvider implements Registra
         addEntityType(entity, getAutomaticName(entity, Registries.ENTITY_TYPE));
     }
 
-    // Automatic en_ud generation
-
-    private static final String NORMAL_CHARS =
-            /* lowercase */ "abcdefghijklmn\u00F1opqrstuvwxyz" +
-                    /* uppercase */ "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
-                    /* numbers */ "0123456789" +
-                    /* special */ "()[]{}<>\u25C1\u25B7_,;.?!/\\'";
-    private static final String UPSIDE_DOWN_CHARS =
-            /* lowercase */ "\u0250q\u0254p\u01DD\u025Fb\u0265\u0131\u0638\u029E\u05DF\u026Fuuodb\u0279s\u0287n\u028C\u028Dx\u028Ez" +
-                    /* uppercase */ "\u2C6F\u15FA\u0186\u15E1\u018E\u2132\u2141HI\u017F\u029E\uA780WNO\u0500\u1F49\u1D1AS\u27D8\u2229\u039BMX\u028EZ" +
-                    /* numbers */ "0\u0196\u1105\u0190\u3123\u03DB9\u312586" +
-                    /* special */ ")(][}{><\u25B7\u25C1\u203E'\u061B\u02D9\u00BF\u00A1\\/,";
-
-    static {
-        if (NORMAL_CHARS.length() != UPSIDE_DOWN_CHARS.length()) {
-            throw new AssertionError("Char maps do not match in length!");
-        }
-    }
-
-    private static boolean isFormatTokenChar(char c) {
-        return Character.isDigit(c) || c == '%' || c == '$' || c == 's' || c == 'd';
-    }
-
-    private String toUpsideDown(String normal) {
-        int formatIndex = 1;
-        ArrayList<Character> ud = new ArrayList<>();
-        for (int i = 0; i < normal.length(); i++) {
-            char c = normal.charAt(i);
-            if (c == '%') {
-                String fmtArg = "";
-                while (isFormatTokenChar(c)) {
-                    if (fmtArg.equals("%") && c == 's') {
-                        fmtArg = "%" + formatIndex + "$s";
-                        formatIndex++;
-                        i++;
-                        break;
-                    } else if (c == '$') {
-                        formatIndex++;
-                    }
-                    fmtArg += c;
-                    i++;
-                    c = i == normal.length() ? 0 : normal.charAt(i);
-                }
-                i--;
-                for (int j = fmtArg.length() - 1; j >= 0; j--) {
-                    ud.addFirst(fmtArg.charAt(j));
-                }
-                continue;
-            }
-            int lookup = NORMAL_CHARS.indexOf(c);
-            if (lookup >= 0) {
-                c = UPSIDE_DOWN_CHARS.charAt(lookup);
-            }
-            ud.addFirst(c);
-        }
-        StringBuilder builder = new StringBuilder(ud.size());
-        for (Character ch : ud) {
-            builder.append(ch);
-        }
-        return builder.toString();
-    }
-
     @Override
     public void add(String key, String value) {
-        super.add(key, value);
-        upsideDown.add(key, toUpsideDown(value));
+        add(key, value, new TranslationSource(Kind.DECLARED, "[" + owner.getModid() + "] ProviderType.LANG (" + key + ")"));
+    }
+
+    public void add(String key, String value, TranslationSource source) {
+        operations.add(new Operation(key, value, source));
+    }
+
+    public void collect(TranslationRegistry registry) {
+        addTranslations();
+        for (var operation : operations) {
+            String locale = owner.requireSourceLocale();
+            if (operation.source().kind() != Kind.AUTOMATIC || "en_us".equals(locale)) {
+                registry.add(new TranslationKey(owner.getModid(), operation.key()), locale, operation.value(), null, operation.source());
+            }
+        }
+        operations.clear();
     }
 
     @Override
     public CompletableFuture<?> run(CachedOutput cache) {
-        return CompletableFuture.allOf(super.run(cache), upsideDown.run(cache));
+        var registry = new TranslationRegistry();
+        collect(registry);
+        owner.collectRawTranslations(registry);
+        return LanguageOutput.write(cache, packOutput, registry);
     }
 }

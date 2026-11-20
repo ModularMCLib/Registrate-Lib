@@ -183,7 +183,7 @@ public class TestMod {
 
     public static final class TestCustomRegistryEntry {}
 
-    private final Registrate registrate = Registrate.create("testmod");
+    private final Registrate registrate = Registrate.create(MOD_ID).sourceLocale("en_us");
 
     @VisibleForTesting
     public final RegistryEntry<CreativeModeTab, CreativeModeTab> testcreativetab = registrate.object("test_creative_mode_tab")
@@ -322,12 +322,15 @@ public class TestMod {
         registrate.addRawLang("testmod.custom.lang.slashes", "/commmands look good and here is a backslash \\");
         registrate.addLang("tooltip", testblock.getId(), "Egg.");
         registrate.addLang("item", testitem.getId(), "testextra", "Magic!");
+        var rootAdvancement = ResourceLocation.fromNamespaceAndPath(MOD_ID, "root");
+        var advancementTitle = registrate.addLang("advancements", rootAdvancement, "title", "Test Advancement");
+        var advancementDescription = registrate.addLang("advancements", rootAdvancement, "description", "Get an egg.");
         registrate.addDataGenerator(ProviderType.ADVANCEMENT, adv -> Advancement.Builder.advancement()
                 .addCriterion("has_egg", InventoryChangeTrigger.TriggerInstance.hasItems(Items.EGG))
                 .display(Items.EGG,
-                        adv.title(registrate.getModid(), "root", "Test Advancement"), adv.desc(registrate.getModid(), "root", "Get an egg."),
+                        advancementTitle, advancementDescription,
                         ResourceLocation.withDefaultNamespace("textures/gui/advancements/backgrounds/stone.png"), AdvancementType.TASK, true, true, false)
-                .save(adv, registrate.getModid() + ":root"));
+                .save(adv, rootAdvancement.toString()));
         registrate.addDataGenerator(ProviderType.GENERIC_SERVER, provider -> provider.add(data -> {
             // generic server side provider to generate custom dimension
             // to teleport to this dimension use the following command

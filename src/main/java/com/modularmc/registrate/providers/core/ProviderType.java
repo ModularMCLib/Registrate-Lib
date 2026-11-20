@@ -127,6 +127,7 @@ public interface ProviderType<T extends RegistrateProvider> extends GeneratorTyp
             throw new IllegalStateException("Client datagen provider '" + name + "' is unavailable outside datagen");
         };
         RegistrateDataProvider.TYPES.put(name, type);
+        RegistrateDataProvider.CLIENT_TYPES.add(type);
         return type;
     }
 

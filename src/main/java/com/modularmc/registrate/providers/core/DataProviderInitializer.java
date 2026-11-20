@@ -27,6 +27,7 @@ public class DataProviderInitializer {
         List<Sorted> ans = new ArrayList<>();
         Set<ProviderType<?>> added = new HashSet<>();
         List<Map.Entry<String, ProviderType<?>>> remain = new ArrayList<>(RegistrateDataProvider.TYPES.entrySet());
+        remain.sort(Map.Entry.comparingByKey());
         while (!remain.isEmpty()) {
             if (!remain.removeIf(e -> {
                 ProviderType<?> type = e.getValue();
