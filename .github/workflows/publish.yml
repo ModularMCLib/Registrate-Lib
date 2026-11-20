@@ -11,7 +11,7 @@ on:
         required: true
         type: string
       version:
-        description: 'Version branch to update after publishing'
+        description: 'Version identifier; 26.1 or 1.21'
         required: true
         type: string
       release-body:
@@ -28,7 +28,7 @@ jobs:
     name: Build and Publish to Maven
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     env:
       CI: 'true'
     outputs:
@@ -36,19 +36,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: refs/tags/${{ inputs.tag-name }}
-          persist-credentials: false
+          ref: ${{ inputs.tag-name }}
       - name: Setup Build
         uses: ./.github/actions/build_setup
         with:
-          ref: refs/tags/${{ inputs.tag-name }}
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+          ref: ${{ inputs.tag-name }}
       - name: Get Version
         id: ver
-        run: |
-          version=$(./gradlew -q printVersion)
-          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(./gradlew -q printVersion)" >> $GITHUB_OUTPUT
       - name: Build
         run: ./gradlew assemble
       - name: Upload Build Artifacts
@@ -94,13 +89,13 @@ jobs:
 #      - name: Download artifacts
 #        uses: actions/download-artifact@v4
 #        with:
-#          name: build-artifacts-${{ inputs.tag-name }}
+#          name: build-artifacts-${{ inputs.branch }}
 #      - name: Publish Mod
 #        env:
-#          MC_VERSION: ${{ inputs.version == '1.21' && '1.21.1' || '26.1.2' }}
-#          LOADER: neoforge
-#          JAVA: ${{ inputs.version == '1.21' && '21' || '25' }}
-#          VERSION_TYPE: beta
+#          MC_VERSION: ${{ inputs.branch == '1.21' && '1.21.1' || '1.20.1' }}
+#          LOADER: ${{ inputs.branch == '1.21' && 'neoforge' || 'forge' }}
+#          JAVA: ${{ inputs.branch == '1.21' && '21' || '17' }}
+#          VERSION_TYPE: ${{ inputs.branch == '1.21' && 'beta' || 'beta' }}
 #        uses: Kir-Antipov/mc-publish@v3.3.0
 #        with:
 #          modrinth-id: aADDBrNC
@@ -127,13 +122,13 @@ jobs:
 #      - name: Download artifacts
 #        uses: actions/download-artifact@v4
 #        with:
-#          name: build-artifacts-${{ inputs.tag-name }}
+#          name: build-artifacts-${{ inputs.branch }}
 #      - name: Publish Mod
 #        env:
-#          MC_VERSION: ${{ inputs.version == '1.21' && '1.21.1' || '26.1.2' }}
-#          LOADER: neoforge
-#          JAVA: ${{ inputs.version == '1.21' && '21' || '25' }}
-#          VERSION_TYPE: ${{ inputs.version == '1.21' && 'alpha' || 'beta' }}
+#          MC_VERSION: ${{ inputs.branch == '1.21' && '1.21.1' || '1.20.1' }}
+#          LOADER: ${{ inputs.branch == '1.21' && 'neoforge' || 'forge' }}
+#          JAVA: ${{ inputs.branch == '1.21' && '21' || '17' }}
+#          VERSION_TYPE: ${{ inputs.branch == '1.21' && 'alpha' || 'beta' }}
 #        uses: Kir-Antipov/mc-publish@v3.3.0
 #        with:
 #          curseforge-id: 1397216
@@ -153,8 +148,7 @@ jobs:
   bump-version-and-changelog:
     name: Bump Version and Build Changelog
     needs: [ build, upload-release-artifacts ]
-    concurrency:
-      group: release-update-${{ inputs.version }}
+    if: ${{ always() && !failure() && !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -162,50 +156,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: refs/heads/${{ inputs.version }}
-          fetch-depth: 0
+          ref: ${{ inputs.version }}
       - name: Bump Version
-        env:
-          RELEASE_BRANCH: ${{ inputs.version }}
-          RELEASE_VERSION: ${{ needs.build.outputs.ver }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git switch -c "gh/release-$RELEASE_BRANCH"
-          current=$(sed -nE 's/^mod_version[[:blank:]]*=[[:blank:]]*(.*)$/\1/p' gradle.properties)
-          if [[ $current == "$RELEASE_VERSION" ]]; then
-            bumped=$(awk 'BEGIN { FS = OFS = "." } { $NF++; print }' <<< "$RELEASE_VERSION")
-            sed -i -E "s/^(mod_version[[:blank:]]*=[[:blank:]]*).*/\1$bumped/" gradle.properties
-            git commit -m "Bump version to $bumped" -- gradle.properties
-          fi
+          git switch -C gh/release-${{ inputs.version }}
+          BUMPED=$(echo ${{ needs.build.outputs.ver }} | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)
+          sed -i "s/= ${{ needs.build.outputs.ver }}/= ${BUMPED}/" gradle.properties
+          git commit -am "Bump version to ${BUMPED}"
       - name: Prepend to CHANGELOG
-        if: inputs.changelog-body != ''
+        if: inputs.changelog-body
         env:
           CHANGELOG_BODY: ${{ inputs.changelog-body }}
-          RELEASE_VERSION: ${{ needs.build.outputs.ver }}
         run: |
-          if git grep -Fq "## Version [v$RELEASE_VERSION](" -- CHANGELOG.md; then
-            exit 0
-          fi
-          {
-            head -n 2 CHANGELOG.md
-            printf '%s\n' "$CHANGELOG_BODY"
-            tail -n +3 CHANGELOG.md
-          } > changelog.tmp
-          mv changelog.tmp CHANGELOG.md
-          git commit -m 'Updated CHANGELOG' -- CHANGELOG.md
+          { head -n 2 CHANGELOG.md; printf '%s\n' "$CHANGELOG_BODY"; tail -n +3 CHANGELOG.md; } > temp.md && mv temp.md CHANGELOG.md
+          git commit -am "Updated CHANGELOG"
       - name: Push and PR
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_BRANCH: ${{ inputs.version }}
         run: |
-          if git diff --quiet "refs/remotes/origin/$RELEASE_BRANCH" HEAD; then
-            exit 0
-          fi
-          pr_branch="gh/release-$RELEASE_BRANCH"
-          git push --force-with-lease origin "HEAD:refs/heads/$pr_branch"
-          pull_request=$(gh pr list --base "$RELEASE_BRANCH" --head "$pr_branch" --json number --jq '.[0].number // empty')
-          if [[ -z $pull_request ]]; then
-            gh pr create --base "$RELEASE_BRANCH" --head "$pr_branch" --title "RELEASE for $RELEASE_BRANCH [no-snapshot]" \
-              --body 'Created by GH Workflow' --label 'ignore changelog'
-          fi
+          git push --force --set-upstream origin gh/release-${{ inputs.version }}
+          gh pr create -B ${{ inputs.version }} -H gh/release-${{ inputs.version }} --title "RELEASE for ${{ inputs.version }} [no-snapshot]" --body "Created by GH Workflow" --label "ignore changelog"

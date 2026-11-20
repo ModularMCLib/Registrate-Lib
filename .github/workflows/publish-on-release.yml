@@ -7,37 +7,34 @@ on:
 jobs:
   meta:
     name: Metadata
-    if: endsWith(github.ref_name, '-26.1') || endsWith(github.ref_name, '-1.21')
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
     outputs:
-      changelog: ${{ steps.changelog.outputs.changelog }}
+      CHANGELOG: ${{ steps.changelog.outputs.changelog }}
+    permissions:
+      contents: write
+      pull-requests: read
     steps:
       - name: Get Config
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
-          fetch-depth: 0
-          sparse-checkout: .github/json
+          ref: ${{ github.ref_name }}
+          sparse-checkout: '.github/json'
       - name: Generate changelog
         id: changelog
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CONFIG: ${{ contains(github.ref_name, '1.21') && '-1.21' || '' }}
         uses: mikepenz/release-changelog-builder-action@v5
         with:
-          token: ${{ github.token }}
-          configuration: "./.github/json/config${{ endsWith(github.ref_name, '-1.21') && '-1.21' || '' }}.json"
+          configuration: './.github/json/config${{ env.CONFIG }}.json'
           ignorePreReleases: true
           fetchViaCommits: true
           failOnError: true
 
   publish-26:
-    name: '26.1'
-    needs: meta
-    if: endsWith(github.ref_name, '-26.1')
-    permissions:
-      contents: write
-      pull-requests: write
+    name: 26.1
+    needs: [ meta ]
+    if: ${{ contains(github.ref_name, '26.1') || !contains(github.ref_name, '1.21') }}
     secrets: inherit
     uses: ./.github/workflows/publish.yml
     with:
@@ -45,15 +42,12 @@ jobs:
       tag-name: ${{ github.ref_name }}
       version: '26.1'
       release-body: ${{ github.event.release.body }}
-      changelog-body: ${{ needs.meta.outputs.changelog }}
+      changelog-body: ${{ needs.meta.outputs.CHANGELOG }}
 
   publish-21:
-    name: '1.21.1'
-    needs: meta
-    if: endsWith(github.ref_name, '-1.21')
-    permissions:
-      contents: write
-      pull-requests: write
+    name: 1.21.1
+    needs: [ meta ]
+    if: ${{ contains(github.ref_name, '1.21') || !contains(github.ref_name, '26.1') }}
     secrets: inherit
     uses: ./.github/workflows/publish.yml
     with:
@@ -61,4 +55,4 @@ jobs:
       tag-name: ${{ github.ref_name }}
       version: '1.21'
       release-body: ${{ github.event.release.body }}
-      changelog-body: ${{ needs.meta.outputs.changelog }}
+      changelog-body: ${{ needs.meta.outputs.CHANGELOG }}
