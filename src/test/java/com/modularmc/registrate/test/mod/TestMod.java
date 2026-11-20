@@ -6,6 +6,7 @@ import com.modularmc.registrate.localization.LocalizationProfile;
 import com.modularmc.registrate.localization.MinecraftLocale;
 import com.modularmc.registrate.localization.TextType;
 import com.modularmc.registrate.localization.TranslationKey;
+import com.modularmc.registrate.localization.annotation.Trans;
 import com.modularmc.registrate.localization.terminology.Domain;
 import com.modularmc.registrate.localization.terminology.LocalizationCatalog.GlossaryTerm;
 import com.modularmc.registrate.localization.terminology.LocalizationCatalog.Unit;
@@ -103,17 +104,18 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import javax.annotation.Nullable;
 
 @Mod(TestMod.MOD_ID)
 public class TestMod {
 
     public static final String MOD_ID = "testmod";
+
+    @Trans(modId = MOD_ID, key = TestMod.CUSTOM_LANG, source = "Test")
+    public static final String CUSTOM_LANG = "testmod.custom.lang";
+
     private static final GlossaryTerm POTENTIAL = new GlossaryTerm("electric_potential", "electric potential", List.of(Domain.PHYSICS), Map.of(MinecraftLocale.ZH_CN, "电势"));
     private static final LocalizationProfile TECHNOLOGY = new LocalizationProfile(List.of(Domain.ENGINEERING), TextType.ITEM, List.of(POTENTIAL));
 
@@ -176,13 +178,6 @@ public class TestMod {
             itemRenderer.renderStatic(new ItemStack(Items.DIAMOND), ItemDisplayContext.GROUND,
                     light, overlay, poseStack, buffers, blockEntity.getLevel(), 0);
             poseStack.popPose();
-        }
-    }
-
-    public static final class TestDummyBlockEntity extends BlockEntity {
-
-        public TestDummyBlockEntity(BlockEntityType<? extends TestDummyBlockEntity> type, BlockPos pos, BlockState state) {
-            super(type, pos, state);
         }
     }
 
@@ -252,16 +247,10 @@ public class TestMod {
             .register();
 
     @VisibleForTesting
-    public final BlockEntry<Block> magicItemModelTest = registrate.object("magic_item_model")
-            .block(Block::new)
-            .blockstate(() -> (ctx, prov) -> prov.create(
-                    ctx.getEntry(),
-                    prov.models().cubeAll("block/subfolder/" + ctx.getName(), prov.mcBlockTexture("gold_block")).getLocation()))
-            .simpleItem()
-            .register();
+    public final KotlinRegistrations kotlinEntries = new KotlinRegistrations(registrate);
 
     @VisibleForTesting
-    public final ItemEntry<BlockItem> testblockitem = (ItemEntry<BlockItem>) testblock.<Item, BlockItem>getSibling(Registries.ITEM);
+    public final ItemEntry<BlockItem> testblockitem = ItemEntry.cast(testblock.getSibling(Registries.ITEM));
     @VisibleForTesting
     public final BlockEntityEntry<ChestBlockEntity> testblockbe = BlockEntityEntry.cast(testblock.getSibling(Registries.BLOCK_ENTITY_TYPE));
 
@@ -282,12 +271,6 @@ public class TestMod {
             .register();
     @VisibleForTesting
     public final ItemEntry<SpawnEggItem> testentitySpawnEgg = ItemEntry.cast(registrate.get("testentity_spawn_egg", Registries.ITEM));
-
-    @VisibleForTesting
-    public final BlockEntityEntry<TestDummyBlockEntity> testblockentity = registrate.object("testblockentity")
-            .blockEntity(TestDummyBlockEntity::new)
-            .validBlock(() -> Blocks.DIRT)
-            .register();
 
     @VisibleForTesting
     public final FluidEntry<BaseFlowingFluid.Flowing> testfluid = registrate.object("testfluid")
@@ -323,7 +306,7 @@ public class TestMod {
         return builder.loot((prov, block) -> prov.dropOther(block, Items.DIAMOND));
     }
 
-    private static @Nullable TestMod INSTANCE = null;
+    private static TestMod INSTANCE;
 
     public TestMod(IEventBus eventBus, ModContainer container) {
         INSTANCE = this;
@@ -335,7 +318,6 @@ public class TestMod {
         registrate.addLocalization(new TranslationKey(MOD_ID, "gui.testmod.voltage"),
                 text -> text.profile(TECHNOLOGY).type(TextType.GUI_LABEL)
                         .source("Voltage: %s V").translation(MinecraftLocale.ZH_CN, "电压：%1$s V"));
-        registrate.addRawLang("testmod.custom.lang", "Test");
         registrate.addRawLang("testmod.custom.lang.with_placeholders1", "Placeholder 1 %s Placeholder 2 %s");
         registrate.addRawLang("testmod.custom.lang.with_placeholders2", "Placeholder 1 %s Placeholder 2 %2$s Placeholder 3 %s");
         registrate.addRawLang("testmod.custom.lang.brackets", "(Bracket 1) [Bracket 2] {Bracket 3} <Bracket 4> ◁Bracket 5▷");
@@ -428,7 +410,6 @@ public class TestMod {
     }
 
     public static TestMod instance() {
-        Objects.requireNonNull(INSTANCE, "Attempting to get mod instance before mod construction");
         return INSTANCE;
     }
 
