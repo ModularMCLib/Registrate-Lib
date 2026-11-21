@@ -12,7 +12,7 @@ interface Glossary {
 	fun find(id: String): GlossaryTerm?
 
 	/**
-	 * Finds all senses of a complete source label, including those with different domains or text types.
+	 * Finds all senses of a complete source label or alias, including those with different domains or text types.
 	 * The query uses locale-independent lowercase. An unmatched label returns an empty iterable.
 	 */
 	fun findBySource(normalizedSource: String): Iterable<GlossaryTerm>

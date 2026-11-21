@@ -3,6 +3,7 @@ package com.modularmc.registrate.test.gametests
 import com.modularmc.registrate.AbstractRegistrate
 import com.modularmc.registrate.localization.LocalizationDeclaration
 import com.modularmc.registrate.localization.LocalizationDeclaration.Companion.sourceText
+import com.modularmc.registrate.localization.LocalizationProfile
 import com.modularmc.registrate.localization.MinecraftLocale
 import com.modularmc.registrate.localization.MinecraftLocale.EN_UD
 import com.modularmc.registrate.localization.MinecraftLocale.EN_US
@@ -18,6 +19,8 @@ import com.modularmc.registrate.localization.terminology.Domain
 import com.modularmc.registrate.localization.terminology.Glossary
 import com.modularmc.registrate.localization.terminology.LocalizationCatalog
 import com.modularmc.registrate.localization.terminology.LocalizationCatalog.GlossaryTerm
+import com.modularmc.registrate.localization.terminology.LocalizationCatalog.TermRelation
+import com.modularmc.registrate.localization.terminology.UnitFormat
 import com.modularmc.registrate.providers.core.LanguageOutput
 import com.modularmc.registrate.test.mod.TestMod
 import com.modularmc.registrate.test.mod.localization.ChineseLocaleTestMod
@@ -31,6 +34,8 @@ import net.neoforged.testframework.gametest.EmptyTemplate
 import net.neoforged.testframework.gametest.GameTest
 
 import java.nio.file.Path
+
+import com.modularmc.registrate.localization.terminology.LocalizationCatalog.Unit as LocalizedUnit
 
 @ForEachTest(groups = ["registrate-localization"])
 object LocalizationTests {
@@ -118,6 +123,49 @@ object LocalizationTests {
 			registry.add(inventory, EN_US, sourceText("Potential"), manual, catalog)
 			val diagnostic = failure(registry::resolve)
 			helper.assertTrue(listOf("electric_potential", "personal_potential", manual.location, inventory.value).all { it in diagnostic }, "Ambiguous term diagnostic")
+			helper.succeed()
+		}
+	}
+
+	@JvmStatic
+	@GameTest
+	@EmptyTemplate(floor = true)
+	@TestHolder(description = ["Compose localization profiles and format a unit in its target locale"])
+	fun composeProfilesAndFormatUnits(test: DynamicTest) {
+		test.onGameTest { helper ->
+			val catalog = LocalizationCatalog()
+			val ohm = LocalizedUnit("ohm", "Ω", mapOf(EN_US to "ohm"), mapOf(ZH_CN to UnitFormat("0.00E0", '.', "")))
+			catalog.register(ohm)
+			helper.assertValueEqual("1250 Ω", ohm.format(1250, EN_US), "Default unit formatting")
+			helper.assertValueEqual("1.25E3Ω", ohm.format(1250, ZH_CN), "Localized scientific formatting")
+			val power = LocalizedUnit("kilowatt", "kW", emptyMap(), mapOf(ZH_CN to UnitFormat("0.0", ',', " ")))
+			helper.assertValueEqual("2,5 kW", power.format(2.5, ZH_CN), "Configured decimal separator")
+
+			val resistance = GlossaryTerm(
+				"resistance",
+				"electrical resistance",
+				listOf(Domain.PHYSICS),
+				mapOf(ZH_CN to "电阻"),
+				aliases = setOf("resistance"),
+				relations = mapOf(TermRelation.BROADER to setOf("electrical_quantity")),
+				unitIds = setOf("ohm"),
+			)
+			catalog.register(resistance)
+			val defaults = LocalizationProfile(listOf(Domain.ENGINEERING), TextType.DESCRIPTION, emptyList(), unitIds = listOf("kilowatt"))
+			val parent = LocalizationProfile(listOf(Domain.PHYSICS), TextType.GUI_LABEL, emptyList())
+			val terminology = LocalizationProfile(emptyList(), null, emptyList(), glossaryIds = listOf(resistance.id))
+			val profile = LocalizationProfile.Builder().defaults(defaults).inherits(parent).include(terminology).build()
+			val declaration = LocalizationDeclaration.Builder().source("Resistance").profile(profile).units("ohm").build()
+			helper.assertValueEqual(listOf(Domain.PHYSICS), declaration.domains, "Parent domains override defaults")
+			helper.assertValueEqual(TextType.GUI_LABEL, declaration.type!!, "Parent text type")
+			helper.assertValueEqual(listOf("kilowatt"), profile.unitIds, "Unit default")
+			helper.assertValueEqual(listOf("ohm"), declaration.unitIds, "Declaration overrides unit defaults")
+			helper.assertValueEqual(setOf("electrical_quantity"), catalog.glossary("resistance").orElseThrow().relations.getValue(TermRelation.BROADER), "Glossary relationships")
+			val registry = TranslationRegistry()
+			registry.add(inventory, EN_US, declaration, manual, catalog)
+			helper.assertValueEqual("电阻", registry.resolve().text(ZH_CN, inventory.value), "Included glossary ID resolves its alias")
+			val conflict = failure { LocalizationProfile.Builder().include(parent, defaults).build() }
+			helper.assertTrue("GUI_LABEL" in conflict && "DESCRIPTION" in conflict, "Same-level text types conflict")
 			helper.succeed()
 		}
 	}

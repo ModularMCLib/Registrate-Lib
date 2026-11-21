@@ -4,6 +4,7 @@ import com.modularmc.registrate.localization.terminology.LocalizationCatalog.Glo
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.objects.ObjectArrayList
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 
 internal class IndexedGlossary : Glossary {
 	private val terms = Object2ObjectOpenHashMap<String, GlossaryTerm>()
@@ -14,15 +15,30 @@ internal class IndexedGlossary : Glossary {
 	fun register(term: GlossaryTerm) {
 		val previous = terms.put(term.id, term)
 		if (previous != null) {
-			val oldSource = previous.source.lowercase()
-			val oldTerms = termsBySource.getValue(oldSource)
-			oldTerms.remove(previous)
-			if (oldTerms.isEmpty) termsBySource.remove(oldSource)
+			forEachForm(previous) { source ->
+				val oldTerms = termsBySource.getValue(source)
+				oldTerms.remove(previous)
+				if (oldTerms.isEmpty) termsBySource.remove(source)
+			}
 		}
-		termsBySource.computeIfAbsent(term.source.lowercase()) { ObjectArrayList(1) }.add(term)
+		forEachForm(term) { source ->
+			termsBySource.computeIfAbsent(source) { ObjectArrayList(1) }.add(term)
+		}
 	}
 
 	override fun find(id: String): GlossaryTerm? = terms[id]
 
 	override fun findBySource(normalizedSource: String): Iterable<GlossaryTerm> = termsBySource[normalizedSource] ?: emptyList()
+
+	private inline fun forEachForm(term: GlossaryTerm, action: (String) -> Unit) {
+		val source = term.source.lowercase()
+		if (term.aliases.isEmpty()) {
+			action(source)
+			return
+		}
+		val forms = ObjectOpenHashSet<String>(term.aliases.size + 1)
+		forms.add(source)
+		for (alias in term.aliases) forms.add(alias.lowercase())
+		forms.forEach(action)
+	}
 }

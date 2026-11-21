@@ -23,10 +23,26 @@ class LocalizationCatalog {
 		val textTypes: Set<TextType> = emptySet(),
 		val acceptedTranslations: Map<MinecraftLocale, Set<String>> = emptyMap(),
 		val forbiddenTranslations: Map<MinecraftLocale, Set<String>> = emptyMap(),
-	)
+		val aliases: Set<String> = emptySet(),
+		val relations: Map<TermRelation, Set<String>> = emptyMap(),
+		val unitIds: Set<String> = emptySet(),
+	) {
+		internal fun matches(sourceText: String): Boolean = source.equals(sourceText, ignoreCase = true) || aliases.any { it.equals(sourceText, ignoreCase = true) }
+	}
+
+	enum class TermRelation {
+		SYNONYM,
+		BROADER,
+		NARROWER,
+		PART_OF,
+		HAS_PART,
+		RELATED,
+	}
 
 	@JvmRecord
-	data class Unit(val id: String, val symbol: String, val names: Map<MinecraftLocale, String>)
+	data class Unit @JvmOverloads constructor(val id: String, val symbol: String, val names: Map<MinecraftLocale, String>, val formats: Map<MinecraftLocale, UnitFormat> = emptyMap()) {
+		fun format(value: Number, locale: MinecraftLocale): String = formats[locale]?.format(value, symbol) ?: "$value $symbol"
+	}
 
 	private val domains = EnumSet.noneOf(Domain::class.java)
 	private val indexedGlossary = IndexedGlossary()
@@ -93,7 +109,7 @@ class LocalizationCatalog {
 		var selected: GlossaryTerm? = null
 
 		fun consider(term: GlossaryTerm) {
-			if (!term.source.equals(declaration.source, ignoreCase = true)) return
+			if (!term.matches(declaration.source)) return
 			val previous = selected
 			if (previous != null && previous.id != term.id) ambiguousTerm(key, source, previous, term)
 			selected = term

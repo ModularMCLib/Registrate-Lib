@@ -38,6 +38,10 @@ var title = registrate.addLocalization(new TranslationKey(MOD_ID, "gui.mymod.vol
 
 通过 `registrate.localizationCatalog().register(glossary)` 接入项目自己的 `Glossary` 实现。接口通过 `find(id)` 查单条定义，通过 `findBySource(normalizedSource)` 返回完整标签的所有词义。源文本查询使用与 Locale 无关的小写形式。同一模组内的词条 ID 对应唯一的定义。
 
+词条可登记缩写和别名、用 `TermRelation` 指定与其他词条的关系，以及关联已登记的单位 ID。单位通过 `Unit.format(value, locale)` 按 Locale 格式化数值和符号。`UnitFormat` 配置 `DecimalFormat` 模式、小数分隔符和数值与符号之间的间距。
+
+`LocalizationProfile.Builder` 依次应用 `defaults(profile)`、`inherits(profile)` 和 `include(profiles…)`。同层的集合值可合并，冲突的文本类型或同 ID 词条会报错。声明可用 `.units("ohm")`、`.glossaryIds(...)` 等显式字段覆盖 Profile 中的对应值。
+
 ## 接入注解处理器
 
 用 `./gradlew :localization-processor:jar` 构建与库版本对应的处理器。Java 源码使用 `annotationProcessor`，Kotlin 源码使用 KSP 插件和 `ksp`。混合项目可同时使用两项配置，主库作为模组依赖。

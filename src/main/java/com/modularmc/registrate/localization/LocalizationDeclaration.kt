@@ -14,6 +14,7 @@ data class LocalizationDeclaration @JvmOverloads constructor(
 	val type: TextType?,
 	val glossary: List<GlossaryTerm>,
 	val glossaryIds: List<String> = emptyList(),
+	val unitIds: List<String> = emptyList(),
 ) {
 	class Builder {
 		private lateinit var source: String
@@ -21,7 +22,8 @@ data class LocalizationDeclaration @JvmOverloads constructor(
 		private var domains: List<Domain>? = null
 		private var type: TextType? = null
 		private var glossary: List<GlossaryTerm>? = null
-		private var glossaryIds: List<String> = emptyList()
+		private var glossaryIds: List<String>? = null
+		private var unitIds: List<String>? = null
 		private var profile = LocalizationProfile.EMPTY
 
 		fun source(source: String) = apply { this.source = source }
@@ -47,13 +49,16 @@ data class LocalizationDeclaration @JvmOverloads constructor(
 			glossaryIds = ids.asList()
 		}
 
+		fun units(vararg ids: String) = apply { unitIds = ids.asList() }
+
 		fun build() = LocalizationDeclaration(
 			source,
 			translations?.toMap() ?: emptyMap(),
 			domains ?: profile.domains,
 			type ?: profile.type,
 			glossary ?: profile.glossary,
-			glossaryIds,
+			glossaryIds ?: profile.glossaryIds,
+			unitIds ?: profile.unitIds,
 		)
 	}
 
