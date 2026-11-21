@@ -4,6 +4,8 @@ package com.modularmc.registrate.localization
 @JvmRecord
 data class TranslationSource(val kind: Kind, val location: String) {
 	enum class Kind {
+		FALLBACK,
+		VARIANT,
 		AUTOMATIC,
 		GLOSSARY,
 		DECLARED,

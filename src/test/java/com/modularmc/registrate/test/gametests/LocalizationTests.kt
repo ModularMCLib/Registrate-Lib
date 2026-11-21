@@ -5,6 +5,8 @@ import com.modularmc.registrate.localization.DeclarationDefaults
 import com.modularmc.registrate.localization.LocalizationDeclaration
 import com.modularmc.registrate.localization.LocalizationDeclaration.Companion.sourceText
 import com.modularmc.registrate.localization.MinecraftLocale
+import com.modularmc.registrate.localization.MinecraftLocale.EN_AU
+import com.modularmc.registrate.localization.MinecraftLocale.EN_GB
 import com.modularmc.registrate.localization.MinecraftLocale.EN_UD
 import com.modularmc.registrate.localization.MinecraftLocale.EN_US
 import com.modularmc.registrate.localization.MinecraftLocale.ZH_CN
@@ -13,6 +15,7 @@ import com.modularmc.registrate.localization.TranslationKey
 import com.modularmc.registrate.localization.TranslationSource
 import com.modularmc.registrate.localization.TranslationSource.Kind
 import com.modularmc.registrate.localization.index.IndexedTranslations
+import com.modularmc.registrate.localization.locale.LocaleDerivation
 import com.modularmc.registrate.localization.resolution.TranslationRegistry
 import com.modularmc.registrate.localization.resolution.TranslationRegistry.LanguageFile
 import com.modularmc.registrate.localization.terminology.Domain
@@ -165,6 +168,45 @@ object LocalizationTests {
 			helper.assertValueEqual("电阻", registry.resolve().text(ZH_CN, inventory.value), "Included glossary ID resolves its alias")
 			val conflict = failure { DeclarationDefaults.Builder().include(parent, defaults).build() }
 			helper.assertTrue("GUI_LABEL" in conflict && "DESCRIPTION" in conflict, "Same-level text types conflict")
+			helper.succeed()
+		}
+	}
+
+	@JvmStatic
+	@GameTest
+	@EmptyTemplate(floor = true)
+	@TestHolder(description = ["Derive configured locales while preserving Minecraft text and measurement symbols"])
+	fun deriveLocalesAndProtectFormatting(test: DynamicTest) {
+		test.onGameTest { helper ->
+			val owner = UnconfiguredRegistrate()
+			val terms = owner.terminology()
+			terms.register(MeasurementUnit("kilowatt", "kW", emptyMap()))
+			terms.register(MeasurementUnit("ohm", "Ω", emptyMap()))
+			owner.deriveLocale(LocaleDerivation(EN_US, EN_GB) { text, _ -> text.lowercase().replace("color", "colour") })
+			owner.deriveLocale(LocaleDerivation.fallback(EN_GB, EN_AU))
+
+			val registry = TranslationRegistry()
+			owner.configureLocaleDerivations(registry)
+			val text = $$"§cColor %1$s at 5 kW / Ω\nhttps://example.org/Power %%"
+			val british = $$"§ccolour %1$s at 5 kW / Ω\nhttps://example.org/Power %%"
+			val declaration = LocalizationDeclaration.Builder().source(text).units("kilowatt", "ohm").build()
+			registry.add(inventory, EN_US, declaration, manual, terms)
+			val languages = registry.resolve()
+			helper.assertValueEqual(british, languages.text(EN_GB, inventory.value), "Only plain text is converted")
+			helper.assertValueEqual(british, languages.text(EN_AU, inventory.value), "An explicitly configured chain can use a derived text")
+			val inverted = languages.text(EN_UD, inventory.value)
+			val preserved = listOf($$"%1$s", "%%", "kW", "Ω", "https://example.org/Power", "\n")
+			helper.assertTrue(inverted.startsWith("§c") && preserved.all { it in inverted }, "Upside-down English protects formatting and units")
+
+			val explicit = $$"Color %1$s %%"
+			registry.add(inventory, EN_US, declaration.copy(translations = mapOf(EN_GB to explicit)), builder, terms)
+			val explicitLanguages = registry.resolve()
+			helper.assertValueEqual(explicit, explicitLanguages.text(EN_GB, inventory.value), "An explicit translation wins")
+			helper.assertValueEqual(explicit, explicitLanguages.text(EN_AU, inventory.value), "The chain uses the winning text")
+
+			owner.deriveLocale(LocaleDerivation.fallback(EN_GB, EN_US))
+			val cycle = failure { owner.configureLocaleDerivations(registry) }
+			helper.assertTrue(listOf(owner.modid, "en_us", "en_gb", "cycle").all { it in cycle }, "Cycle diagnostic")
 			helper.succeed()
 		}
 	}

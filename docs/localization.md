@@ -42,6 +42,12 @@ var title = registrate.addLocalization(new TranslationKey(MOD_ID, "gui.mymod.vol
 
 `DeclarationDefaults.Builder` 依次应用基础默认值、继承值和组合值，对应 `defaults`、`inherits` 和 `include`。同层的集合值可合并，冲突的文本类型或同 ID 词条会报错。声明可用 `.units("ohm")`、`.glossaryIds(...)` 等显式字段覆盖对应的默认值。
 
+### 语言转换与回退
+
+`registrate.deriveLocale(new LocaleDerivation(EN_US, EN_GB, converter))` 为模组注册转换规则。转换器处理未受保护的文本片段，可读取语言、Key 和声明。`LocaleDerivation.fallback(EN_GB, EN_AU)` 在缺少目标译文时使用已解析的输入语言。规则允许组成多步路径，循环会在 DataGen 收集时报告。已有译文优先于转换和回退。
+
+转换会保留 Minecraft 参数、样式标记、URL、换行和已声明的单位符号。默认的 `en_us → en_ud` 同样遵循这些规则，并用显式索引保持倒置后的参数含义。
+
 ## 接入注解处理器
 
 用 `./gradlew :localization-processor:jar` 构建与库版本对应的处理器。Java 源码使用 `annotationProcessor`，Kotlin 源码使用 KSP 插件和 `ksp`。混合项目可同时使用两项配置，主库作为模组依赖。

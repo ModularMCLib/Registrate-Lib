@@ -32,6 +32,7 @@ import com.modularmc.registrate.localization.LocalizationDeclaration.Companion.s
 import com.modularmc.registrate.localization.MinecraftLocale
 import com.modularmc.registrate.localization.TranslationKey
 import com.modularmc.registrate.localization.TranslationSource
+import com.modularmc.registrate.localization.locale.LocaleDerivation
 import com.modularmc.registrate.localization.resolution.TranslationRegistry
 import com.modularmc.registrate.localization.terminology.Terminology
 import com.modularmc.registrate.providers.RegistrateLangProvider.Companion.toEnglishName
@@ -92,6 +93,7 @@ import com.mojang.serialization.Codec
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.logging.log4j.Level
 
+import java.util.EnumMap
 import java.util.Optional
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.function.BiConsumer
@@ -553,6 +555,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	private val generatedLang = ConcurrentLinkedQueue<RawTranslation>()
 	private var sourceLocale: MinecraftLocale? = null
 	private val terminology = Terminology()
+	private val localeDerivations = EnumMap<MinecraftLocale, LocaleDerivation>(MinecraftLocale::class.java)
 
 	/** Configures the source locale for this mod before data generation.  */
 	open fun sourceLocale(locale: MinecraftLocale): S {
@@ -568,6 +571,16 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	}
 
 	open fun terminology(): Terminology = terminology
+
+	/** Configures how DataGen fills a missing locale for this mod. The rule for a target can be replaced during setup. */
+	open fun deriveLocale(derivation: LocaleDerivation): S {
+		localeDerivations[derivation.output] = derivation
+		return self()
+	}
+
+	internal fun configureLocaleDerivations(registry: TranslationRegistry) {
+		if (localeDerivations.isNotEmpty()) registry.configureDerivations(terminology(), modid, localeDerivations.values)
+	}
 
 	open fun collectRawTranslations(registry: TranslationRegistry, locale: MinecraftLocale) {
 		for (translation in extraLang) {

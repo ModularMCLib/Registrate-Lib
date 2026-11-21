@@ -71,6 +71,8 @@ class Terminology {
 
 	fun unit(id: String): Optional<MeasurementUnit> = Optional.ofNullable(units[id])
 
+	internal fun unitSymbol(id: String): String = units.getValue(id).symbol
+
 	internal fun resolveTerm(key: TranslationKey, declaration: LocalizationDeclaration, source: TranslationSource): GlossaryTerm? {
 		if (declaration.glossary.isNotEmpty() || declaration.glossaryIds.isNotEmpty()) {
 			resolveExplicitTerm(key, declaration, source)?.let { return it }

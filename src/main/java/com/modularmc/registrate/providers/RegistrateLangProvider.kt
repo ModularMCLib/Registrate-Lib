@@ -98,6 +98,7 @@ open class RegistrateLangProvider(private val owner: AbstractRegistrate<*>, priv
 		val modId = owner.modid
 		val locale = owner.requireSourceLocale()
 		val terminology = owner.terminology()
+		owner.configureLocaleDerivations(registry)
 		owner.collectEntryTranslations(registry, locale)
 		addTranslations()
 		for (operation in operations) {
