@@ -971,7 +971,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		addModListener(
 			this,
 			NewRegistryEvent::class.java,
-			Consumer { e: NewRegistryEvent -> e.register<R>(builder.apply(registryId).create()) },
+			Consumer { e: NewRegistryEvent -> e.register(builder.apply(registryId).create()) },
 		)
 		return registryId
 	}
@@ -1015,7 +1015,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		addModListener(
 			this,
 			NewRegistry::class.java,
-			Consumer { event: NewRegistry -> event.dataPackRegistry<R>(registryId, codec, networkCodec) },
+			Consumer { event: NewRegistry -> event.dataPackRegistry(registryId, codec, networkCodec) },
 		)
 		return registryId
 	}
@@ -1386,14 +1386,14 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 			Registries.CREATIVE_MODE_TAB,
 			Identifier.fromNamespaceAndPath(this.modid, name),
 		)
-		return this.generic<CreativeModeTab, CreativeModeTab, P>(
+		return this.generic(
 			parent,
 			name,
 			Registries.CREATIVE_MODE_TAB,
 		) {
 			val builder = CreativeModeTab.builder()
 				.icon {
-					getAll<Item, Item>(Registries.ITEM).firstOrNull()?.get()?.let(::ItemStack) ?: ItemStack.EMPTY
+					getAll(Registries.ITEM).firstOrNull()?.get()?.let(::ItemStack) ?: ItemStack.EMPTY
 				}
 				.title(
 					addRawLang(
