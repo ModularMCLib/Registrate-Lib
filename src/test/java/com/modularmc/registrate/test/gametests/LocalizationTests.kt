@@ -15,6 +15,9 @@ import com.modularmc.registrate.localization.index.IndexedTranslations
 import com.modularmc.registrate.localization.resolution.TranslationRegistry
 import com.modularmc.registrate.localization.resolution.TranslationRegistry.LanguageFile
 import com.modularmc.registrate.localization.terminology.Domain
+import com.modularmc.registrate.localization.terminology.Glossary
+import com.modularmc.registrate.localization.terminology.LocalizationCatalog
+import com.modularmc.registrate.localization.terminology.LocalizationCatalog.GlossaryTerm
 import com.modularmc.registrate.providers.core.LanguageOutput
 import com.modularmc.registrate.test.mod.TestMod
 import com.modularmc.registrate.test.mod.localization.ChineseLocaleTestMod
@@ -72,6 +75,49 @@ object LocalizationTests {
 			helper.assertTrue(metadata.type == TextType.ITEM, "Text type from profile")
 			helper.assertValueEqual(catalog.glossary("electric_potential").orElseThrow(), metadata.glossary.first(), "Glossary from profile")
 			helper.assertValueEqual("V", catalog.unit("volt").orElseThrow().symbol, "Unit symbol")
+			helper.succeed()
+		}
+	}
+
+	@JvmStatic
+	@GameTest
+	@EmptyTemplate(floor = true)
+	@TestHolder(description = ["Resolve glossary labels using their owning mod, context and explicit terminology"])
+	fun resolveGlossaryByContext(test: DynamicTest) {
+		test.onGameTest { helper ->
+			val catalog = LocalizationCatalog()
+			catalog.register(GlossaryTerm("electric_potential", "potential", listOf(Domain.PHYSICS), mapOf(ZH_CN to "电势"), setOf(TextType.GUI_LABEL)))
+			val personal = GlossaryTerm("personal_potential", "potential", emptyList(), mapOf(ZH_CN to "潜力"), setOf(TextType.DESCRIPTION))
+			catalog.register(object : Glossary {
+				override fun find(id: String): GlossaryTerm? = personal.takeIf { it.id == id }
+
+				override fun findBySource(normalizedSource: String): Iterable<GlossaryTerm> = if (normalizedSource == personal.source) listOf(personal) else emptyList()
+			})
+			val anotherCatalog = LocalizationCatalog()
+			anotherCatalog.register(GlossaryTerm("potential", "potential", emptyList(), mapOf(ZH_CN to "势能")))
+
+			val registry = TranslationRegistry()
+			val electrical = TranslationKey(TestMod.MOD_ID, "gui.testmod.electrical_potential")
+			val talent = electrical.copy(value = "gui.testmod.personal_potential")
+			val override = electrical.copy(value = "gui.testmod.potential_override")
+			val otherMod = electrical.copy(value = "gui.localetest.potential")
+			registry.add(electrical, EN_US, LocalizationDeclaration.Builder().source("Potential").domain(Domain.PHYSICS).build(), builder, catalog)
+			registry.add(talent, EN_US, LocalizationDeclaration.Builder().source("Potential").type(TextType.DESCRIPTION).build(), manual, catalog)
+			val explicit = LocalizationDeclaration.Builder().source("Potential").domain(Domain.PHYSICS).glossaryIds("personal_potential").build()
+			registry.add(override, EN_US, explicit, manual, catalog)
+			registry.add(otherMod, EN_US, sourceText("Potential"), manual, anotherCatalog)
+			val languages = registry.resolve()
+			helper.assertValueEqual("电势", languages.text(ZH_CN, electrical.value), "Domain selects electric potential")
+			helper.assertValueEqual("潜力", languages.text(ZH_CN, talent.value), "Text type selects personal potential")
+			helper.assertValueEqual("潜力", languages.text(ZH_CN, override.value), "Explicit glossary ID takes priority")
+			helper.assertValueEqual("势能", languages.text(ZH_CN, otherMod.value), "A shared namespace uses its declaring mod's glossary")
+
+			registry.add(electrical, EN_US, LocalizationDeclaration.Builder().source("Potential").translation(ZH_CN, "电位").build(), manual)
+			helper.assertValueEqual("电位", registry.resolve().text(ZH_CN, electrical.value), "Explicit translation takes priority over glossary")
+
+			registry.add(inventory, EN_US, sourceText("Potential"), manual, catalog)
+			val diagnostic = failure(registry::resolve)
+			helper.assertTrue(listOf("electric_potential", "personal_potential", manual.location, inventory.value).all { it in diagnostic }, "Ambiguous term diagnostic")
 			helper.succeed()
 		}
 	}

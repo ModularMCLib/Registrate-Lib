@@ -32,6 +32,12 @@ var title = registrate.addLocalization(new TranslationKey(MOD_ID, "gui.mymod.vol
 
 在 `registrate.localizationCatalog()` 中登记 `Domain`、`GlossaryTerm` 和 `Unit`。Builder 的 `.profile(profile)` 可复用领域、文本类型和术语。条目的显式参数覆盖 Profile 的相应字段。
 
+### 按语境选取术语
+
+词表按声明所属的模组查询。完整源文本与词条匹配时，优先使用 `.glossaryIds("electric_potential")` 或 `.glossary(term)` 指定的术语。其余候选按 `Domain` 和 `TextType` 筛选，匹配程度相同的词条会报告声明位置与术语 ID。词表的首选译名可以补充缺少的译文。条目已有译文时，解析保留显式值，并提示禁用译名或词表未收录的写法。
+
+通过 `registrate.localizationCatalog().register(glossary)` 接入项目自己的 `Glossary` 实现。接口通过 `find(id)` 查单条定义，通过 `findBySource(normalizedSource)` 返回完整标签的所有词义。源文本查询使用与 Locale 无关的小写形式。同一模组内的词条 ID 对应唯一的定义。
+
 ## 接入注解处理器
 
 用 `./gradlew :localization-processor:jar` 构建与库版本对应的处理器。Java 源码使用 `annotationProcessor`，Kotlin 源码使用 KSP 插件和 `ksp`。混合项目可同时使用两项配置，主库作为模组依赖。

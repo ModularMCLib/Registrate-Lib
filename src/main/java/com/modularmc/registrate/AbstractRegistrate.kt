@@ -581,7 +581,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 
 	private fun collectRawTranslation(registry: TranslationRegistry, locale: MinecraftLocale, translation: RawTranslation) {
 		if (translation.source.kind != TranslationSource.Kind.AUTOMATIC || locale == MinecraftLocale.EN_US) {
-			registry.add(translation.key, locale, translation.declaration, translation.source)
+			registry.add(translation.key, locale, translation.declaration, translation.source, localizationCatalog())
 		}
 	}
 
@@ -668,9 +668,9 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 			val key = TranslationKey(modid, localization.key.get())
 			val source = TranslationSource(
 				localization.kind,
-				"Builder ${entry.id} in ${entry.key!!.registry()}",
+				"Builder ${entry.id} in ${entry.key.registry()}",
 			)
-			registry.add(key, locale, localization.declaration.get(), source)
+			registry.add(key, locale, localization.declaration.get(), source, localizationCatalog())
 		}
 	}
 

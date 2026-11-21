@@ -5,6 +5,7 @@ package com.modularmc.registrate.localization
 data class TranslationSource(val kind: Kind, val location: String) {
 	enum class Kind {
 		AUTOMATIC,
+		GLOSSARY,
 		DECLARED,
 	}
 }

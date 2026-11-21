@@ -7,13 +7,21 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 
 /** A source declaration and its explicit translations, resolved against the owning mod's source locale. */
 @JvmRecord
-data class LocalizationDeclaration(val source: String, val translations: Map<MinecraftLocale, String>, val domains: List<Domain>, val type: TextType?, val glossary: List<GlossaryTerm>) {
+data class LocalizationDeclaration @JvmOverloads constructor(
+	val source: String,
+	val translations: Map<MinecraftLocale, String>,
+	val domains: List<Domain>,
+	val type: TextType?,
+	val glossary: List<GlossaryTerm>,
+	val glossaryIds: List<String> = emptyList(),
+) {
 	class Builder {
 		private lateinit var source: String
 		private var translations: Object2ObjectOpenHashMap<MinecraftLocale, String>? = null
 		private var domains: List<Domain>? = null
 		private var type: TextType? = null
 		private var glossary: List<GlossaryTerm>? = null
+		private var glossaryIds: List<String> = emptyList()
 		private var profile = LocalizationProfile.EMPTY
 
 		fun source(source: String) = apply { this.source = source }
@@ -29,7 +37,15 @@ data class LocalizationDeclaration(val source: String, val translations: Map<Min
 
 		fun domain(vararg domains: Domain) = apply { this.domains = domains.toList() }
 
-		fun glossary(vararg terms: GlossaryTerm) = apply { glossary = terms.toList() }
+		fun glossary(vararg terms: GlossaryTerm) = apply {
+			glossary = terms.asList()
+			glossaryIds = emptyList()
+		}
+
+		fun glossaryIds(vararg ids: String) = apply {
+			glossary = emptyList()
+			glossaryIds = ids.asList()
+		}
 
 		fun build() = LocalizationDeclaration(
 			source,
@@ -37,6 +53,7 @@ data class LocalizationDeclaration(val source: String, val translations: Map<Min
 			domains ?: profile.domains,
 			type ?: profile.type,
 			glossary ?: profile.glossary,
+			glossaryIds,
 		)
 	}
 
