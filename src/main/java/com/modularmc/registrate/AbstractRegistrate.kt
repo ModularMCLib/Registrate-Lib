@@ -284,7 +284,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 
 	/**
 	 * Allows retrieval of a previously created entry, of the current name (from the last invocation of
-	 * [object]. Useful to retrieve a different entry than the final state of your
+	 * [object]). Useful to retrieve a different entry than the final state of your
 	 * chain may produce, e.g.
 	 *
 	 * ```java
