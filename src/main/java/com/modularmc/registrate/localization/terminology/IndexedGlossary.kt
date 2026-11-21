@@ -1,6 +1,6 @@
 package com.modularmc.registrate.localization.terminology
 
-import com.modularmc.registrate.localization.terminology.LocalizationCatalog.GlossaryTerm
+import com.modularmc.registrate.localization.terminology.Terminology.GlossaryTerm
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.objects.ObjectArrayList

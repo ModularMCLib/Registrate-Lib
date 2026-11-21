@@ -1,9 +1,9 @@
 package com.modularmc.registrate.localization.terminology
 
-import com.modularmc.registrate.localization.terminology.LocalizationCatalog.GlossaryTerm
+import com.modularmc.registrate.localization.terminology.Terminology.GlossaryTerm
 
 /**
- * Supplies terminology to a mod's [LocalizationCatalog] from any storage format.
+ * Supplies terminology to a mod's [Terminology] from any storage format.
  * Register a glossary during mod setup and keep its lookups stable throughout DataGen.
  * Term IDs identify a single definition across the mod's glossaries.
  */

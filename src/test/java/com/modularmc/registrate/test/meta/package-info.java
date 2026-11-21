@@ -1,5 +1,5 @@
 /**
- * Maintenance helpers for generated bridge methods and protected API snapshots.
+ * Maintains generated bridge methods and protected API listings.
  *
  * <p>
  * These tests support source upkeep rather than runtime game behavior.

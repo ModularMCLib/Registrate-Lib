@@ -30,17 +30,17 @@ var title = registrate.addLocalization(new TranslationKey(MOD_ID, "gui.mymod.vol
 
 `addLocalization` 返回可用于 GUI 的翻译组件。进度标题等跨侧文本可在模组构造期间声明，在服务端 DataGen 的进度回调中引用组件。`addLang`、`addRawLang` 和 `ProviderType.LANG` 回调都使用同一个源 Locale。
 
-在 `registrate.localizationCatalog()` 中登记 `Domain`、`GlossaryTerm` 和 `Unit`。Builder 的 `.profile(profile)` 可复用领域、文本类型和术语。条目的显式参数覆盖 Profile 的相应字段。
+在 `registrate.terminology()` 中登记 `Domain`、`GlossaryTerm` 和 `MeasurementUnit`。Builder 的 `.defaults(defaults)` 可复用领域、文本类型和术语。条目的显式参数覆盖对应的默认值。
 
 ### 按语境选取术语
 
 词表按声明所属的模组查询。完整源文本与词条匹配时，优先使用 `.glossaryIds("electric_potential")` 或 `.glossary(term)` 指定的术语。其余候选按 `Domain` 和 `TextType` 筛选，匹配程度相同的词条会报告声明位置与术语 ID。词表的首选译名可以补充缺少的译文。条目已有译文时，解析保留显式值，并提示禁用译名或词表未收录的写法。
 
-通过 `registrate.localizationCatalog().register(glossary)` 接入项目自己的 `Glossary` 实现。接口通过 `find(id)` 查单条定义，通过 `findBySource(normalizedSource)` 返回完整标签的所有词义。源文本查询使用与 Locale 无关的小写形式。同一模组内的词条 ID 对应唯一的定义。
+通过 `registrate.terminology().register(glossary)` 接入项目自己的 `Glossary` 实现。接口通过 `find(id)` 查单条定义，通过 `findBySource(normalizedSource)` 返回完整标签的所有词义。源文本查询使用与 Locale 无关的小写形式。同一模组内的词条 ID 对应唯一的定义。
 
-词条可登记缩写和别名、用 `TermRelation` 指定与其他词条的关系，以及关联已登记的单位 ID。单位通过 `Unit.format(value, locale)` 按 Locale 格式化数值和符号。`UnitFormat` 配置 `DecimalFormat` 模式、小数分隔符和数值与符号之间的间距。
+词条可登记缩写和别名、用 `TermRelation` 指定与其他词条的关系，以及关联已登记的单位 ID。单位通过 `MeasurementUnit.format(value, locale)` 格式化数值和符号。`UnitFormat` 配置 `DecimalFormat` 模式、小数分隔符和数值与符号之间的间距。
 
-`LocalizationProfile.Builder` 依次应用 `defaults(profile)`、`inherits(profile)` 和 `include(profiles…)`。同层的集合值可合并，冲突的文本类型或同 ID 词条会报错。声明可用 `.units("ohm")`、`.glossaryIds(...)` 等显式字段覆盖 Profile 中的对应值。
+`DeclarationDefaults.Builder` 依次应用基础默认值、继承值和组合值，对应 `defaults`、`inherits` 和 `include`。同层的集合值可合并，冲突的文本类型或同 ID 词条会报错。声明可用 `.units("ohm")`、`.glossaryIds(...)` 等显式字段覆盖对应的默认值。
 
 ## 接入注解处理器
 

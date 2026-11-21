@@ -1,7 +1,7 @@
 package com.modularmc.registrate.localization
 
 import com.modularmc.registrate.localization.terminology.Domain
-import com.modularmc.registrate.localization.terminology.LocalizationCatalog.GlossaryTerm
+import com.modularmc.registrate.localization.terminology.Terminology.GlossaryTerm
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap
 import it.unimi.dsi.fastutil.objects.ObjectArrayList
@@ -9,47 +9,47 @@ import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet
 
 /** Reusable domain, text type and glossary defaults for a localization declaration. */
 @JvmRecord
-data class LocalizationProfile @JvmOverloads constructor(
+data class DeclarationDefaults @JvmOverloads constructor(
 	val domains: List<Domain>,
 	val type: TextType?,
 	val glossary: List<GlossaryTerm>,
 	val glossaryIds: List<String> = emptyList(),
 	val unitIds: List<String> = emptyList(),
 ) {
-	/** Builds a profile from already constructed profiles. Included values take precedence over inherited defaults. */
+	/** Combines existing defaults so that included values take precedence over inherited defaults. */
 	class Builder {
 		private var defaults = EMPTY
 		private var parent = EMPTY
-		private val included = ObjectArrayList<LocalizationProfile>()
+		private val included = ObjectArrayList<DeclarationDefaults>()
 
-		fun defaults(profile: LocalizationProfile) = apply { defaults = profile }
+		fun defaults(defaults: DeclarationDefaults) = apply { this.defaults = defaults }
 
-		fun inherits(profile: LocalizationProfile) = apply { parent = profile }
+		fun inherits(parent: DeclarationDefaults) = apply { this.parent = parent }
 
-		fun include(vararg profiles: LocalizationProfile) = apply { included.addAll(profiles.asList()) }
+		fun include(vararg defaults: DeclarationDefaults) = apply { included.addAll(defaults.asList()) }
 
-		fun build(): LocalizationProfile {
+		fun build(): DeclarationDefaults {
 			val domains = ObjectLinkedOpenHashSet<Domain>()
 			val glossary = Object2ObjectLinkedOpenHashMap<String, GlossaryTerm>()
 			val glossaryIds = ObjectLinkedOpenHashSet<String>()
 			val units = ObjectLinkedOpenHashSet<String>()
 			var type: TextType? = null
-			for (profile in included) {
-				domains.addAll(profile.domains)
-				glossaryIds.addAll(profile.glossaryIds)
-				units.addAll(profile.unitIds)
-				for (term in profile.glossary) {
+			for (defaults in included) {
+				domains.addAll(defaults.domains)
+				glossaryIds.addAll(defaults.glossaryIds)
+				units.addAll(defaults.unitIds)
+				for (term in defaults.glossary) {
 					val existing = glossary.putIfAbsent(term.id, term)
-					require(existing == null || existing == term) { "Included profiles disagree on glossary term '${term.id}'" }
+					require(existing == null || existing == term) { "Included defaults disagree on glossary term '${term.id}'" }
 				}
-				profile.type?.let { candidate ->
-					require(type == null || type == candidate) { "Included profiles disagree on text type: $type and $candidate" }
+				defaults.type?.let { candidate ->
+					require(type == null || type == candidate) { "Included defaults disagree on text type: $type and $candidate" }
 					type = candidate
 				}
 			}
 			val glossaryParent = if (parent.glossary.isEmpty() && parent.glossaryIds.isEmpty()) defaults else parent
 			val useIncludedGlossary = glossary.isNotEmpty() || glossaryIds.isNotEmpty()
-			return LocalizationProfile(
+			return DeclarationDefaults(
 				if (domains.isEmpty()) parent.domains.ifEmpty { defaults.domains } else ObjectArrayList(domains),
 				type ?: parent.type ?: defaults.type,
 				if (useIncludedGlossary) ObjectArrayList(glossary.values) else glossaryParent.glossary,
@@ -60,6 +60,6 @@ data class LocalizationProfile @JvmOverloads constructor(
 	}
 
 	companion object {
-		internal val EMPTY = LocalizationProfile(emptyList(), null, emptyList())
+		internal val EMPTY = DeclarationDefaults(emptyList(), null, emptyList())
 	}
 }

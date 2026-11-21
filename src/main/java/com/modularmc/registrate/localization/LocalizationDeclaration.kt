@@ -1,7 +1,7 @@
 package com.modularmc.registrate.localization
 
 import com.modularmc.registrate.localization.terminology.Domain
-import com.modularmc.registrate.localization.terminology.LocalizationCatalog.GlossaryTerm
+import com.modularmc.registrate.localization.terminology.Terminology.GlossaryTerm
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 
@@ -24,13 +24,13 @@ data class LocalizationDeclaration @JvmOverloads constructor(
 		private var glossary: List<GlossaryTerm>? = null
 		private var glossaryIds: List<String>? = null
 		private var unitIds: List<String>? = null
-		private var profile = LocalizationProfile.EMPTY
+		private var defaults = DeclarationDefaults.EMPTY
 
 		fun source(source: String) = apply { this.source = source }
 
 		fun type(type: TextType?) = apply { this.type = type }
 
-		fun profile(profile: LocalizationProfile) = apply { this.profile = profile }
+		fun defaults(defaults: DeclarationDefaults) = apply { this.defaults = defaults }
 
 		fun translation(locale: MinecraftLocale, text: String) = apply {
 			val texts = translations ?: Object2ObjectOpenHashMap<MinecraftLocale, String>(2).also { translations = it }
@@ -54,11 +54,11 @@ data class LocalizationDeclaration @JvmOverloads constructor(
 		fun build() = LocalizationDeclaration(
 			source,
 			translations?.toMap() ?: emptyMap(),
-			domains ?: profile.domains,
-			type ?: profile.type,
-			glossary ?: profile.glossary,
-			glossaryIds ?: profile.glossaryIds,
-			unitIds ?: profile.unitIds,
+			domains ?: defaults.domains,
+			type ?: defaults.type,
+			glossary ?: defaults.glossary,
+			glossaryIds ?: defaults.glossaryIds,
+			unitIds ?: defaults.unitIds,
 		)
 	}
 

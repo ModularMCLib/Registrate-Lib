@@ -13,7 +13,7 @@ import java.util.EnumSet
 import java.util.Optional
 
 /** Terminology defined by one mod. Register it during mod setup and query it alongside declarations. */
-class LocalizationCatalog {
+class Terminology {
 	@JvmRecord
 	data class GlossaryTerm @JvmOverloads constructor(
 		val id: String,
@@ -40,14 +40,14 @@ class LocalizationCatalog {
 	}
 
 	@JvmRecord
-	data class Unit @JvmOverloads constructor(val id: String, val symbol: String, val names: Map<MinecraftLocale, String>, val formats: Map<MinecraftLocale, UnitFormat> = emptyMap()) {
+	data class MeasurementUnit @JvmOverloads constructor(val id: String, val symbol: String, val names: Map<MinecraftLocale, String>, val formats: Map<MinecraftLocale, UnitFormat> = emptyMap()) {
 		fun format(value: Number, locale: MinecraftLocale): String = formats[locale]?.format(value, symbol) ?: "$value $symbol"
 	}
 
 	private val domains = EnumSet.noneOf(Domain::class.java)
 	private val indexedGlossary = IndexedGlossary()
 	private val glossaries = ObjectArrayList<Glossary>(1).apply { add(indexedGlossary) }
-	private val units = Object2ObjectOpenHashMap<String, Unit>()
+	private val units = Object2ObjectOpenHashMap<String, MeasurementUnit>()
 
 	fun register(domain: Domain) {
 		domains.add(domain)
@@ -61,7 +61,7 @@ class LocalizationCatalog {
 		glossaries.add(glossary)
 	}
 
-	fun register(unit: Unit) {
+	fun register(unit: MeasurementUnit) {
 		units[unit.id] = unit
 	}
 
@@ -69,7 +69,7 @@ class LocalizationCatalog {
 
 	fun glossary(id: String): Optional<GlossaryTerm> = Optional.ofNullable(findTerm(id))
 
-	fun unit(id: String): Optional<Unit> = Optional.ofNullable(units[id])
+	fun unit(id: String): Optional<MeasurementUnit> = Optional.ofNullable(units[id])
 
 	internal fun resolveTerm(key: TranslationKey, declaration: LocalizationDeclaration, source: TranslationSource): GlossaryTerm? {
 		if (declaration.glossary.isNotEmpty() || declaration.glossaryIds.isNotEmpty()) {
@@ -129,6 +129,6 @@ class LocalizationCatalog {
 		throw IllegalArgumentException("Ambiguous glossary term for $key at ${source.location}: ${first.id} or ${second.id}")
 
 	internal companion object {
-		val EMPTY = LocalizationCatalog()
+		val EMPTY = Terminology()
 	}
 }

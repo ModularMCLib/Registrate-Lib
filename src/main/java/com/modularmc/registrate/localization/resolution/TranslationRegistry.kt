@@ -8,8 +8,8 @@ import com.modularmc.registrate.localization.MinecraftLocale.EN_US
 import com.modularmc.registrate.localization.TranslationKey
 import com.modularmc.registrate.localization.TranslationSource
 import com.modularmc.registrate.localization.TranslationSource.Kind
-import com.modularmc.registrate.localization.terminology.LocalizationCatalog
-import com.modularmc.registrate.localization.terminology.LocalizationCatalog.GlossaryTerm
+import com.modularmc.registrate.localization.terminology.Terminology
+import com.modularmc.registrate.localization.terminology.Terminology.GlossaryTerm
 
 import it.unimi.dsi.fastutil.ints.Int2IntMap
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap
@@ -27,13 +27,7 @@ class TranslationRegistry {
 		override fun toString(): String = "${key.namespace}/${key.value} (${locale.code()})"
 	}
 
-	private class Candidate(
-		val text: String,
-		val source: TranslationSource,
-		val original: Selection?,
-		val declaration: LocalizationDeclaration? = null,
-		val catalog: LocalizationCatalog = LocalizationCatalog.EMPTY,
-	)
+	private class Candidate(val text: String, val source: TranslationSource, val original: Selection?, val declaration: LocalizationDeclaration? = null, val terms: Terminology = Terminology.EMPTY)
 
 	private class Selection(var winner: Candidate) {
 		private var ties: MutableList<Candidate>? = null
@@ -76,8 +70,8 @@ class TranslationRegistry {
 	}
 
 	@JvmOverloads
-	fun add(key: TranslationKey, locale: MinecraftLocale, declaration: LocalizationDeclaration, source: TranslationSource, catalog: LocalizationCatalog = LocalizationCatalog.EMPTY) {
-		val original = selections.add(EntryKey(key, locale), Candidate(declaration.source, source, null, declaration, catalog))
+	fun add(key: TranslationKey, locale: MinecraftLocale, declaration: LocalizationDeclaration, source: TranslationSource, terminology: Terminology = Terminology.EMPTY) {
+		val original = selections.add(EntryKey(key, locale), Candidate(declaration.source, source, null, declaration, terminology))
 		for ((target, text) in declaration.translations) {
 			selections.add(EntryKey(key, target), Candidate(text, source, original))
 		}
@@ -110,7 +104,7 @@ class TranslationRegistry {
 			selection.verifyText(key)
 			selection.forEachWinner { candidate ->
 				val declaration = candidate.declaration ?: return@forEachWinner
-				val term = candidate.catalog.resolveTerm(key.key, declaration, candidate.source) ?: return@forEachWinner
+				val term = candidate.terms.resolveTerm(key.key, declaration, candidate.source) ?: return@forEachWinner
 				val source = TranslationSource(Kind.GLOSSARY, "${candidate.source.location} (glossary ${term.id})")
 				for ((locale, text) in term.preferredTranslations) {
 					if (locale == key.locale) continue

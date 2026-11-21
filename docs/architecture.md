@@ -54,7 +54,7 @@ RegistrateLib is a maintained fork of Registrate for the `com.modularmc.registra
   - 可执行的运行时检查 / Executable runtime checks
 
 - `com.modularmc.registrate.test.meta`
-  - 用于生成的桥接方法和受保护 API 快照的维护工具 / Maintenance tooling for generated bridge methods and protected API snapshots
+  - 维护生成的桥接方法和受保护的 API 清单 / Maintains generated bridge methods and protected API listings
 
 ## 公开 API 边界 / Public API Boundary
 

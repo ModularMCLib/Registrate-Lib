@@ -2,14 +2,14 @@ package com.modularmc.registrate.test.mod;
 
 import com.modularmc.registrate.Registrate;
 import com.modularmc.registrate.builders.BlockBuilder;
-import com.modularmc.registrate.localization.LocalizationProfile;
+import com.modularmc.registrate.localization.DeclarationDefaults;
 import com.modularmc.registrate.localization.MinecraftLocale;
 import com.modularmc.registrate.localization.TextType;
 import com.modularmc.registrate.localization.TranslationKey;
 import com.modularmc.registrate.localization.annotation.Trans;
 import com.modularmc.registrate.localization.terminology.Domain;
-import com.modularmc.registrate.localization.terminology.LocalizationCatalog.GlossaryTerm;
-import com.modularmc.registrate.localization.terminology.LocalizationCatalog.Unit;
+import com.modularmc.registrate.localization.terminology.Terminology.GlossaryTerm;
+import com.modularmc.registrate.localization.terminology.Terminology.MeasurementUnit;
 import com.modularmc.registrate.providers.DataGenContext;
 import com.modularmc.registrate.providers.core.ProviderType;
 import com.modularmc.registrate.providers.generators.RegistrateItemModelGenerator;
@@ -134,7 +134,7 @@ public class TestMod {
     public static final String CUSTOM_LANG = "testmod.custom.lang";
 
     private static final GlossaryTerm POTENTIAL = new GlossaryTerm("electric_potential", "electric potential", List.of(Domain.PHYSICS), Map.of(MinecraftLocale.ZH_CN, "电势"));
-    private static final LocalizationProfile TECHNOLOGY = new LocalizationProfile(List.of(Domain.ENGINEERING), TextType.ITEM, List.of(POTENTIAL));
+    private static final DeclarationDefaults TECHNOLOGY = new DeclarationDefaults(List.of(Domain.ENGINEERING), TextType.ITEM, List.of(POTENTIAL));
 
     public static final class TestBlock extends Block implements EntityBlock {
 
@@ -234,7 +234,7 @@ public class TestMod {
     @VisibleForTesting
     public final ItemEntry<Item> testitem = registrate.object("testitem")
             .item(Item::new)
-            .localization(text -> text.profile(TECHNOLOGY).domain(Domain.PHYSICS).source("Testitem").translation(MinecraftLocale.ZH_CN, "测试物品"))
+            .localization(text -> text.defaults(TECHNOLOGY).domain(Domain.PHYSICS).source("Testitem").translation(MinecraftLocale.ZH_CN, "测试物品"))
             .onRegister(item -> sawCallback.set(registrate.get("testitem", Registries.ITEM).get() == item))
             .properties(p -> p.food(new FoodProperties.Builder().nutrition(1).saturationModifier(0.2f).build()))
             .tag(ItemTags.BEDS)
@@ -342,12 +342,12 @@ public class TestMod {
     public TestMod(IEventBus eventBus, ModContainer container) {
         INSTANCE = this;
 
-        var catalog = registrate.localizationCatalog();
-        catalog.register(Domain.PHYSICS);
-        catalog.register(POTENTIAL);
-        catalog.register(new Unit("volt", "V", Map.of(MinecraftLocale.EN_US, "volt", MinecraftLocale.ZH_CN, "伏特")));
+        var terminology = registrate.terminology();
+        terminology.register(Domain.PHYSICS);
+        terminology.register(POTENTIAL);
+        terminology.register(new MeasurementUnit("volt", "V", Map.of(MinecraftLocale.EN_US, "volt", MinecraftLocale.ZH_CN, "伏特")));
         registrate.addLocalization(new TranslationKey(MOD_ID, "gui.testmod.voltage"),
-                text -> text.profile(TECHNOLOGY).type(TextType.GUI_LABEL)
+                text -> text.defaults(TECHNOLOGY).type(TextType.GUI_LABEL)
                         .source("Voltage: %s V").translation(MinecraftLocale.ZH_CN, "电压：%1$s V"));
         registrate.addRawLang("testmod.custom.lang.with_placeholders1", "Placeholder 1 %s Placeholder 2 %s");
         registrate.addRawLang("testmod.custom.lang.with_placeholders2", "Placeholder 1 %s Placeholder 2 %2$s Placeholder 3 %s");

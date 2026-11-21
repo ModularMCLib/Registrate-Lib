@@ -33,7 +33,7 @@ import com.modularmc.registrate.localization.MinecraftLocale
 import com.modularmc.registrate.localization.TranslationKey
 import com.modularmc.registrate.localization.TranslationSource
 import com.modularmc.registrate.localization.resolution.TranslationRegistry
-import com.modularmc.registrate.localization.terminology.LocalizationCatalog
+import com.modularmc.registrate.localization.terminology.Terminology
 import com.modularmc.registrate.providers.RegistrateLangProvider.Companion.toEnglishName
 import com.modularmc.registrate.providers.core.DataProviderInitializer
 import com.modularmc.registrate.providers.core.GeneratorType
@@ -552,7 +552,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	private val extraLang = ArrayList<RawTranslation>()
 	private val generatedLang = ConcurrentLinkedQueue<RawTranslation>()
 	private var sourceLocale: MinecraftLocale? = null
-	private val localizationCatalog = LocalizationCatalog()
+	private val terminology = Terminology()
 
 	/** Configures the source locale for this mod before data generation.  */
 	open fun sourceLocale(locale: MinecraftLocale): S {
@@ -567,7 +567,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		return locale
 	}
 
-	open fun localizationCatalog(): LocalizationCatalog = localizationCatalog
+	open fun terminology(): Terminology = terminology
 
 	open fun collectRawTranslations(registry: TranslationRegistry, locale: MinecraftLocale) {
 		for (translation in extraLang) {
@@ -581,7 +581,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 
 	private fun collectRawTranslation(registry: TranslationRegistry, locale: MinecraftLocale, translation: RawTranslation) {
 		if (translation.source.kind != TranslationSource.Kind.AUTOMATIC || locale == MinecraftLocale.EN_US) {
-			registry.add(translation.key, locale, translation.declaration, translation.source, localizationCatalog())
+			registry.add(translation.key, locale, translation.declaration, translation.source, terminology())
 		}
 	}
 
@@ -670,7 +670,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 				localization.kind,
 				"Builder ${entry.id} in ${entry.key.registry()}",
 			)
-			registry.add(key, locale, localization.declaration.get(), source, localizationCatalog())
+			registry.add(key, locale, localization.declaration.get(), source, terminology())
 		}
 	}
 

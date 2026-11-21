@@ -5,7 +5,7 @@ import com.modularmc.registrate.localization.MinecraftLocale
 import com.modularmc.registrate.localization.TranslationKey
 import com.modularmc.registrate.localization.TranslationSource
 import com.modularmc.registrate.localization.resolution.TranslationRegistry
-import com.modularmc.registrate.localization.terminology.LocalizationCatalog
+import com.modularmc.registrate.localization.terminology.Terminology
 
 import net.neoforged.fml.ModList
 
@@ -17,7 +17,7 @@ import java.io.UncheckedIOException
 object IndexedTranslations {
 	@JvmStatic
 	@JvmOverloads
-	fun collect(modId: String, locale: MinecraftLocale, registry: TranslationRegistry, catalog: LocalizationCatalog = LocalizationCatalog.EMPTY) {
+	fun collect(modId: String, locale: MinecraftLocale, registry: TranslationRegistry, terminology: Terminology = Terminology.EMPTY) {
 		val contents = ModList.get().getModFileById(modId).file.contents
 		for (frontend in LocalizationIndex.Frontend.entries) {
 			val index = LocalizationIndex.path(modId, frontend)
@@ -31,7 +31,7 @@ object IndexedTranslations {
 							locale,
 							LocalizationDeclaration(entry.source, entry.translations, emptyList(), null, emptyList()),
 							TranslationSource(TranslationSource.Kind.DECLARED, entry.location),
-							catalog,
+							terminology,
 						)
 					}
 				}
