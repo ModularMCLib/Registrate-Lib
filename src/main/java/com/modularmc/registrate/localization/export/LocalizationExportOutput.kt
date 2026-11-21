@@ -5,24 +5,18 @@ import com.modularmc.registrate.localization.TranslationSource
 
 import net.minecraft.data.CachedOutput
 import net.minecraft.data.DataProvider
-import net.minecraft.data.PackOutput
-import net.minecraft.data.PackOutput.Target
-import net.minecraft.resources.Identifier
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import it.unimi.dsi.fastutil.ints.Int2IntMaps
 
+import java.nio.file.Path
 import java.util.Locale
 import java.util.concurrent.CompletableFuture
 
 internal object LocalizationExportOutput {
-	fun write(cache: CachedOutput, output: PackOutput, document: LocalizationDocument): CompletableFuture<*> {
-		val paths = output.createPathProvider(Target.DATA_PACK, "registrate")
-		val path = paths.json(Identifier.fromNamespaceAndPath(document.modId, "localization"))
-		return DataProvider.saveStable(cache, toJson(document), path)
-	}
+	fun write(cache: CachedOutput, path: Path, document: LocalizationDocument): CompletableFuture<*> = DataProvider.saveStable(cache, toJson(document), path)
 
 	private fun toJson(document: LocalizationDocument): JsonObject {
 		val json = JsonObject()

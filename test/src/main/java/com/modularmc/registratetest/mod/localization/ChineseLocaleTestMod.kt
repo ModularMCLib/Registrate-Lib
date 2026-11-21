@@ -1,10 +1,10 @@
-package com.modularmc.registrate.test.mod.localization
+package com.modularmc.registratetest.mod.localization
 
 import com.modularmc.registrate.Registrate
 import com.modularmc.registrate.localization.MinecraftLocale
 import com.modularmc.registrate.localization.annotation.Trans
 import com.modularmc.registrate.localization.annotation.Translation
-import com.modularmc.registrate.test.mod.TestMod
+import com.modularmc.registratetest.mod.TestMod
 import com.modularmc.registrate.util.nullness.NonNullBiConsumer
 
 import net.minecraft.world.item.Item

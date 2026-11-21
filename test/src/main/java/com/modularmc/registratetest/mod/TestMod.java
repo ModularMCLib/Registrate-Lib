@@ -1,4 +1,4 @@
-package com.modularmc.registrate.test.mod;
+package com.modularmc.registratetest.mod;
 
 import com.modularmc.registrate.Registrate;
 import com.modularmc.registrate.builders.BlockBuilder;
@@ -13,7 +13,7 @@ import com.modularmc.registrate.localization.terminology.Terminology.Measurement
 import com.modularmc.registrate.providers.DataGenContext;
 import com.modularmc.registrate.providers.core.ProviderType;
 import com.modularmc.registrate.providers.generators.RegistrateItemModelGenerator;
-import com.modularmc.registrate.test.mod.localization.EnglishLabels;
+import com.modularmc.registratetest.mod.localization.EnglishLabels;
 import com.modularmc.registrate.util.DataIngredient;
 import com.modularmc.registrate.util.entry.*;
 
@@ -119,6 +119,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -344,7 +345,9 @@ public class TestMod {
 
     public TestMod(IEventBus eventBus, ModContainer container) {
         INSTANCE = this;
-        registrate.export().localization().build();
+        registrate.export().localization()
+                .path(Path.of("build", "localization", "testmod.json"))
+                .build();
 
         var terminology = registrate.terminology();
         terminology.register(Domain.PHYSICS);

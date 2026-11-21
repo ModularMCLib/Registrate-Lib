@@ -1,4 +1,4 @@
-package com.modularmc.registrate.test.mod
+package com.modularmc.registratetest.mod
 
 import com.modularmc.registrate.Registrate
 import com.modularmc.registrate.util.nullness.NonNullBiConsumer

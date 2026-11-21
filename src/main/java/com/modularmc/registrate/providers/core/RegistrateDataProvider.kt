@@ -84,7 +84,7 @@ open class RegistrateDataProvider(private val parent: AbstractRegistrate<*>, pri
 
 	internal fun hasLanguageProvider(): Boolean = ProviderType.LANG in subProviders
 
-	internal fun requestsLocalizationExport(): Boolean = parent.localizationExportRequested()
+	internal fun localizationExportPath() = parent.localizationExportPath()
 
 	internal fun localizationSourceLocale() = parent.requireSourceLocale()
 

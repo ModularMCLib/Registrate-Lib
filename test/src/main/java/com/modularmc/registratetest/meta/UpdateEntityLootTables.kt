@@ -1,4 +1,4 @@
-package com.modularmc.registrate.test.meta
+package com.modularmc.registratetest.meta
 
 import java.nio.file.Path
 

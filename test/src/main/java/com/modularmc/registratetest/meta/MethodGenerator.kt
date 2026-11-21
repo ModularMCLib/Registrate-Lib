@@ -1,7 +1,7 @@
-package com.modularmc.registrate.test.meta
+package com.modularmc.registratetest.meta
 
-import com.modularmc.registrate.test.meta.ProtectedMethodScraper.isNullable
-import com.modularmc.registrate.test.meta.ProtectedMethodScraper.kotlinType
+import com.modularmc.registratetest.meta.ProtectedMethodScraper.isNullable
+import com.modularmc.registratetest.meta.ProtectedMethodScraper.kotlinType
 
 import com.sun.source.tree.AnnotatedTypeTree
 import com.sun.source.tree.ArrayTypeTree

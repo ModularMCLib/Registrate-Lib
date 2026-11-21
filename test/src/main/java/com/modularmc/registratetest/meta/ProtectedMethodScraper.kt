@@ -1,4 +1,4 @@
-package com.modularmc.registrate.test.meta
+package com.modularmc.registratetest.meta
 
 import com.sun.source.tree.AnnotatedTypeTree
 import com.sun.source.tree.ArrayTypeTree

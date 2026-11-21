@@ -97,6 +97,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.logging.log4j.Level
 
+import java.nio.file.Path
 import java.util.EnumMap
 import java.util.Optional
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -569,7 +570,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	private val importedTranslations = ObjectArrayList<ImportedTranslation>()
 	private var sourceLocale: MinecraftLocale? = null
 	private var defaultLocalization = DeclarationDefaults.EMPTY
-	private var localizationExportRequested = false
+	private var localizationExportPath: Path? = null
 	private val terminology = Terminology()
 	private val localeDerivations = EnumMap<MinecraftLocale, LocaleDerivation>(MinecraftLocale::class.java)
 
@@ -582,11 +583,11 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	/** Starts a chain for export files created during this Registrate's DataGen run. */
 	open fun export(): RegistrateExportBuilder = RegistrateExportBuilder(this)
 
-	internal fun requestLocalizationExport() {
-		localizationExportRequested = true
+	internal fun requestLocalizationExport(path: Path) {
+		localizationExportPath = path
 	}
 
-	internal fun localizationExportRequested(): Boolean = localizationExportRequested
+	internal fun localizationExportPath(): Path? = localizationExportPath
 
 	/** Sets the defaults applied to localization declarations created after this call. */
 	open fun localizationDefaults(defaults: DeclarationDefaults): S {

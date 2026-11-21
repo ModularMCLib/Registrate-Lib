@@ -7,12 +7,15 @@
 ```java
 import com.modularmc.registrate.Registrate;
 import com.modularmc.registrate.localization.MinecraftLocale;
+import java.nio.file.Path;
 
 Registrate registrate = Registrate.create(MOD_ID).sourceLocale(MinecraftLocale.EN_US);
-registrate.export().localization().build();
+registrate.export().localization()
+        .path(Path.of("build", "localization", "mymod.json"))
+        .build();
 ```
 
-The export chain registers a DataGen output request. The language callbacks run once, then the same collected declarations produce both Minecraft language files and `data/<modid>/registrate/localization.json`.
+`path` is the destination JSON file. Relative paths resolve against the DataGen process working directory. The export request is fulfilled after language callbacks have run once; the same declarations produce both Minecraft language files and the exchange document.
 
 ## 声明文本
 

@@ -1,7 +1,7 @@
-package com.modularmc.registrate.test.gametests
+package com.modularmc.registratetest.gametests
 
 import com.modularmc.registrate.providers.core.ProviderType
-import com.modularmc.registrate.test.mod.TestMod
+import com.modularmc.registratetest.mod.TestMod
 
 import net.minecraft.core.registries.Registries
 import net.minecraft.world.item.Item

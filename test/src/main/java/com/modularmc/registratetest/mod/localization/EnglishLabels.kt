@@ -1,11 +1,11 @@
-package com.modularmc.registrate.test.mod.localization
+package com.modularmc.registratetest.mod.localization
 
 import com.modularmc.registrate.localization.MinecraftLocale
 import com.modularmc.registrate.localization.annotation.Trans
 import com.modularmc.registrate.localization.annotation.TransVariants
 import com.modularmc.registrate.localization.annotation.Translation
 import com.modularmc.registrate.localization.annotation.Variant
-import com.modularmc.registrate.test.mod.TestMod
+import com.modularmc.registratetest.mod.TestMod
 
 @TransVariants(
 	modId = TestMod.MOD_ID,
