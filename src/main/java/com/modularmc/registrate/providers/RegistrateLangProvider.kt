@@ -104,11 +104,17 @@ open class RegistrateLangProvider(private val owner: AbstractRegistrate<*>, priv
 		for (operation in operations) {
 			val key = operation.key
 			val source = TranslationSource(Kind.DECLARED, "[$modId] ProviderType.LANG ($key)")
-			registry.add(TranslationKey(modId, key), locale, LocalizationDeclaration.sourceText(operation.value), source, terminology)
+			registry.add(
+				TranslationKey(modId, key),
+				locale,
+				LocalizationDeclaration.sourceText(operation.value, owner.localizationDefaultValues()),
+				source,
+				terminology,
+			)
 		}
 		operations.clear()
 		owner.collectRawTranslations(registry, locale)
-		IndexedTranslations.collect(modId, locale, registry, terminology)
+		IndexedTranslations.collect(modId, locale, registry, terminology, owner.localizationDefaultValues())
 		owner.collectImportedTranslations(registry, locale)
 	}
 

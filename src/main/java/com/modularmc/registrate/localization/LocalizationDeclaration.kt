@@ -51,19 +51,28 @@ data class LocalizationDeclaration @JvmOverloads constructor(
 
 		fun units(vararg ids: String) = apply { unitIds = ids.asList() }
 
-		fun build() = LocalizationDeclaration(
-			source,
-			translations?.toMap() ?: emptyMap(),
-			domains ?: defaults.domains,
-			type ?: defaults.type,
-			glossary ?: defaults.glossary,
-			glossaryIds ?: defaults.glossaryIds,
-			unitIds ?: defaults.unitIds,
-		)
+		fun build(): LocalizationDeclaration = build(DeclarationDefaults.EMPTY)
+
+		fun build(moduleDefaults: DeclarationDefaults): LocalizationDeclaration {
+			val entryGlossary = if (defaults.glossary.isEmpty() && defaults.glossaryIds.isEmpty()) moduleDefaults else defaults
+			return LocalizationDeclaration(
+				source,
+				translations?.toMap() ?: emptyMap(),
+				domains ?: defaults.domains.ifEmpty { moduleDefaults.domains },
+				type ?: defaults.type ?: moduleDefaults.type,
+				glossary ?: entryGlossary.glossary,
+				glossaryIds ?: entryGlossary.glossaryIds,
+				unitIds ?: defaults.unitIds.ifEmpty { moduleDefaults.unitIds },
+			)
+		}
 	}
 
 	companion object {
 		@JvmStatic
 		fun sourceText(source: String) = LocalizationDeclaration(source, emptyMap(), emptyList(), null, emptyList())
+
+		@JvmStatic
+		fun sourceText(source: String, defaults: DeclarationDefaults) =
+			LocalizationDeclaration(source, emptyMap(), defaults.domains, defaults.type, defaults.glossary, defaults.glossaryIds, defaults.unitIds)
 	}
 }

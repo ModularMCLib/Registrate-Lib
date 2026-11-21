@@ -2,6 +2,7 @@ package com.modularmc.registrate.localization.terminology
 
 import com.modularmc.registrate.localization.terminology.Terminology.GlossaryTerm
 import com.modularmc.registrate.localization.terminology.Terminology.TermRelation
+
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.objects.ObjectArrayList

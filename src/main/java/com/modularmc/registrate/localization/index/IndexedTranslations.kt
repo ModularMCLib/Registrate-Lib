@@ -1,5 +1,6 @@
 package com.modularmc.registrate.localization.index
 
+import com.modularmc.registrate.localization.DeclarationDefaults
 import com.modularmc.registrate.localization.LocalizationDeclaration
 import com.modularmc.registrate.localization.MinecraftLocale
 import com.modularmc.registrate.localization.TranslationKey
@@ -17,7 +18,7 @@ import java.io.UncheckedIOException
 object IndexedTranslations {
 	@JvmStatic
 	@JvmOverloads
-	fun collect(modId: String, locale: MinecraftLocale, registry: TranslationRegistry, terminology: Terminology = Terminology.EMPTY) {
+	fun collect(modId: String, locale: MinecraftLocale, registry: TranslationRegistry, terminology: Terminology = Terminology.EMPTY, defaults: DeclarationDefaults = DeclarationDefaults.EMPTY) {
 		val contents = ModList.get().getModFileById(modId).file.contents
 		for (frontend in LocalizationIndex.Frontend.entries) {
 			val index = LocalizationIndex.path(modId, frontend)
@@ -29,7 +30,7 @@ object IndexedTranslations {
 						registry.add(
 							TranslationKey(entry.namespace, entry.key),
 							locale,
-							LocalizationDeclaration(entry.source, entry.translations, emptyList(), null, emptyList()),
+							LocalizationDeclaration(entry.source, entry.translations, defaults.domains, defaults.type, defaults.glossary, defaults.glossaryIds, defaults.unitIds),
 							TranslationSource(TranslationSource.Kind.DECLARED, entry.location),
 							terminology,
 						)

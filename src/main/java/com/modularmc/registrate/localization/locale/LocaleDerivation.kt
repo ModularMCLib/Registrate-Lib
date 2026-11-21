@@ -2,8 +2,11 @@ package com.modularmc.registrate.localization.locale
 
 import com.modularmc.registrate.localization.LocalizationDeclaration
 import com.modularmc.registrate.localization.MinecraftLocale
+import com.modularmc.registrate.localization.MinecraftLocale.EN_GB
 import com.modularmc.registrate.localization.MinecraftLocale.EN_UD
 import com.modularmc.registrate.localization.MinecraftLocale.EN_US
+import com.modularmc.registrate.localization.MinecraftLocale.ZH_CN
+import com.modularmc.registrate.localization.MinecraftLocale.ZH_TW
 import com.modularmc.registrate.localization.TranslationKey
 import com.modularmc.registrate.localization.TranslationSource.Kind
 import com.modularmc.registrate.localization.resolution.MinecraftTextFormat
@@ -29,6 +32,8 @@ class LocaleDerivation private constructor(
 
 	companion object {
 		internal val UPSIDE_DOWN = LocaleDerivation(EN_US, EN_UD, Kind.VARIANT) { text, symbols, _, _ -> MinecraftTextFormat.upsideDown(text, symbols) }
+		internal val BRITISH_ENGLISH = LocaleDerivation(EN_US, EN_GB) { text, _ -> BritishEnglish.convert(text) }
+		internal val TRADITIONAL_CHINESE = LocaleDerivation(ZH_CN, ZH_TW) { text, _ -> TraditionalChinese.convert(text) }
 
 		/** Copies the resolved input as a display fallback for a missing target. */
 		@JvmStatic

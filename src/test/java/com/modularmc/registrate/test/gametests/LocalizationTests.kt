@@ -11,6 +11,7 @@ import com.modularmc.registrate.localization.MinecraftLocale.EN_GB
 import com.modularmc.registrate.localization.MinecraftLocale.EN_UD
 import com.modularmc.registrate.localization.MinecraftLocale.EN_US
 import com.modularmc.registrate.localization.MinecraftLocale.ZH_CN
+import com.modularmc.registrate.localization.MinecraftLocale.ZH_TW
 import com.modularmc.registrate.localization.SourceRevision
 import com.modularmc.registrate.localization.TextType
 import com.modularmc.registrate.localization.TranslationKey
@@ -44,6 +45,7 @@ import net.neoforged.testframework.annotation.ForEachTest
 import net.neoforged.testframework.annotation.TestHolder
 import net.neoforged.testframework.gametest.EmptyTemplate
 import net.neoforged.testframework.gametest.GameTest
+
 import java.nio.file.Path
 
 @ForEachTest(groups = ["registrate-localization"])
@@ -256,6 +258,34 @@ object LocalizationTests {
 	@JvmStatic
 	@GameTest
 	@EmptyTemplate(floor = true)
+	@TestHolder(description = ["Derive built-in British English, Traditional Chinese and upside-down locales"])
+	fun deriveBuiltInLocales(test: DynamicTest) {
+		test.onGameTest { helper ->
+			val terms = Terminology()
+			terms.register(MeasurementUnit("kilowatt", "kW", emptyMap()))
+			val englishKey = TranslationKey(TestMod.MOD_ID, "gui.testmod.built_in_english")
+			val chineseKey = TranslationKey(TestMod.MOD_ID, "gui.testmod.built_in_chinese")
+			val registry = TranslationRegistry()
+			registry.add(
+				englishKey,
+				EN_US,
+				LocalizationDeclaration.Builder().source($$"Color center %1$s at 5 kW https://example.org/color").units("kilowatt").build(),
+				manual,
+				terms,
+			)
+			registry.add(chineseKey, ZH_CN, sourceText("简体汉语"), manual, terms)
+
+			val languages = registry.resolve()
+			helper.assertValueEqual($$"Colour centre %1$s at 5 kW https://example.org/color", languages.text(EN_GB, englishKey.value), "British spelling preserves protected text")
+			helper.assertValueEqual("簡體漢語", languages.text(ZH_TW, chineseKey.value), "ICU converts the default Chinese locale variant")
+			helper.assertTrue(listOf($$"%1$s", "kW", "https://example.org/color").all { it in languages.text(EN_UD, englishKey.value) }, "Upside-down English remains available")
+			helper.succeed()
+		}
+	}
+
+	@JvmStatic
+	@GameTest
+	@EmptyTemplate(floor = true)
 	@TestHolder(description = ["Resolve imported translations by source revision, review state and lock state"])
 	fun resolveImportedTranslations(test: DynamicTest) {
 		test.onGameTest { helper ->
@@ -341,11 +371,14 @@ object LocalizationTests {
 	fun collectCompiledAnnotationsBeforeWriting(test: DynamicTest) {
 		test.onGameTest { helper ->
 			val registry = TranslationRegistry()
-			IndexedTranslations.collect(TestMod.MOD_ID, EN_US, registry)
+			val testMod = TestMod.instance()
+			RegistrateLangProvider(testMod.registrate(), PackOutput(Path.of("unused-language-output"))).collect(registry)
 			IndexedTranslations.collect(ChineseLocaleTestMod.MOD_ID, ZH_CN, registry)
 			val languages = registry.resolve()
 			helper.assertValueEqual("Test", languages.text(EN_US, TestMod.CUSTOM_LANG), "Java annotation")
+			helper.assertValueEqual("电势", languages.text(ZH_CN, TestMod.JAVA_DEFAULT_LABEL), "Java annotation uses mod defaults")
 			helper.assertValueEqual("Test Container", languages.text(EN_US, EnglishLabels.MENU_TITLE), "Kotlin field annotation")
+			helper.assertValueEqual("电势", languages.text(ZH_CN, EnglishLabels.DEFAULT_LABEL), "Kotlin annotation uses mod defaults")
 			helper.assertValueEqual("Low power", languages.text(EN_US, "gui.testmod.power.low"), "First variant")
 			helper.assertValueEqual("高功率", languages.text(ZH_CN, "gui.testmod.power.high"), "Second variant's target text")
 			helper.assertValueEqual($$"频率：%1$s Hz", languages.text(ZH_CN, "gui.localetest.frequency"), "Chinese source in shared namespace")

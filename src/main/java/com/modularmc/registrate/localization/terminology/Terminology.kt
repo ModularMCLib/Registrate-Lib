@@ -5,9 +5,11 @@ import com.modularmc.registrate.localization.MinecraftLocale
 import com.modularmc.registrate.localization.TextType
 import com.modularmc.registrate.localization.TranslationKey
 import com.modularmc.registrate.localization.TranslationSource
+
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
+
 import java.util.Optional
 
 /** Terminology defined by one mod. Register it during mod setup and query it alongside declarations. */

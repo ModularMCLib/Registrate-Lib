@@ -18,6 +18,13 @@ import com.modularmc.registrate.test.mod.TestMod
 object EnglishLabels {
 	@field:Trans(
 		modId = TestMod.MOD_ID,
+		key = "gui.testmod.kotlin_default_label",
+		source = "Electric potential",
+	)
+	const val DEFAULT_LABEL = "gui.testmod.kotlin_default_label"
+
+	@field:Trans(
+		modId = TestMod.MOD_ID,
 		key = "gui.testmod.container",
 		source = "Test Container",
 		translations = [Translation(MinecraftLocale.ZH_CN, "测试容器")],

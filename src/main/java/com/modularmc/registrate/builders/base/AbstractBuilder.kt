@@ -107,14 +107,18 @@ abstract class AbstractBuilder<R : Any, T : R, P : Any, S : AbstractBuilder<R, T
 
 	open fun lang(langKeyProvider: NonNullFunction<T, String>): S = defaultLang(langKeyProvider, name)
 
-	open fun lang(langKeyProvider: NonNullFunction<T, String>, name: String): S = localization(langKeyProvider, { LocalizationDeclaration.sourceText(name) }, Kind.DECLARED)
+	open fun lang(langKeyProvider: NonNullFunction<T, String>, name: String): S = localization(
+		langKeyProvider,
+		{ LocalizationDeclaration.sourceText(name, owner.localizationDefaultValues()) },
+		Kind.DECLARED,
+	)
 
 	protected open fun defaultLang(key: NonNullFunction<T, String>, path: String): S =
-		localization(key, { LocalizationDeclaration.sourceText(RegistrateLangProvider.toEnglishName(path)) }, Kind.AUTOMATIC)
+		localization(key, { LocalizationDeclaration.sourceText(RegistrateLangProvider.toEnglishName(path), owner.localizationDefaultValues()) }, Kind.AUTOMATIC)
 
 	/** Declares text whose translation key is read from the registered object during DataGen. */
 	open fun localization(key: NonNullFunction<T, String>, configure: Consumer<LocalizationDeclaration.Builder>): S {
-		val declaration = LocalizationDeclaration.Builder().also(configure::accept).build()
+		val declaration = LocalizationDeclaration.Builder().also(configure::accept).build(owner.localizationDefaultValues())
 		return localization(key, { declaration }, Kind.DECLARED)
 	}
 

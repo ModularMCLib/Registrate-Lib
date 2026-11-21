@@ -26,6 +26,7 @@ import com.modularmc.registrate.internal.util.DebugMarkers
 import com.modularmc.registrate.internal.util.RegistrateLogger.core
 import com.modularmc.registrate.internal.util.RegistrateLogger.datagen
 import com.modularmc.registrate.internal.util.RegistrateLogger.modMessage
+import com.modularmc.registrate.localization.DeclarationDefaults
 import com.modularmc.registrate.localization.EntryLocalization
 import com.modularmc.registrate.localization.ImportedTranslation
 import com.modularmc.registrate.localization.LocalizationDeclaration
@@ -557,6 +558,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	private val generatedLang = ConcurrentLinkedQueue<RawTranslation>()
 	private val importedTranslations = ObjectArrayList<ImportedTranslation>()
 	private var sourceLocale: MinecraftLocale? = null
+	private var defaultLocalization = DeclarationDefaults.EMPTY
 	private val terminology = Terminology()
 	private val localeDerivations = EnumMap<MinecraftLocale, LocaleDerivation>(MinecraftLocale::class.java)
 
@@ -565,6 +567,14 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		sourceLocale = locale
 		return self()
 	}
+
+	/** Sets the defaults applied to localization declarations created after this call. */
+	open fun localizationDefaults(defaults: DeclarationDefaults): S {
+		defaultLocalization = defaults
+		return self()
+	}
+
+	internal fun localizationDefaultValues(): DeclarationDefaults = defaultLocalization
 
 	/** Returns the source locale after validating this mod's configuration.  */
 	open fun requireSourceLocale(): MinecraftLocale {
@@ -659,7 +669,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 
 	private fun addRawLang(key: String, value: String, kind: TranslationSource.Kind): MutableComponent {
 		if (dataGeneration.get()) {
-			addLocalization(TranslationKey(modid, key), sourceText(value), kind)
+			addLocalization(TranslationKey(modid, key), sourceText(value, defaultLocalization), kind)
 		}
 		return Component.translatable(key)
 	}
@@ -669,7 +679,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		if (dataGeneration.get()) {
 			val builder = LocalizationDeclaration.Builder()
 			configure.accept(builder)
-			addLocalization(key, builder.build(), TranslationSource.Kind.DECLARED)
+			addLocalization(key, builder.build(defaultLocalization), TranslationSource.Kind.DECLARED)
 		}
 		return Component.translatable(key.value)
 	}
