@@ -140,27 +140,27 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 		return owner.item(
 			this,
 			name,
-        ) { p: Item.Properties -> factory.apply(entry, p) }
-            .removeData(ProviderType.LANG)
+		) { p: Item.Properties -> factory.apply(entry, p) }
+			.removeData(ProviderType.LANG)
 			.model {
-                NonNullBiConsumer { ctx: DataGenContext<Item, I>, prov: RegistrateItemModelGenerator ->
-                    if (prov.hasModel(ctx.get())) {
-                        return@NonNullBiConsumer
-                    }
-                    val block = entry
-                    val model = owner.getDataProvider(ProviderType.BLOCKSTATE)
-                        .flatMap(
-                            Function { generator: RegistrateBlockModelGenerator ->
-                                generator.getSingleVariantModel(
-                                    block,
-                                )
-                            },
-                        )
-                        .orElseGet(Supplier { RegistrateBlockModelGenerator.modelLocation(block) })
-                    prov.createWithExistingModel(ctx.get(), model)
-                }
-            }
-    }
+				NonNullBiConsumer { ctx: DataGenContext<Item, I>, prov: RegistrateItemModelGenerator ->
+					if (prov.hasModel(ctx.get())) {
+						return@NonNullBiConsumer
+					}
+					val block = entry
+					val model = owner.getDataProvider(ProviderType.BLOCKSTATE)
+						.flatMap(
+							Function { generator: RegistrateBlockModelGenerator ->
+								generator.getSingleVariantModel(
+									block,
+								)
+							},
+						)
+						.orElseGet(Supplier { RegistrateBlockModelGenerator.modelLocation(block) })
+					prov.createWithExistingModel(ctx.get(), model)
+				}
+			}
+	}
 
 	/**
 	 * Create a [BlockEntity] for this block, which is created by the given factory, and assigned this block as
@@ -187,8 +187,7 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	 * A factory for the block entity
 	 * @return the [BlockEntityBuilder]
 	</BE> */
-	open fun <BE : BlockEntity> blockEntity(factory: BlockEntityBuilder.BlockEntityFactory<BE>) =
-		owner.blockEntity(this, name, factory).validBlock(asSupplier())
+	open fun <BE : BlockEntity> blockEntity(factory: BlockEntityBuilder.BlockEntityFactory<BE>) = owner.blockEntity(this, name, factory).validBlock(asSupplier())
 
 	/**
 	 * Registers the client color handler for all tint indices of this block.
@@ -199,7 +198,7 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	open fun color(colorHandler: NonNullSupplier<Supplier<BlockColor>>): BlockBuilder<T, P> {
 		if (this.colorHandler == null) {
 			unsafeRunWhenOn(Dist.CLIENT) { Runnable { this.registerBlockColor() } }
-        }
+		}
 		this.colorHandler = colorHandler
 		return this
 	}
@@ -226,14 +225,14 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	 * @return this [BlockBuilder]
 	 */
 	open fun defaultBlockstate(): BlockBuilder<T, P> = blockstate {
-        NonNullBiConsumer { ctx: DataGenContext<Block, T>, prov: RegistrateBlockModelGenerator ->
-            prov.createTrivialCube(
-                ctx.entry,
-            )
-        }
-    }
+		NonNullBiConsumer { ctx: DataGenContext<Block, T>, prov: RegistrateBlockModelGenerator ->
+			prov.createTrivialCube(
+				ctx.entry,
+			)
+		}
+	}
 
-    /**
+	/**
 	 * Configure the blockstate/models for this block.
 	 *
 	 * @param cons
@@ -246,10 +245,10 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 			cons.lazy()
 		return setData(
 			ProviderType.BLOCKSTATE,
-        ) { context: DataGenContext<Block, T>, generator: RegistrateBlockModelGenerator ->
-            blockstate.get().accept(context, generator)
-        }
-    }
+		) { context: DataGenContext<Block, T>, generator: RegistrateBlockModelGenerator ->
+			blockstate.get().accept(context, generator)
+		}
+	}
 
 	/**
 	 * Assign the default translation, as specified by
@@ -261,7 +260,7 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	 */
 	open fun defaultLang(): BlockBuilder<T, P> = lang { obj: T -> obj.descriptionId }
 
-    /** Configures the source text and translations of this entry.  */
+	/** Configures the source text and translations of this entry.  */
 	open fun localization(configure: Consumer<LocalizationDeclaration.Builder>): BlockBuilder<T, P> = localization({ obj: T -> obj.descriptionId }, configure)
 
 	/**
@@ -282,7 +281,7 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	 */
 	open fun defaultLoot(): BlockBuilder<T, P> = loot { obj: RegistrateBlockLootTables, block: T -> obj.dropSelf(block) }
 
-    /**
+	/**
 	 * Configure the loot table for this block. This is different than most data gen callbacks as the callback does not
 	 * accept a [DataGenContext], but instead a
 	 * [RegistrateBlockLootTables], for creating specifically block loot tables.
@@ -297,17 +296,17 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	 */
 	open fun loot(cons: NonNullBiConsumer<RegistrateBlockLootTables, T>) = setData(
 		ProviderType.LOOT,
-    ) { ctx: DataGenContext<Block, T>, prov: RegistrateLootTableProvider ->
-        prov.addLootAction(
-            RegistrateLootTableProvider.LootType.BLOCK,
-        ) { tb: RegistrateBlockLootTables ->
-            if (ctx.entry.lootTable !== BuiltInLootTables.EMPTY) {
-                cons.accept(tb, ctx.entry)
-            }
-        }
-    }
+	) { ctx: DataGenContext<Block, T>, prov: RegistrateLootTableProvider ->
+		prov.addLootAction(
+			RegistrateLootTableProvider.LootType.BLOCK,
+		) { tb: RegistrateBlockLootTables ->
+			if (ctx.entry.lootTable !== BuiltInLootTables.EMPTY) {
+				cons.accept(tb, ctx.entry)
+			}
+		}
+	}
 
-    /**
+	/**
 	 * Configure the recipe(s) for this block.
 	 *
 	 * @param cons
@@ -330,7 +329,7 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	open fun clientExtension(clientExtension: NonNullSupplier<Supplier<IClientBlockExtensions>>): BlockBuilder<T, P> {
 		if (this.clientExtension == null) {
 			unsafeRunWhenOn(Dist.CLIENT) { Runnable { this.registerClientExtension() } }
-        }
+		}
 		this.clientExtension = clientExtension
 		return this
 	}
@@ -399,14 +398,13 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 		 * @return A new [BlockBuilder] with reasonable default data generators.
 		</P></T> */
 		@JvmStatic
-		fun <T : Block, P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, factory: NonNullFunction<BlockBehaviour.Properties, T>) =
-			BlockBuilder(
-				owner,
-				parent,
-				name,
-				callback,
-				factory,
-            ) { BlockBehaviour.Properties.of() }
-                .defaultBlockstate().defaultLoot().defaultLang()
+		fun <T : Block, P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, factory: NonNullFunction<BlockBehaviour.Properties, T>) = BlockBuilder(
+			owner,
+			parent,
+			name,
+			callback,
+			factory,
+		) { BlockBehaviour.Properties.of() }
+			.defaultBlockstate().defaultLoot().defaultLang()
 	}
 }

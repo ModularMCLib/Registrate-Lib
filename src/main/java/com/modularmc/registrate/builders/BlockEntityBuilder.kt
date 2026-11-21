@@ -101,7 +101,7 @@ open class BlockEntityBuilder<T : BlockEntity, P : Any> protected constructor(
 	open fun renderer(renderer: NonNullSupplier<NonNullFunction<BlockEntityRendererProvider.Context, BlockEntityRenderer<T>>>): BlockEntityBuilder<T, P> {
 		if (this.renderer == null) { // First call only
 			unsafeRunWhenOn(Dist.CLIENT) { Runnable { this.registerRenderer() } }
-        }
+		}
 		this.renderer = renderer
 		return this
 	}
@@ -116,10 +116,10 @@ open class BlockEntityBuilder<T : BlockEntity, P : Any> protected constructor(
 				if (renderer != null) {
 					BlockEntityRenderers.register(
 						entry,
-                    ) { t: BlockEntityRendererProvider.Context? ->
-                        renderer.get().apply(t!!)
-                    }
-                }
+					) { t: BlockEntityRendererProvider.Context? ->
+						renderer.get().apply(t!!)
+					}
+				}
 			},
 		)
 	}

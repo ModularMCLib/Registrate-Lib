@@ -54,13 +54,13 @@ interface Builder<R : Any, T : R, P : Any, S : Builder<R, T, P, S>> : NonNullSup
 
 	fun <D : Any> dataMap(type: DataMapType<R, D>, value: D): S = dataMap(type) { value }
 
-    fun <D : Any> dataMap(type: DataMapType<R, D>, factory: NonNullFunction<DataGenContext<R, T>, D>): S = dataMap(type) { context, _ ->
-        factory.apply(
-            context
-        )
-    }
+	fun <D : Any> dataMap(type: DataMapType<R, D>, factory: NonNullFunction<DataGenContext<R, T>, D>): S = dataMap(type) { context, _ ->
+		factory.apply(
+			context,
+		)
+	}
 
-    @Suppress("UNCHECKED_CAST")
+	@Suppress("UNCHECKED_CAST")
 	fun <D : Any> dataMap(type: DataMapType<R, D>, factory: NonNullBiFunction<DataGenContext<R, T>, HolderLookup.Provider, D>): S {
 		owner.addDataGenerator(ProviderType.DATA_MAP) { provider ->
 			val context = DataGenContext.from(this)
