@@ -1,12 +1,18 @@
 repositories {
     mavenLocal()
     mavenCentral()
-    // force gradle to download FastUtil & LWJGL from the central maven so we can get source artifacts
+    // Resolve libraries hosted on Maven Central without querying mod repositories.
     exclusiveContent { // Force
         forRepository { mavenCentral() }
         filter {
             includeGroup("it.unimi.dsi")
             includeGroup("org.lwjgl")
+            includeGroup("com.google.guava")
+            includeGroup("com.google.devtools.ksp")
+            includeGroup("org.jacoco")
+            includeGroupAndSubgroups("io.netty")
+            includeGroupAndSubgroups("org.jetbrains")
+            includeGroupAndSubgroups("org.ow2")
         }
     }
     maven {

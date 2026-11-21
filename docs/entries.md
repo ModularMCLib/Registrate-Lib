@@ -59,7 +59,6 @@ public class ItemProviderEntry<R extends ItemLike, T extends R>
 |---------------------|-------------------------------------------------------------------------|
 | `asStack()`         | 创建包含此物品的 `ItemStack`（数量 1）/ Create an ItemStack (count 1)               |
 | `asStack(int)`      | 创建指定数量的 `ItemStack` / Create an ItemStack with specified count          |
-| `asStackTemplate()` | 创建 `ItemStackTemplate`（用于配方）/ Create an ItemStackTemplate (for recipes) |
 | `isIn(ItemStack)`   | 检查物品栈是否包含此物品 / Check if a stack contains this item                      |
 | `is(Item)`          | 检查是否特定物品 / Check if specific item                                       |
 | `asItem()`          | 获取 `Item` 对象 / Get the Item object                                      |
@@ -161,7 +160,7 @@ public class EntityEntry<T extends Entity>
 
 | 方法 / Method                        | 描述 / Description                              |
 |------------------------------------|-----------------------------------------------|
-| `create(Level, EntitySpawnReason)` | 创建实体实例 / Create an entity instance            |
+| `create(Level)`                    | 创建实体实例 / Create an entity instance            |
 | `is(Entity)`                       | 检查实体是否属于此类型 / Check if entity is of this type |
 | `cast(RegistryEntry)`              | 静态转换方法 / Static cast method                   |
 
@@ -170,9 +169,11 @@ public class EntityEntry<T extends Entity>
 ```java
 // 生成实体
 // Spawn entity
-MyEntity entity = MY_ENTITY.create(level, EntitySpawnReason.SPAWN_EGG);
-entity.setPos(x, y, z);
-level.addFreshEntity(entity);
+MyEntity entity = MY_ENTITY.create(level);
+if (entity != null) {
+    entity.setPos(x, y, z);
+    level.addFreshEntity(entity);
+}
 ```
 
 ---

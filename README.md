@@ -1,4 +1,4 @@
-# RegistrateLib [![License](https://img.shields.io/github/license/ModularMCLib/RegistrateLib?cacheSeconds=36000)](https://www.tldrlegal.com/l/mpl-2.0) ![Minecraft Version](https://img.shields.io/badge/minecraft-26.1.1-blue)
+# RegistrateLib [![License](https://img.shields.io/github/license/ModularMCLib/RegistrateLib?cacheSeconds=36000)](https://www.tldrlegal.com/l/mpl-2.0) ![Minecraft Version](https://img.shields.io/badge/minecraft-26.1.2-blue)
 
 <!-- [![Build Status](https://img.shields.io/jenkins/build?jobUrl=https%3A%2F%2Fci.tterrag.com%2Fjob%2FRegistrate%2Fjob%2F1.21%2F)](https://ci.tterrag.com/job/Registrate/job/1.21) -->
 <!-- [![Maven Version](https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Fmaven.tterrag.com%2Fcom%2Ftterrag%2Fregistrate%2FRegistrate%2Fmaven-metadata.xml)](https://maven.tterrag.com/com/tterrag/registrate/Registrate) -->
@@ -13,8 +13,8 @@ A powerful wrapper for creating and registering objects in your mod.
 
 ## 分支状态 / Fork Status
 
-本仓库是 `com.modularmc.registrate` 命名空间下的 Registrate 分支，为 ModularMCLib 生态维护。它追踪上游 Registrate 的设计，同时面向现代 NeoForge + Minecraft `26.1` 工具链，并保留可安全嵌入下游项目的包命名空间。
-This repository is the `com.modularmc.registrate` fork maintained for the ModularMCLib ecosystem. It tracks the upstream Registrate design while targeting the modern NeoForge + Minecraft `26.1` toolchain and preserving a package namespace that can be safely embedded in downstream projects.
+本仓库是 `com.modularmc.registrate` 命名空间下的 Registrate 分支，为 ModularMCLib 生态维护。当前分支面向 Minecraft `26.1.2`、NeoForge `26.1.2.126` 和 Java `25`。
+This repository is the `com.modularmc.registrate` fork maintained for the ModularMCLib ecosystem. This branch targets Minecraft `26.1.2`, NeoForge `26.1.2.126`, and Java `25`.
 
 ---
 
@@ -67,7 +67,7 @@ This repository is the `com.modularmc.registrate` fork maintained for the Modula
 First, create a `Registrate` object which will be used across your entire project.
 
 ```java
-public static final Registrate REGISTRATE = Registrate.create(MOD_ID);
+public static final Registrate REGISTRATE = Registrate.create(MOD_ID).sourceLocale(MinecraftLocale.EN_US);
 ```
 
 不一定要使用常量字段，可以在注册设置完成后传递或丢弃。  
@@ -77,7 +77,8 @@ Using a constant field is not necessary, it can be passed around and thrown away
 If declared static in your `@Mod` class, you must create the `Registrate` object lazily so it is not created too early during loading. This can be done easily like so:
 
 ```java
-public static final NonNullSupplier<Registrate> REGISTRATE = NonNullSupplier.lazy(() -> Registrate.create(MOD_ID));
+public static final NonNullSupplier<Registrate> REGISTRATE =
+        NonNullSupplier.lazy(() -> Registrate.create(MOD_ID).sourceLocale(MinecraftLocale.EN_US));
 ```
 
 接下来，开始添加对象。  
@@ -108,17 +109,18 @@ Registrate 会创建一个方块，并生成默认的简单方块状态、模型
 Registrate will create a block, with a default simple blockstate, model, loot table, and lang entry. However, all of these facets can be configured easily to use whatever custom data you may want. Example:
 
 ```java
-public static final RegistryEntry<MyStairsBlock> MY_STAIRS = REGISTRATE.block("my_block", MyStairsBlock::new)
-            .defaultItem()
+public static final BlockEntry<MyStairsBlock> MY_STAIRS = REGISTRATE.block("my_stairs", MyStairsBlock::new)
+            .simpleItem()
             .tag(BlockTags.STAIRS)
-            .blockstate(ctx -> ctx.getProvider()
-                .stairsBlock(ctx.getEntry(), ctx.getProvider().modLoc(ctx.getName())))
+            .blockstate(() -> (ctx, prov) -> prov.stairsBlock(ctx.getEntry(), prov.modBlockTexture(ctx.getName())))
             .lang("Special Stairs")
             .register();
 ```
 
 这个自定义版本会创建 BlockItem（含默认模型和语言条目）、将方块添加到标签、配置楼梯属性方块状态，并添加自定义本地化。  
 This customized version will create a BlockItem (with its own default model and lang entry), add the block to a tag, configure the blockstate for stair properties, and add a custom localization.
+
+源语言、译文和注解处理器的接入方式见 [本地化与迁移](docs/localization.md)。
 
 <!-- 有关不同 API 和方法的概述，请查阅 [Javadocs](https://ci.tterrag.com/job/Registrate/job/1.21/javadoc/)。 -->
 有关不同 API 和方法的概述，请查阅 Javadocs（待定）。更高级的用法请阅读 [维基](https://github.com/ModularMCLib/RegistrateLib/wiki)（编写中）。  

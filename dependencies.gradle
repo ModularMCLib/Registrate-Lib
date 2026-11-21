@@ -1,7 +1,13 @@
 dependencies {
     compileOnly(libs.jetbrains.annotations)
+    compileOnly(libs.jspecify)
 
+    jarJar(api(libs.kotlin.stdlib.get())) {
+        exclude group: 'org.jetbrains', module: 'annotations'
+    }
     testImplementation(libs.testframework.get())
+    testAnnotationProcessor(project(':localization-processor'))
+    kspTest(project(':localization-processor'))
 
     // Standard runtime mods //
     localRuntime(libs.testframework)

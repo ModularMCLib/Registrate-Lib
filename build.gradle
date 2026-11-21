@@ -1,6 +1,7 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
+
 plugins {
     id 'java-library'
-    id 'org.jetbrains.kotlin.jvm'
     id 'eclipse'
     id 'idea'
     id 'maven-publish'
@@ -8,7 +9,8 @@ plugins {
     alias libs.plugins.modDevGradle
     //alias libs.plugins.shadow
     alias libs.plugins.spotless
-    alias libs.plugins.lombok
+    alias libs.plugins.kotlin.jvm
+    alias libs.plugins.ksp
 }
 
 group = maven_group
@@ -19,6 +21,13 @@ boolean isCI = System.getenv("CI") != null
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+
+kotlin {
+    jvmToolchain(25)
+    compilerOptions {
+        jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
+    }
 }
 
 sourceSets {
@@ -79,18 +88,15 @@ apply from: "$rootDir/gradle/scripts/resources.gradle"
 apply from: "$rootDir/gradle/scripts/publishing.gradle"
 apply from: "$rootDir/gradle/scripts/spotless.gradle"
 
-
 tasks.withType(JavaCompile).configureEach {
     options.encoding = "UTF-8"
+    options.compilerArgs << '-Xmaxerrs' << '2000'
     options.compilerArgs << "-Xlint:-removal"
 }
 
 tasks.named('test') {
+    // The test source set is exercised by NeoForge's GameTest server.
     failOnNoDiscoveredTests = false
-}
-
-lombok {
-    version = "1.18.38"
 }
 
 jacoco {
@@ -102,28 +108,18 @@ tasks.named('runGameTestServer') {
 }
 
 jacocoTestReport {
-    doFirst {
-        try {
-            runGameTestServer.exec()
-        } catch (RuntimeException ignored) {}
-    }
-    doLast {
-        println "Coverage report location:"
-        println " - file://${layout.buildDirectory.dir('coverage').map(a -> a.file('index.html')).get()}"
-        println " - file://${layout.buildDirectory.dir('coverage').map(a -> a.file('coverage.xml')).get()}"
-    }
+    dependsOn runGameTestServer
     executionData runGameTestServer
     sourceSets sourceSets.test
     reports {
         csv.required = false
         xml.required = true
         html.outputLocation = layout.buildDirectory.dir('coverage')
-        xml.outputLocation = layout.buildDirectory.dir('coverage').map(a -> a.file('coverage.xml'))
+        xml.outputLocation = layout.buildDirectory.file('coverage/coverage.xml')
     }
     afterEvaluate {
-        classDirectories.setFrom(files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: '**/client/**')
-            fileTree(dir: it, exclude: '**/mixins/**')
-        }))
+        classDirectories.setFrom(classDirectories.asFileTree.matching {
+            exclude '**/client/**', '**/mixins/**'
+        })
     }
 }

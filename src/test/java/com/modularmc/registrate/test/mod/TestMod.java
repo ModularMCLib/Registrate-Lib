@@ -2,9 +2,18 @@ package com.modularmc.registrate.test.mod;
 
 import com.modularmc.registrate.Registrate;
 import com.modularmc.registrate.builders.BlockBuilder;
+import com.modularmc.registrate.localization.LocalizationProfile;
+import com.modularmc.registrate.localization.MinecraftLocale;
+import com.modularmc.registrate.localization.TextType;
+import com.modularmc.registrate.localization.TranslationKey;
+import com.modularmc.registrate.localization.annotation.Trans;
+import com.modularmc.registrate.localization.terminology.Domain;
+import com.modularmc.registrate.localization.terminology.LocalizationCatalog.GlossaryTerm;
+import com.modularmc.registrate.localization.terminology.LocalizationCatalog.Unit;
 import com.modularmc.registrate.providers.DataGenContext;
 import com.modularmc.registrate.providers.core.ProviderType;
 import com.modularmc.registrate.providers.generators.RegistrateItemModelGenerator;
+import com.modularmc.registrate.test.mod.localization.EnglishLabels;
 import com.modularmc.registrate.util.DataIngredient;
 import com.modularmc.registrate.util.entry.*;
 
@@ -13,8 +22,6 @@ import net.minecraft.advancements.AdvancementType;
 import net.minecraft.advancements.criterion.InventoryChangeTrigger;
 import net.minecraft.client.color.block.BlockTintSources;
 import net.minecraft.client.color.item.Constant;
-import net.minecraft.client.data.models.model.ModelTemplates;
-import net.minecraft.client.data.models.model.TextureMapping;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -22,12 +29,11 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 import net.minecraft.client.renderer.entity.PigRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
-import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+import net.minecraft.client.renderer.feature.ModelFeatureRenderer.CrumblingOverlay;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
@@ -110,20 +116,25 @@ import net.neoforged.testframework.impl.MutableTestFramework;
 import com.google.common.annotations.VisibleForTesting;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import javax.annotation.Nullable;
 
 @Mod(TestMod.MOD_ID)
 public class TestMod {
 
     public static final String MOD_ID = "testmod";
+
+    @Trans(modId = MOD_ID, key = TestMod.CUSTOM_LANG, source = "Test")
+    public static final String CUSTOM_LANG = "testmod.custom.lang";
+
+    private static final GlossaryTerm POTENTIAL = new GlossaryTerm("electric_potential", "electric potential", List.of(Domain.PHYSICS), Map.of(MinecraftLocale.ZH_CN, "电势"));
+    private static final LocalizationProfile TECHNOLOGY = new LocalizationProfile(List.of(Domain.ENGINEERING), TextType.ITEM, List.of(POTENTIAL));
 
     public static final class TestBlock extends Block implements EntityBlock {
 
@@ -149,7 +160,7 @@ public class TestMod {
 
                     @Override
                     public Component getDisplayName() {
-                        return Component.literal("Test");
+                        return Component.translatable(EnglishLabels.MENU_TITLE);
                     }
                 });
             }
@@ -183,7 +194,7 @@ public class TestMod {
         }
 
         @Override
-        public void extractRenderState(TestBlockEntity blockEntity, RenderState state, float partialTicks, Vec3 cameraPosition, @Nullable ModelFeatureRenderer.CrumblingOverlay breakProgress) {
+        public void extractRenderState(TestBlockEntity blockEntity, RenderState state, float partialTicks, Vec3 cameraPosition, @Nullable CrumblingOverlay breakProgress) {
             BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTicks, cameraPosition, breakProgress);
             itemModelResolver.updateForTopItem(state.item, new ItemStack(Items.DIAMOND), ItemDisplayContext.GROUND, blockEntity.getLevel(), null, 0);
         }
@@ -202,13 +213,6 @@ public class TestMod {
         }
     }
 
-    public static final class TestDummyBlockEntity extends BlockEntity {
-
-        public TestDummyBlockEntity(BlockEntityType<? extends TestDummyBlockEntity> type, BlockPos pos, BlockState state) {
-            super(type, pos, state);
-        }
-    }
-
     public static final class TestEntity extends Pig {
 
         public TestEntity(EntityType<? extends Pig> p_i50250_1_, Level p_i50250_2_) {
@@ -218,7 +222,7 @@ public class TestMod {
 
     public static final class TestCustomRegistryEntry {}
 
-    private final Registrate registrate = Registrate.create("testmod");
+    private final Registrate registrate = Registrate.create(MOD_ID).sourceLocale(MinecraftLocale.EN_US);
 
     @VisibleForTesting
     public final RegistryEntry<CreativeModeTab, CreativeModeTab> testcreativetab = registrate.object("test_creative_mode_tab")
@@ -230,7 +234,8 @@ public class TestMod {
     @VisibleForTesting
     public final ItemEntry<Item> testitem = registrate.object("testitem")
             .item(Item::new)
-            .onRegister(ignored -> sawCallback.set(true))
+            .localization(text -> text.profile(TECHNOLOGY).domain(Domain.PHYSICS).source("Testitem").translation(MinecraftLocale.ZH_CN, "测试物品"))
+            .onRegister(item -> sawCallback.set(registrate.get("testitem", Registries.ITEM).get() == item))
             .properties(p -> p.food(new FoodProperties.Builder().nutrition(1).saturationModifier(0.2f).build()))
             .tag(ItemTags.BEDS)
             .model(() -> (ctx, prov) -> prov.createWithExistingModel(ctx.getEntry(), prov.mcLoc("block/stone")))
@@ -273,19 +278,10 @@ public class TestMod {
             .register();
 
     @VisibleForTesting
-    public final BlockEntry<Block> magicItemModelTest = registrate.object("magic_item_model")
-            .block(Block::new)
-            .blockstate(() -> (ctx, prov) -> prov.create(
-                    ctx.getEntry(),
-                    ModelTemplates.CUBE_ALL.create(
-                            prov.modLoc("block/subfolder/" + ctx.getName()),
-                            TextureMapping.cube(prov.mcBlockTexture("gold_block")),
-                            prov.modelOutput)))
-            .simpleItem()
-            .register();
+    public final KotlinRegistrations kotlinEntries = new KotlinRegistrations(registrate);
 
     @VisibleForTesting
-    public final ItemEntry<BlockItem> testblockitem = (ItemEntry<BlockItem>) testblock.<Item, BlockItem>getSibling(Registries.ITEM);
+    public final ItemEntry<BlockItem> testblockitem = ItemEntry.cast(testblock.getSibling(Registries.ITEM));
     @VisibleForTesting
     public final BlockEntityEntry<ChestBlockEntity> testblockbe = BlockEntityEntry.cast(testblock.getSibling(Registries.BLOCK_ENTITY_TYPE));
 
@@ -295,7 +291,7 @@ public class TestMod {
             .attributes(Pig::createAttributes)
             .renderer(() -> PigRenderer::new)
             .spawnPlacement(SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Animal::checkAnimalSpawnRules, RegisterSpawnPlacementsEvent.Operation.OR)
-            .spawnEgg(egg -> egg.model(() -> (ctx, prov) -> prov.generateFlatItem(ctx.getEntry(), new Material(Identifier.fromNamespaceAndPath(MOD_ID, "item/testentity_spawn_egg")))))
+            .spawnEgg(egg -> egg.model(() -> (ctx, prov) -> prov.generateFlatItem(ctx.getEntry(), prov.modItemTexture(ctx.getName()))))
             .loot((prov, type) -> prov.add(type, LootTable.lootTable()
                     .withPool(LootPool.lootPool()
                             .setRolls(ConstantValue.exactly(1))
@@ -306,12 +302,6 @@ public class TestMod {
             .register();
     @VisibleForTesting
     public final ItemEntry<SpawnEggItem> testentitySpawnEgg = ItemEntry.cast(registrate.get("testentity_spawn_egg", Registries.ITEM));
-
-    @VisibleForTesting
-    public final BlockEntityEntry<TestDummyBlockEntity> testblockentity = registrate.object("testblockentity")
-            .blockEntity(TestDummyBlockEntity::new)
-            .validBlock(() -> Blocks.DIRT)
-            .register();
 
     @VisibleForTesting
     public final FluidEntry<BaseFlowingFluid.Flowing> testfluid = registrate.object("testfluid")
@@ -347,24 +337,33 @@ public class TestMod {
         return builder.loot((prov, block) -> prov.dropOther(block, Items.DIAMOND));
     }
 
-    private static @Nullable TestMod INSTANCE = null;
+    private static TestMod INSTANCE;
 
     public TestMod(IEventBus eventBus, ModContainer container) {
         INSTANCE = this;
 
-        registrate.addRawLang("testmod.custom.lang", "Test");
+        var catalog = registrate.localizationCatalog();
+        catalog.register(Domain.PHYSICS);
+        catalog.register(POTENTIAL);
+        catalog.register(new Unit("volt", "V", Map.of(MinecraftLocale.EN_US, "volt", MinecraftLocale.ZH_CN, "伏特")));
+        registrate.addLocalization(new TranslationKey(MOD_ID, "gui.testmod.voltage"),
+                text -> text.profile(TECHNOLOGY).type(TextType.GUI_LABEL)
+                        .source("Voltage: %s V").translation(MinecraftLocale.ZH_CN, "电压：%1$s V"));
         registrate.addRawLang("testmod.custom.lang.with_placeholders1", "Placeholder 1 %s Placeholder 2 %s");
         registrate.addRawLang("testmod.custom.lang.with_placeholders2", "Placeholder 1 %s Placeholder 2 %2$s Placeholder 3 %s");
         registrate.addRawLang("testmod.custom.lang.brackets", "(Bracket 1) [Bracket 2] {Bracket 3} <Bracket 4> ◁Bracket 5▷");
         registrate.addRawLang("testmod.custom.lang.slashes", "/commmands look good and here is a backslash \\");
         registrate.addLang("tooltip", testblock.getId(), "Egg.");
         registrate.addLang("item", testitem.getId(), "testextra", "Magic!");
+        var rootAdvancement = Identifier.fromNamespaceAndPath(MOD_ID, "root");
+        var advancementTitle = registrate.addLang("advancements", rootAdvancement, "title", "Test Advancement");
+        var advancementDescription = registrate.addLang("advancements", rootAdvancement, "description", "Get an egg.");
         registrate.addDataGenerator(ProviderType.ADVANCEMENT, adv -> Advancement.Builder.advancement()
                 .addCriterion("has_egg", InventoryChangeTrigger.TriggerInstance.hasItems(Items.EGG))
                 .display(Items.EGG,
-                        adv.title(registrate.getModid(), "root", "Test Advancement"), adv.desc(registrate.getModid(), "root", "Get an egg."),
+                        advancementTitle, advancementDescription,
                         Identifier.withDefaultNamespace("textures/gui/advancements/backgrounds/stone.png"), AdvancementType.TASK, true, true, false)
-                .save(adv, registrate.getModid() + ":root"));
+                .save(adv, rootAdvancement.toString()));
         registrate.addDataGenerator(ProviderType.GENERIC_SERVER, provider -> provider.add(data -> {
             // generic server side provider to generate custom dimension
             // to teleport to this dimension use the following command
@@ -469,13 +468,17 @@ public class TestMod {
 
     private static class Client {
 
-        private static void testBlockModel(DataGenContext<Item, BlockItem> ctx, RegistrateItemModelGenerator prov) {
-            prov.generateTintedModel(ctx.get(), prov.mcLoc("item/egg"), new Constant(0xFFFF0000));
+        private static void testBlockModel(DataGenContext<Item, BlockItem> context, RegistrateItemModelGenerator provider) {
+            provider.generateTintedModel(context.get(), provider.mcLoc("item/egg"), new Constant(0xFFFF0000));
         }
     }
 
     public static TestMod instance() {
-        Objects.requireNonNull(INSTANCE, "Attempting to get mod instance before mod construction");
         return INSTANCE;
+    }
+
+    @VisibleForTesting
+    public Registrate registrate() {
+        return registrate;
     }
 }

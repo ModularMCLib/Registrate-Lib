@@ -84,7 +84,7 @@ registrate.block("my_block", MyBlock::new)
 | `item(NonNullBiFunction)`                                            | 使用自定义工厂创建 BlockItem / Create BlockItem with a custom factory                                             |
 | `simpleBlockEntity(BlockEntityFactory)`                              | 快速创建没有额外配置的方块实体 / Quickly create a block entity without extra configuration                              |
 | `blockEntity(BlockEntityFactory)`                                    | 返回 `BlockEntityBuilder` 用于完全配置方块实体 / Return BlockEntityBuilder for full BE configuration                 |
-| `color(NonNullSupplier<Supplier<List<BlockTintSource>>>)`            | 设置方块着色器 / Set block tint sources                                                                         |
+| `color(NonNullSupplier<Supplier<List<BlockTintSource>>>)`           | 按索引注册方块着色源 / Register indexed block tint sources                                                        |
 | `defaultBlockstate()`                                                | 使用默认方块状态生成 / Use default blockstate generation                                                           |
 | `blockstate(NonNullSupplier<NonNullBiConsumer>)`                     | 自定义方块状态生成 / Custom blockstate generation                                                                 |
 | `defaultLang()`                                                      | 自动生成语言条目 / Auto-generate lang entry                                                                      |
@@ -101,10 +101,9 @@ registrate.block("my_block", MyBlock::new)
 ```java
 public static final BlockEntry<MyStairsBlock> MY_STAIRS = REGISTRATE
         .block("my_stairs", MyStairsBlock::new)
-        .defaultItem()  // 或 .item() 进行自定义 / or .item() for custom
+        .simpleItem()  // 或 .item() 进行自定义 / or .item() for custom
         .tag(BlockTags.STAIRS)
-        .blockstate(ctx -> ctx.getProvider()
-                .stairsBlock(ctx.getEntry(), ctx.getProvider().modLoc(ctx.getName())))
+        .blockstate(() -> (ctx, prov) -> prov.stairsBlock(ctx.getEntry(), prov.modBlockTexture(ctx.getName())))
         .lang("Special Stairs")
         .register();
 ```
@@ -130,6 +129,7 @@ public class ItemBuilder<T extends Item, P>
 | `tab(ResourceKey<CreativeModeTab>, ...)`                            | 添加到创造模式标签页 / Add to creative mode tab      |
 | `removeTab(ResourceKey<CreativeModeTab>)`                           | 从标签页移除 / Remove from tab                   |
 | `defaultModel()`                                                    | 使用默认物品模型 / Use default item model          |
+| `defaultModel(ItemTintSource...)`                                 | 为默认模型指定着色源 / Generate a default model with tints |
 | `model(NonNullSupplier<NonNullBiConsumer>)`                         | 自定义物品模型 / Custom item model                |
 | `defaultLang()`                                                     | 自动生成语言条目 / Auto-generate lang entry        |
 | `lang(String)`                                                      | 自定义语言名称 / Custom lang name                 |
@@ -247,8 +247,8 @@ public class FluidBuilder<T extends BaseFlowingFluid, P>
 ```java
 // 基本创建（默认 FluidType）/ Basic creation (default FluidType)
 registrate.fluid("my_fluid",
-        Identifier.of("minecraft:block/water_still"),
-        Identifier.of("minecraft:block/water_flow"),
+        Identifier.withDefaultNamespace("block/water_still"),
+        Identifier.withDefaultNamespace("block/water_flow"),
         FluidType::new)
 ```
 
@@ -270,8 +270,7 @@ registrate.fluid("my_fluid",
 | `bucket()`                                                      | 返回 `ItemBuilder` 配置流体桶 / Return ItemBuilder for bucket         |
 | `bucket(NonNullBiFunction)`                                     | 自定义桶 / Custom bucket                                           |
 | `noBucket()`                                                    | 不生成桶 / Skip bucket generation                                  |
-| `model(Identifier, Identifier)`                                 | 设置静态和流动纹理 / Set still and flowing textures                     |
-| `model(NonNullSupplier)`                                        | 自定义模型 / Custom model                                           |
+| `model(Identifier, Identifier)`                                      | 设置静态和流动纹理 / Set still and flowing textures                     |
 | `clientExtension(NonNullSupplier)`                              | 添加客户端流体类型扩展 / Add client fluid type extensions                 |
 | `tag(TagKey<Fluid>...)`                                         | 添加流体标签 / Add fluid tags                                        |
 | `removeTag(TagKey<Fluid>...)`                                   | 移除流体标签 / Remove fluid tags                                     |
@@ -282,8 +281,8 @@ registrate.fluid("my_fluid",
 ```java
 public static final FluidEntry<BaseFlowingFluid.Flowing> MY_FLUID = REGISTRATE
         .fluid("my_fluid",
-                Identifier.of("minecraft:block/water_still"),
-                Identifier.of("minecraft:block/water_flow"),
+                Identifier.withDefaultNamespace("block/water_still"),
+                Identifier.withDefaultNamespace("block/water_flow"),
                 FluidType::new)
         .properties(p -> p.lightLevel(15).canConvertToSource(true))
         .register();
