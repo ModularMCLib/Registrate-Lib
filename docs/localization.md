@@ -48,6 +48,29 @@ var title = registrate.addLocalization(new TranslationKey(MOD_ID, "gui.mymod.vol
 
 转换会保留 Minecraft 参数、样式标记、URL、换行和已声明的单位符号。默认的 `en_us → en_ud` 同样遵循这些规则，并用显式索引保持倒置后的参数含义。
 
+### 导入人工译文
+
+在模组初始化时用 `importTranslation` 登记已读入的译文。提供译者审核时对应的源文本修订，以及可以定位到文件或平台条目的来源。
+
+```java
+import com.modularmc.registrate.localization.ImportedTranslation;
+import com.modularmc.registrate.localization.MinecraftLocale;
+import com.modularmc.registrate.localization.SourceRevision;
+import com.modularmc.registrate.localization.TranslationKey;
+import com.modularmc.registrate.localization.TranslationStatus;
+
+registrate.importTranslation(new ImportedTranslation(
+        new TranslationKey(MOD_ID, "item.mymod.copper_ingot"),
+        MinecraftLocale.ZH_CN,
+        "铜锭",
+        SourceRevision.of("Copper Ingot"),
+        TranslationStatus.APPROVED,
+        false,
+        "translations/zh_cn.json"));
+```
+
+DataGen 用模组当前选中的源文本核对修订。源文本变化会将译文标为 `STALE`。锁定译文仍可参与选择，未锁定的过期译文仅用于诊断，此时配置的术语、转换和回退规则可以继续解析目标 Locale。开发者显式声明优先，其次是锁定的导入译文和当前修订的普通导入译文。同一层级中，已批准、审核中和草稿依次参与选择。
+
 ## 接入注解处理器
 
 用 `./gradlew :localization-processor:jar` 构建与库版本对应的处理器。Java 源码使用 `annotationProcessor`，Kotlin 源码使用 KSP 插件和 `ksp`。混合项目可同时使用两项配置，主库作为模组依赖。

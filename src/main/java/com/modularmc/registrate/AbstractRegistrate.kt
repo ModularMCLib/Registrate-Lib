@@ -27,6 +27,7 @@ import com.modularmc.registrate.internal.util.RegistrateLogger.core
 import com.modularmc.registrate.internal.util.RegistrateLogger.datagen
 import com.modularmc.registrate.internal.util.RegistrateLogger.modMessage
 import com.modularmc.registrate.localization.EntryLocalization
+import com.modularmc.registrate.localization.ImportedTranslation
 import com.modularmc.registrate.localization.LocalizationDeclaration
 import com.modularmc.registrate.localization.LocalizationDeclaration.Companion.sourceText
 import com.modularmc.registrate.localization.MinecraftLocale
@@ -90,6 +91,7 @@ import net.neoforged.neoforge.registries.RegistryBuilder
 import com.google.common.collect.ArrayListMultimap
 import com.google.common.collect.HashBasedTable
 import com.mojang.serialization.Codec
+import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.logging.log4j.Level
 
@@ -553,6 +555,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 
 	private val extraLang = ArrayList<RawTranslation>()
 	private val generatedLang = ConcurrentLinkedQueue<RawTranslation>()
+	private val importedTranslations = ObjectArrayList<ImportedTranslation>()
 	private var sourceLocale: MinecraftLocale? = null
 	private val terminology = Terminology()
 	private val localeDerivations = EnumMap<MinecraftLocale, LocaleDerivation>(MinecraftLocale::class.java)
@@ -571,6 +574,17 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	}
 
 	open fun terminology(): Terminology = terminology
+
+	/** Registers an imported target translation during mod setup for subsequent client DataGen runs. */
+	open fun importTranslation(translation: ImportedTranslation): S {
+		importedTranslations.add(translation)
+		return self()
+	}
+
+	internal fun collectImportedTranslations(registry: TranslationRegistry, locale: MinecraftLocale) {
+		val terminology = terminology()
+		for (translation in importedTranslations) registry.addImported(locale, translation, terminology)
+	}
 
 	/** Configures how DataGen fills a missing locale for this mod. The rule for a target can be replaced during setup. */
 	open fun deriveLocale(derivation: LocaleDerivation): S {

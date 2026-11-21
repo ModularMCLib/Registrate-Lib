@@ -109,6 +109,7 @@ open class RegistrateLangProvider(private val owner: AbstractRegistrate<*>, priv
 		operations.clear()
 		owner.collectRawTranslations(registry, locale)
 		IndexedTranslations.collect(modId, locale, registry, terminology)
+		owner.collectImportedTranslations(registry, locale)
 	}
 
 	open fun addEntityType(entity: NonNullSupplier<out EntityType<*>>) {

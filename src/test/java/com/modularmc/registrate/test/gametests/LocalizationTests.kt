@@ -2,6 +2,7 @@ package com.modularmc.registrate.test.gametests
 
 import com.modularmc.registrate.AbstractRegistrate
 import com.modularmc.registrate.localization.DeclarationDefaults
+import com.modularmc.registrate.localization.ImportedTranslation
 import com.modularmc.registrate.localization.LocalizationDeclaration
 import com.modularmc.registrate.localization.LocalizationDeclaration.Companion.sourceText
 import com.modularmc.registrate.localization.MinecraftLocale
@@ -10,10 +11,16 @@ import com.modularmc.registrate.localization.MinecraftLocale.EN_GB
 import com.modularmc.registrate.localization.MinecraftLocale.EN_UD
 import com.modularmc.registrate.localization.MinecraftLocale.EN_US
 import com.modularmc.registrate.localization.MinecraftLocale.ZH_CN
+import com.modularmc.registrate.localization.SourceRevision
 import com.modularmc.registrate.localization.TextType
 import com.modularmc.registrate.localization.TranslationKey
 import com.modularmc.registrate.localization.TranslationSource
 import com.modularmc.registrate.localization.TranslationSource.Kind
+import com.modularmc.registrate.localization.TranslationStatus
+import com.modularmc.registrate.localization.TranslationStatus.APPROVED
+import com.modularmc.registrate.localization.TranslationStatus.DRAFT
+import com.modularmc.registrate.localization.TranslationStatus.IN_REVIEW
+import com.modularmc.registrate.localization.TranslationStatus.STALE
 import com.modularmc.registrate.localization.index.IndexedTranslations
 import com.modularmc.registrate.localization.locale.LocaleDerivation
 import com.modularmc.registrate.localization.resolution.TranslationRegistry
@@ -25,6 +32,7 @@ import com.modularmc.registrate.localization.terminology.Terminology.GlossaryTer
 import com.modularmc.registrate.localization.terminology.Terminology.MeasurementUnit
 import com.modularmc.registrate.localization.terminology.Terminology.TermRelation
 import com.modularmc.registrate.localization.terminology.UnitFormat
+import com.modularmc.registrate.providers.RegistrateLangProvider
 import com.modularmc.registrate.providers.core.LanguageOutput
 import com.modularmc.registrate.test.mod.TestMod
 import com.modularmc.registrate.test.mod.localization.ChineseLocaleTestMod
@@ -214,6 +222,56 @@ object LocalizationTests {
 	@JvmStatic
 	@GameTest
 	@EmptyTemplate(floor = true)
+	@TestHolder(description = ["Resolve imported translations by source revision, review state and lock state"])
+	fun resolveImportedTranslations(test: DynamicTest) {
+		test.onGameTest { helper ->
+			val registry = TranslationRegistry()
+			val owner = UnconfiguredRegistrate(TestMod.MOD_ID).sourceLocale(EN_US)
+			val terms = owner.terminology()
+			val reviewedKey = inventory.copy(value = "gui.testmod.reviewed")
+			val staleKey = inventory.copy(value = "gui.testmod.stale")
+			val lockedKey = inventory.copy(value = "gui.testmod.locked")
+			val annotatedKey = inventory.copy(value = EnglishLabels.MENU_TITLE)
+
+			val current = "Current source"
+			val previous = "Previous source"
+			registry.add(reviewedKey, EN_US, sourceText(current), manual, terms)
+			registry.add(staleKey, EN_US, sourceText(previous), TranslationSource(Kind.AUTOMATIC, "Default label"), terms)
+			registry.add(lockedKey, EN_US, sourceText(current), manual, terms)
+
+			fun importText(key: TranslationKey, text: String, source: String, status: TranslationStatus = APPROVED, locked: Boolean = false) =
+				ImportedTranslation(key, ZH_CN, text, SourceRevision.of(source), status, locked, "translations/${key.value}").also {
+					owner.importTranslation(it)
+				}
+
+			importText(reviewedKey, "审核中", current, IN_REVIEW)
+			importText(reviewedKey, "已审核", current)
+			importText(reviewedKey, "草稿", current, DRAFT)
+			val stale = importText(staleKey, "旧译文", previous)
+			val locked = importText(lockedKey, "锁定旧译文", previous, locked = true)
+			importText(lockedKey, "新译文", current)
+			importText(annotatedKey, "导入译文", "Test Container", locked = true)
+
+			RegistrateLangProvider(owner, PackOutput(Path.of("unused-language-output"))).collect(registry)
+			helper.assertValueEqual(stale.text, registry.resolve().text(ZH_CN, staleKey.value), "A matching source revision enables the import")
+			registry.add(staleKey, EN_US, sourceText("Updated source"), manual, terms)
+
+			val imports = ArrayList<ImportedTranslation>()
+			val languages = registry.resolve(imports::add)
+			val chinese = languages.getValue(LanguageFile(TestMod.MOD_ID, ZH_CN))
+			helper.assertValueEqual("已审核", chinese.getValue(reviewedKey.value), "Approved translation outranks lower review states")
+			helper.assertTrue(stale.copy(status = STALE) in imports, "Source change marks the import stale and keeps its provenance")
+			helper.assertTrue(staleKey.value !in chinese, "Unlocked stale text is excluded from language output")
+			helper.assertTrue(locked.copy(status = STALE) in imports, "A locked import still reports its stale revision")
+			helper.assertValueEqual(locked.text, chinese.getValue(lockedKey.value), "The locked import preserves its wording")
+			helper.assertValueEqual("测试容器", chinese.getValue(annotatedKey.value), "The annotation's explicit translation takes priority")
+			helper.succeed()
+		}
+	}
+
+	@JvmStatic
+	@GameTest
+	@EmptyTemplate(floor = true)
 	@TestHolder(description = ["Report both conflicting declarations, mismatched placeholders and missing source locale"])
 	fun locateInvalidLocalizationDeclarations(test: DynamicTest) {
 		test.onGameTest { helper ->
@@ -276,5 +334,5 @@ object LocalizationTests {
 		throw AssertionError("Localization operation should have failed")
 	}
 
-	private class UnconfiguredRegistrate : AbstractRegistrate<UnconfiguredRegistrate>("missing_locale")
+	private class UnconfiguredRegistrate(modId: String = "missing_locale") : AbstractRegistrate<UnconfiguredRegistrate>(modId)
 }

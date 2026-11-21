@@ -1,11 +1,14 @@
 package com.modularmc.registrate.localization.resolution
 
-import com.modularmc.registrate.internal.util.RegistrateLogger
+import com.modularmc.registrate.internal.util.RegistrateLogger.datagen
+import com.modularmc.registrate.localization.ImportedTranslation
 import com.modularmc.registrate.localization.LocalizationDeclaration
 import com.modularmc.registrate.localization.MinecraftLocale
+import com.modularmc.registrate.localization.SourceRevision
 import com.modularmc.registrate.localization.TranslationKey
 import com.modularmc.registrate.localization.TranslationSource
 import com.modularmc.registrate.localization.TranslationSource.Kind
+import com.modularmc.registrate.localization.TranslationStatus.STALE
 import com.modularmc.registrate.localization.locale.LocaleDerivation
 import com.modularmc.registrate.localization.locale.LocaleDerivationGraph
 import com.modularmc.registrate.localization.terminology.Terminology
@@ -13,14 +16,19 @@ import com.modularmc.registrate.localization.terminology.Terminology.GlossaryTer
 
 import it.unimi.dsi.fastutil.ints.Int2IntMap
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap
+import it.unimi.dsi.fastutil.objects.Object2ObjectMap
+import it.unimi.dsi.fastutil.objects.Object2ObjectMaps
+import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap
 
 import java.util.TreeMap
+import java.util.function.Consumer
 
 /** Resolves the declarations for one DataGen output before the language provider writes any files. */
 class TranslationRegistry {
 	private val selections = Object2ObjectLinkedOpenHashMap<EntryKey, Selection>()
+	private val imports = ObjectArrayList<PendingImport>()
 	private val derivations = Reference2ObjectOpenHashMap<Terminology, LocaleDerivationGraph>()
 
 	@JvmRecord
@@ -32,24 +40,32 @@ class TranslationRegistry {
 
 	private class Declaration(val localization: LocalizationDeclaration, val terminology: Terminology)
 
-	private class Candidate(val text: String, val source: TranslationSource, val declaration: Declaration, val original: Selection? = null)
+	private class PendingImport(val sourceLocale: MinecraftLocale, val translation: ImportedTranslation, val terminology: Terminology)
 
-	private class Selection(var winner: Candidate) {
+	private class Candidate(val text: String, val source: TranslationSource, val declaration: Declaration, val original: Selection? = null, val importPriority: Int = 0) {
+		fun comparePriority(other: Candidate): Int {
+			val sourcePriority = source.kind.priority.compareTo(other.source.kind.priority)
+			return if (sourcePriority != 0) sourcePriority else importPriority.compareTo(other.importPriority)
+		}
+	}
+
+	private class Selection(private val key: EntryKey, var winner: Candidate) {
 		private var ties: MutableList<Candidate>? = null
-		lateinit var signature: Int2IntMap
+		private var signature: Int2IntMap? = null
 
 		fun add(candidate: Candidate) {
-			val precedence = candidate.source.kind.compareTo(winner.source.kind)
+			val precedence = candidate.comparePriority(winner)
 			if (precedence > 0) {
 				winner = candidate
 				ties = null
+				signature = null
 			} else if (precedence == 0) {
 				val candidates = ties ?: ArrayList<Candidate>(1).also { ties = it }
 				candidates.add(candidate)
 			}
 		}
 
-		fun verifyText(key: EntryKey) {
+		fun verifyText() {
 			ties?.forEach { candidate ->
 				require(candidate.text == winner.text) {
 					"Conflicting translations for $key from ${winner.source.location} and ${candidate.source.location}"
@@ -62,14 +78,25 @@ class TranslationRegistry {
 			ties?.forEach(action)
 		}
 
-		fun verifyPlaceholders(key: EntryKey) {
-			verifyPlaceholders(key, winner)
-			ties?.forEach { verifyPlaceholders(key, it) }
+		fun sourceFor(terminology: Terminology): Declaration? {
+			fun belongsTo(candidate: Candidate) = candidate.original == null && candidate.declaration.terminology === terminology
+			return if (belongsTo(winner)) winner.declaration else ties?.firstOrNull(::belongsTo)?.declaration
 		}
 
-		private fun verifyPlaceholders(key: EntryKey, candidate: Candidate) {
-			candidate.original?.let { original ->
-				require(original.signature == signature) { "Minecraft placeholder mismatch for $key at ${candidate.source.location}" }
+		fun verifyPlaceholders() {
+			val expected = placeholderSignature()
+			forEachWinner { candidate ->
+				val original = candidate.original ?: return@forEachWinner
+				require(original.placeholderSignature() == expected) { "Minecraft placeholder mismatch for $key at ${candidate.source.location}" }
+			}
+		}
+
+		private fun placeholderSignature(): Int2IntMap {
+			signature?.let { return it }
+			return try {
+				MinecraftTextFormat.signature(winner.text).also { signature = it }
+			} catch (error: IllegalArgumentException) {
+				throw IllegalArgumentException("Invalid Minecraft placeholder for $key at ${winner.source.location}", error)
 			}
 		}
 	}
@@ -83,6 +110,10 @@ class TranslationRegistry {
 		}
 	}
 
+	internal fun addImported(sourceLocale: MinecraftLocale, translation: ImportedTranslation, terminology: Terminology) {
+		imports.add(PendingImport(sourceLocale, translation, terminology))
+	}
+
 	internal fun configureDerivations(terminology: Terminology, modId: String, rules: Collection<LocaleDerivation>) {
 		derivations[terminology] = LocaleDerivationGraph(modId, rules)
 	}
@@ -93,29 +124,75 @@ class TranslationRegistry {
 			selection.add(candidate)
 			return selection
 		}
-		return Selection(candidate).also { put(key, it) }
+		return Selection(key, candidate).also { put(key, it) }
 	}
 
-	fun resolve(): Map<LanguageFile, Map<String, String>> {
-		val glossaryTerms = Reference2ObjectOpenHashMap<Declaration, GlossaryTerm>()
-		val glossary = collectGlossary(glossaryTerms)
+	/** Resolves language entries and, when requested, reports each matched import with its current status. */
+	@JvmOverloads
+	fun resolve(reportImport: Consumer<ImportedTranslation>? = null): Map<LanguageFile, Map<String, String>> {
+		val imported = resolveImports(reportImport)
 		val files = Object2ObjectLinkedOpenHashMap<LanguageFile, MutableMap<String, String>>()
-		writeSelections(selections, files)
-		writeSelections(glossary, files)
-		val variants = collectDerivations(glossary, glossaryTerms)
-		writeSelections(variants, files)
-		verifyPlaceholders(selections)
-		verifyPlaceholders(glossary)
-		verifyPlaceholders(variants)
+		forEachSelection(imported) { key, selection -> collectLanguageText(key, selection, files) }
+
+		val glossaryTerms = Reference2ObjectOpenHashMap<Declaration, GlossaryTerm>()
+		val glossary = collectGlossary(imported, glossaryTerms)
+		glossary.object2ObjectEntrySet().fastForEach { collectLanguageText(it.key, it.value, files) }
+		val variants = collectDerivations(imported, glossary, glossaryTerms)
+		variants.object2ObjectEntrySet().fastForEach { collectLanguageText(it.key, it.value, files) }
 		return files
 	}
 
-	private fun collectGlossary(terms: MutableMap<Declaration, GlossaryTerm>): Object2ObjectLinkedOpenHashMap<EntryKey, Selection> {
+	private fun resolveImports(reportImport: Consumer<ImportedTranslation>?): Object2ObjectMap<EntryKey, Selection> {
+		if (imports.isEmpty) return Object2ObjectMaps.emptyMap()
+
+		val selected = Object2ObjectLinkedOpenHashMap<EntryKey, Selection>()
+		val logger = datagen()
+		val revisions = Reference2ObjectOpenHashMap<Selection, SourceRevision>()
+		for (pending in imports) {
+			val translation = pending.translation
+			val key = EntryKey(translation.key, pending.sourceLocale)
+			val original = selections[key]
+			val declaration = original?.sourceFor(pending.terminology)
+			require(declaration != null) {
+				"No source declaration for import $key at ${translation.location}"
+			}
+
+			val revision = revisions.getOrPut(original) {
+				original.verifyText()
+				SourceRevision.of(declaration.localization.source)
+			}
+			val current = translation.forRevision(revision)
+			reportImport?.accept(current)
+
+			val target = key.copy(locale = current.locale)
+			if (current.status == STALE) {
+				logger.warn("Stale translation for {} at {} (reviewed revision {}, current revision {})", target, current.location, current.sourceRevision.value, revision.value)
+				if (!current.locked) continue
+			}
+			val existing = selections[target]
+			if (target == key || (existing != null && existing.winner.source.kind.priority > Kind.IMPORTED.priority)) continue
+			val source = TranslationSource(Kind.IMPORTED, current.location)
+			selected.add(target, Candidate(current.text, source, declaration, original, current.status.priority(current.locked)))
+		}
+		return selected
+	}
+
+	private inline fun forEachSelection(imported: Object2ObjectMap<EntryKey, Selection>, action: (EntryKey, Selection) -> Unit) {
+		val entries = selections.object2ObjectEntrySet().fastIterator()
+		while (entries.hasNext()) {
+			val entry = entries.next()
+			action(entry.key, imported[entry.key] ?: entry.value)
+		}
+		val translations = Object2ObjectMaps.fastIterator(imported)
+		while (translations.hasNext()) {
+			val entry = translations.next()
+			if (!selections.containsKey(entry.key)) action(entry.key, entry.value)
+		}
+	}
+
+	private fun collectGlossary(imported: Object2ObjectMap<EntryKey, Selection>, terms: MutableMap<Declaration, GlossaryTerm>): Object2ObjectLinkedOpenHashMap<EntryKey, Selection> {
 		val glossary = Object2ObjectLinkedOpenHashMap<EntryKey, Selection>()
-		selections.object2ObjectEntrySet().fastForEach { entry ->
-			val key = entry.key
-			val selection = entry.value
-			selection.verifyText(key)
+		forEachSelection(imported) { key, selection ->
 			selection.forEachWinner { candidate ->
 				if (candidate.original != null) return@forEachWinner
 				val declaration = candidate.declaration
@@ -125,7 +202,7 @@ class TranslationRegistry {
 				for ((locale, text) in term.preferredTranslations) {
 					if (locale == key.locale) continue
 					val target = key.copy(locale = locale)
-					val explicit = selections[target]
+					val explicit = imported[target] ?: selections[target]
 					if (explicit == null) {
 						glossary.add(target, Candidate(text, source, declaration, selection))
 					} else {
@@ -137,13 +214,17 @@ class TranslationRegistry {
 		return glossary
 	}
 
-	private fun collectDerivations(glossary: Object2ObjectLinkedOpenHashMap<EntryKey, Selection>, terms: Map<Declaration, GlossaryTerm>): Object2ObjectLinkedOpenHashMap<EntryKey, Selection> {
+	private fun collectDerivations(
+		imported: Object2ObjectMap<EntryKey, Selection>,
+		glossary: Object2ObjectLinkedOpenHashMap<EntryKey, Selection>,
+		terms: Map<Declaration, GlossaryTerm>,
+	): Object2ObjectLinkedOpenHashMap<EntryKey, Selection> {
 		val variants = Object2ObjectLinkedOpenHashMap<EntryKey, Selection>()
 
 		fun expand(key: EntryKey, candidate: Candidate, original: Selection, graph: LocaleDerivationGraph, symbols: Collection<String>) {
 			for (rule in graph.from(key.locale)) {
 				val target = key.copy(locale = rule.output)
-				if (selections.containsKey(target) || glossary.containsKey(target)) continue
+				if (selections.containsKey(target) || imported.containsKey(target) || glossary.containsKey(target)) continue
 				val kind = if (candidate.source.kind == Kind.FALLBACK) Kind.FALLBACK else rule.kind
 				val source = TranslationSource(kind, "${candidate.source.location} (${key.locale.code()} -> ${target.locale.code()})")
 				val declaration = candidate.declaration
@@ -154,19 +235,17 @@ class TranslationRegistry {
 			}
 		}
 
-		fun expandFrom(entries: Object2ObjectLinkedOpenHashMap<EntryKey, Selection>) {
-			entries.object2ObjectEntrySet().fastForEach { entry ->
-				entry.value.forEachWinner { candidate ->
-					val declaration = candidate.declaration
-					val graph = derivations[declaration.terminology] ?: LocaleDerivationGraph.DEFAULT
-					if (graph.from(entry.key.locale).isEmpty()) return@forEachWinner
-					val symbols = unitSymbols(declaration, terms[declaration])
-					expand(entry.key, candidate, entry.value, graph, symbols)
-				}
+		fun expandFrom(key: EntryKey, selection: Selection) {
+			selection.forEachWinner { candidate ->
+				val declaration = candidate.declaration
+				val graph = derivations[declaration.terminology] ?: LocaleDerivationGraph.DEFAULT
+				if (graph.from(key.locale).isEmpty()) return@forEachWinner
+				val symbols = unitSymbols(declaration, terms[declaration])
+				expand(key, candidate, selection, graph, symbols)
 			}
 		}
-		expandFrom(selections)
-		expandFrom(glossary)
+		forEachSelection(imported, ::expandFrom)
+		glossary.object2ObjectEntrySet().fastForEach { expandFrom(it.key, it.value) }
 		return variants
 	}
 
@@ -180,34 +259,18 @@ class TranslationRegistry {
 		return unitSymbols
 	}
 
-	private fun verifyPlaceholders(entries: Object2ObjectLinkedOpenHashMap<EntryKey, Selection>) {
-		entries.object2ObjectEntrySet().fastForEach { it.value.verifyPlaceholders(it.key) }
-	}
-
 	private fun checkGlossaryText(key: EntryKey, term: GlossaryTerm, preferred: String, candidate: Candidate) {
 		val text = candidate.text
 		val forbidden = term.forbiddenTranslations[key.locale]?.any { it.equals(text, ignoreCase = true) } == true
 		val accepted = preferred.equals(text, ignoreCase = true) || term.acceptedTranslations[key.locale]?.any { it.equals(text, ignoreCase = true) } == true
 		if (forbidden || !accepted) {
-			RegistrateLogger.datagen().warn("Glossary term {} for {} at {} prefers '{}', found '{}'", term.id, key, candidate.source.location, preferred, text)
+			datagen().warn("Glossary term {} for {} at {} prefers '{}', found '{}'", term.id, key, candidate.source.location, preferred, text)
 		}
 	}
 
-	private fun writeSelections(entries: Object2ObjectLinkedOpenHashMap<EntryKey, Selection>, files: MutableMap<LanguageFile, MutableMap<String, String>>) {
-		val iterator = entries.object2ObjectEntrySet().fastIterator()
-		while (iterator.hasNext()) {
-			val entry = iterator.next()
-			val key = entry.key
-			val selection = entry.value
-			selection.verifyText(key)
-
-			val winner = selection.winner
-			selection.signature = try {
-				MinecraftTextFormat.signature(winner.text)
-			} catch (error: IllegalArgumentException) {
-				throw IllegalArgumentException("Invalid Minecraft placeholder for $key at ${winner.source.location}", error)
-			}
-			files.computeIfAbsent(LanguageFile(key.key.namespace, key.locale)) { TreeMap() }[key.key.value] = winner.text
-		}
+	private fun collectLanguageText(key: EntryKey, selection: Selection, files: MutableMap<LanguageFile, MutableMap<String, String>>) {
+		selection.verifyText()
+		selection.verifyPlaceholders()
+		files.computeIfAbsent(LanguageFile(key.key.namespace, key.locale)) { TreeMap() }[key.key.value] = selection.winner.text
 	}
 }
