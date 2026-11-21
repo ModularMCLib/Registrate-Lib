@@ -5,7 +5,6 @@ plugins {
     id 'eclipse'
     id 'idea'
     id 'maven-publish'
-    id 'jacoco'
     alias libs.plugins.modDevGradle
     //alias libs.plugins.shadow
     alias libs.plugins.spotless
@@ -97,29 +96,4 @@ tasks.withType(JavaCompile).configureEach {
 tasks.named('test') {
     // The test source set is exercised by NeoForge's GameTest server.
     failOnNoDiscoveredTests = false
-}
-
-jacoco {
-    applyTo runGameTestServer
-}
-
-tasks.named('runGameTestServer') {
-    jacoco.excludes = ['com.mojang.*', 'net.minecraft.*', 'net.neoforged.*']
-}
-
-jacocoTestReport {
-    dependsOn runGameTestServer
-    executionData runGameTestServer
-    sourceSets sourceSets.test
-    reports {
-        csv.required = false
-        xml.required = true
-        html.outputLocation = layout.buildDirectory.dir('coverage')
-        xml.outputLocation = layout.buildDirectory.file('coverage/coverage.xml')
-    }
-    afterEvaluate {
-        classDirectories.setFrom(classDirectories.asFileTree.matching {
-            exclude '**/client/**', '**/mixins/**'
-        })
-    }
 }
