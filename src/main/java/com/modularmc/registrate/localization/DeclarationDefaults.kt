@@ -43,7 +43,7 @@ data class DeclarationDefaults @JvmOverloads constructor(
 					require(existing == null || existing == term) { "Included defaults disagree on glossary term '${term.id}'" }
 				}
 				defaults.type?.let { candidate ->
-					require(type == null || type == candidate) { "Included defaults disagree on text type: $type and $candidate" }
+					require(type == null || type == candidate) { "Included defaults disagree on text type: ${type?.id} and ${candidate.id}" }
 					type = candidate
 				}
 			}

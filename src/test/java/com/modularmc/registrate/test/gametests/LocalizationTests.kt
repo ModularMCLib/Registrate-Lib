@@ -44,7 +44,6 @@ import net.neoforged.testframework.annotation.ForEachTest
 import net.neoforged.testframework.annotation.TestHolder
 import net.neoforged.testframework.gametest.EmptyTemplate
 import net.neoforged.testframework.gametest.GameTest
-
 import java.nio.file.Path
 
 @ForEachTest(groups = ["registrate-localization"])
@@ -107,6 +106,8 @@ object LocalizationTests {
 				override fun find(id: String): GlossaryTerm? = personal.takeIf { it.id == id }
 
 				override fun findBySource(normalizedSource: String): Iterable<GlossaryTerm> = if (normalizedSource == personal.source) listOf(personal) else emptyList()
+
+				override fun findRelated(id: String, relation: TermRelation): Iterable<GlossaryTerm> = emptyList()
 			})
 			val otherTerms = Terminology()
 			otherTerms.register(GlossaryTerm("potential", "potential", emptyList(), mapOf(ZH_CN to "势能")))
@@ -133,6 +134,39 @@ object LocalizationTests {
 			registry.add(inventory, EN_US, sourceText("Potential"), manual, terms)
 			val diagnostic = failure(registry::resolve)
 			helper.assertTrue(listOf("electric_potential", "personal_potential", manual.location, inventory.value).all { it in diagnostic }, "Ambiguous term diagnostic")
+			helper.succeed()
+		}
+	}
+
+	@JvmStatic
+	@GameTest
+	@EmptyTemplate(floor = true)
+	@TestHolder(description = ["Expand one-sided synonyms in both directions without using broader relations as translations"])
+	fun deriveTranslationsFromSynonyms(test: DynamicTest) {
+		test.onGameTest { helper ->
+			val terms = Terminology()
+			val electrical = GlossaryTerm(
+				"electric_potential",
+				"electric potential",
+				listOf(Domain.PHYSICS),
+				mapOf(ZH_CN to "电势"),
+				relations = mapOf(TermRelation.SYNONYM to setOf("potential"), TermRelation.BROADER to setOf("voltage")),
+			)
+			val potential = GlossaryTerm("potential", "potential", listOf(Domain.PHYSICS), mapOf(ZH_CN to "电势"))
+			val voltage = GlossaryTerm("voltage", "voltage", listOf(Domain.PHYSICS), mapOf(ZH_CN to "电压"))
+			terms.register(electrical)
+			terms.register(potential)
+			terms.register(voltage)
+
+			val electricalKey = TranslationKey(TestMod.MOD_ID, "gui.testmod.electric_potential")
+			val potentialKey = TranslationKey(TestMod.MOD_ID, "gui.testmod.potential")
+			val registry = TranslationRegistry()
+			registry.add(electricalKey, EN_US, LocalizationDeclaration.Builder().source("Electric potential").domain(Domain.PHYSICS).build(), manual, terms)
+			registry.add(potentialKey, EN_US, LocalizationDeclaration.Builder().source("Potential").domain(Domain.PHYSICS).build(), manual, terms)
+
+			val chinese = registry.resolve().getValue(LanguageFile(TestMod.MOD_ID, ZH_CN))
+			helper.assertValueEqual("电势", chinese.getValue(electricalKey.value), "The declared synonym contributes its preferred translation")
+			helper.assertValueEqual("电势", chinese.getValue(potentialKey.value), "Reverse synonym lookup contributes the same translation")
 			helper.succeed()
 		}
 	}
@@ -175,7 +209,7 @@ object LocalizationTests {
 			registry.add(inventory, EN_US, declaration, manual, terms)
 			helper.assertValueEqual("电阻", registry.resolve().text(ZH_CN, inventory.value), "Included glossary ID resolves its alias")
 			val conflict = failure { DeclarationDefaults.Builder().include(parent, defaults).build() }
-			helper.assertTrue("GUI_LABEL" in conflict && "DESCRIPTION" in conflict, "Same-level text types conflict")
+			helper.assertTrue("gui_label" in conflict && "description" in conflict, "Same-level text types conflict")
 			helper.succeed()
 		}
 	}

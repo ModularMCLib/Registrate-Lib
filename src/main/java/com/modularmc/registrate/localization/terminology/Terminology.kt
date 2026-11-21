@@ -5,11 +5,9 @@ import com.modularmc.registrate.localization.MinecraftLocale
 import com.modularmc.registrate.localization.TextType
 import com.modularmc.registrate.localization.TranslationKey
 import com.modularmc.registrate.localization.TranslationSource
-
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.objects.ObjectArrayList
-
-import java.util.EnumSet
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 import java.util.Optional
 
 /** Terminology defined by one mod. Register it during mod setup and query it alongside declarations. */
@@ -44,7 +42,7 @@ class Terminology {
 		fun format(value: Number, locale: MinecraftLocale): String = formats[locale]?.format(value, symbol) ?: "$value $symbol"
 	}
 
-	private val domains = EnumSet.noneOf(Domain::class.java)
+	private val domains = ObjectOpenHashSet<Domain>()
 	private val indexedGlossary = IndexedGlossary()
 	private val glossaries = ObjectArrayList<Glossary>(1).apply { add(indexedGlossary) }
 	private val units = Object2ObjectOpenHashMap<String, MeasurementUnit>()
@@ -66,6 +64,28 @@ class Terminology {
 	}
 
 	fun hasDomain(domain: Domain): Boolean = domains.contains(domain)
+
+	internal fun synonyms(term: GlossaryTerm): ObjectArrayList<GlossaryTerm> {
+		val discovered = ObjectOpenHashSet<String>()
+		val pending = ObjectArrayList<GlossaryTerm>(4)
+		val result = ObjectArrayList<GlossaryTerm>(4)
+		discovered.add(term.id)
+		pending.add(term)
+		result.add(term)
+		var index = 0
+		while (index < pending.size) {
+			val current = pending[index++]
+			for (glossary in glossaries) {
+				for (related in glossary.findRelated(current.id, TermRelation.SYNONYM)) {
+					if (discovered.add(related.id)) {
+						pending.add(related)
+						result.add(related)
+					}
+				}
+			}
+		}
+		return result
+	}
 
 	fun glossary(id: String): Optional<GlossaryTerm> = Optional.ofNullable(findTerm(id))
 

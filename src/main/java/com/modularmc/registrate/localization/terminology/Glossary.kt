@@ -1,6 +1,7 @@
 package com.modularmc.registrate.localization.terminology
 
 import com.modularmc.registrate.localization.terminology.Terminology.GlossaryTerm
+import com.modularmc.registrate.localization.terminology.Terminology.TermRelation
 
 /**
  * Supplies terminology to a mod's [Terminology] from any storage format.
@@ -16,4 +17,10 @@ interface Glossary {
 	 * The query uses locale-independent lowercase. An unmatched label returns an empty iterable.
 	 */
 	fun findBySource(normalizedSource: String): Iterable<GlossaryTerm>
+
+	/**
+	 * Returns terms directly related to the supplied term. `SYNONYM` results include both incoming and outgoing links.
+	 * Implementations own the relation data and keep lookups stable throughout DataGen.
+	 */
+	fun findRelated(id: String, relation: TermRelation): Iterable<GlossaryTerm>
 }

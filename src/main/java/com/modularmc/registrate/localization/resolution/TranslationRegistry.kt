@@ -199,15 +199,17 @@ class TranslationRegistry {
 				val declaration = candidate.declaration
 				val term = declaration.terminology.resolveTerm(key.key, declaration.localization, candidate.source) ?: return@forEachWinner
 				terms[declaration] = term
-				val source = TranslationSource(Kind.GLOSSARY, "${candidate.source.location} (glossary ${term.id})")
-				for ((locale, text) in term.preferredTranslations) {
-					if (locale == key.locale) continue
-					val target = key.copy(locale = locale)
-					val explicit = imported[target] ?: selections[target]
-					if (explicit == null) {
-						glossary.add(target, Candidate(text, source, declaration, selection))
-					} else {
-						checkGlossaryText(target, term, text, explicit.winner)
+				for (synonym in declaration.terminology.synonyms(term)) {
+					val source = TranslationSource(Kind.GLOSSARY, "${candidate.source.location} (glossary ${synonym.id})")
+					for ((locale, text) in synonym.preferredTranslations) {
+						if (locale == key.locale) continue
+						val target = key.copy(locale = locale)
+						val explicit = imported[target] ?: selections[target]
+						if (explicit == null) {
+							glossary.add(target, Candidate(text, source, declaration, selection))
+						} else {
+							checkGlossaryText(target, synonym, text, explicit.winner)
+						}
 					}
 				}
 			}
