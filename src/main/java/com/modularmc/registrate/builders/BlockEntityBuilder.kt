@@ -100,27 +100,26 @@ open class BlockEntityBuilder<T : BlockEntity, P : Any> protected constructor(
 	 */
 	open fun renderer(renderer: NonNullSupplier<NonNullFunction<BlockEntityRendererProvider.Context, BlockEntityRenderer<T>>>): BlockEntityBuilder<T, P> {
 		if (this.renderer == null) { // First call only
-			unsafeRunWhenOn(Dist.CLIENT, Supplier { Runnable { this.registerRenderer() } })
-		}
+			unsafeRunWhenOn(Dist.CLIENT) { Runnable { this.registerRenderer() } }
+        }
 		this.renderer = renderer
 		return this
 	}
 
 	protected open fun registerRenderer() {
-		addModListener<FMLClientSetupEvent>(
+		addModListener(
 			owner,
 			FMLClientSetupEvent::class.java,
 			Consumer { `$`: FMLClientSetupEvent ->
 				val renderer: NonNullSupplier<NonNullFunction<BlockEntityRendererProvider.Context, BlockEntityRenderer<T>>>? =
 					this.renderer
 				if (renderer != null) {
-					BlockEntityRenderers.register<T>(
+					BlockEntityRenderers.register(
 						entry,
-						BlockEntityRendererProvider { t: BlockEntityRendererProvider.Context? ->
-							renderer.get().apply(t!!)
-						},
-					)
-				}
+                    ) { t: BlockEntityRendererProvider.Context? ->
+                        renderer.get().apply(t!!)
+                    }
+                }
 			},
 		)
 	}
@@ -132,7 +131,7 @@ open class BlockEntityBuilder<T : BlockEntity, P : Any> protected constructor(
 	 * @return this [BlockEntityBuilder]
 	 */
 	open fun registerCapability(registerCapabilitiesEvent: Consumer<RegisterCapabilitiesEvent>): BlockEntityBuilder<T, P> {
-		addModListener<RegisterCapabilitiesEvent>(
+		addModListener(
 			owner,
 			RegisterCapabilitiesEvent::class.java,
 			registerCapabilitiesEvent,
@@ -148,9 +147,9 @@ open class BlockEntityBuilder<T : BlockEntity, P : Any> protected constructor(
 		return BlockEntityType.Builder.of<T>({ pos, state -> factory.create(supplier.get(), pos, state) }, *valid).build(null)
 	}
 
-	override fun createEntryWrapper(delegate: DeferredHolder<BlockEntityType<*>, BlockEntityType<T>>): RegistryEntry<BlockEntityType<*>, BlockEntityType<T>> = BlockEntityEntry<T>(owner, delegate)
+	override fun createEntryWrapper(delegate: DeferredHolder<BlockEntityType<*>, BlockEntityType<T>>) = BlockEntityEntry(owner, delegate)
 
-	public override fun register(): BlockEntityEntry<T> = super.register() as BlockEntityEntry<T>
+	override fun register(): BlockEntityEntry<T> = super.register() as BlockEntityEntry<T>
 
 	companion object {
 		/**
@@ -177,7 +176,7 @@ open class BlockEntityBuilder<T : BlockEntity, P : Any> protected constructor(
 		 * @return A new [BlockEntityBuilder] with reasonable default data generators.
 		</P></T> */
 		@JvmStatic
-		fun <T : BlockEntity, P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, factory: BlockEntityFactory<T>): BlockEntityBuilder<T, P> =
-			BlockEntityBuilder<T, P>(owner, parent, name, callback, factory)
+		fun <T : BlockEntity, P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, factory: BlockEntityFactory<T>) =
+			BlockEntityBuilder(owner, parent, name, callback, factory)
 	}
 }

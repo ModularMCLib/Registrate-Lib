@@ -513,7 +513,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 			name,
 			callback,
 			{ properties: FluidType.Properties -> FluidType(properties) },
-			{ properties: BaseFlowingFluid.Properties -> BaseFlowingFluid.Flowing(properties) },
+			{ properties: BaseFlowingFluid.Properties -> Flowing(properties) },
 		)
 
 		/**

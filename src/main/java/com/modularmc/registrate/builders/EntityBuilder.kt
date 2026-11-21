@@ -66,9 +66,10 @@ open class EntityBuilder<T : Entity, P : Any> protected constructor(
 	callback,
 	Registries.ENTITY_TYPE,
 ) {
-	private val builder: NonNullSupplier<EntityType.Builder<T>>
+	private val builder: NonNullSupplier<EntityType.Builder<T>> =
+        NonNullSupplier { EntityType.Builder.of<T>(factory, classification) }
 
-	private var builderCallback = NonNullConsumer { `$`: EntityType.Builder<T> -> }
+    private var builderCallback = NonNullConsumer { `$`: EntityType.Builder<T> -> }
 
 	private var renderer: NonNullSupplier<NonNullFunction<EntityRendererProvider.Context, EntityRenderer<in T>>>? =
 		null
@@ -76,11 +77,7 @@ open class EntityBuilder<T : Entity, P : Any> protected constructor(
 	private var attributesConfigured = false
 	private var spawnConfigured = false
 
-	init {
-		this.builder = NonNullSupplier { EntityType.Builder.of<T>(factory, classification) }
-	}
-
-	/**
+    /**
 	 * Modify the properties of the entity. Modifications are done lazily, but the passed function is composed with the
 	 * current one, and as such this method can be called multiple times to perform
 	 * different operations.
@@ -106,14 +103,14 @@ open class EntityBuilder<T : Entity, P : Any> protected constructor(
 	 */
 	open fun renderer(renderer: NonNullSupplier<NonNullFunction<EntityRendererProvider.Context, EntityRenderer<in T>>>): EntityBuilder<T, P> {
 		if (this.renderer == null) {
-			unsafeRunWhenOn(Dist.CLIENT, Supplier { Runnable { this.registerRenderer() } })
-		}
+			unsafeRunWhenOn(Dist.CLIENT) { Runnable { this.registerRenderer() } }
+        }
 		this.renderer = renderer
 		return this
 	}
 
 	protected open fun registerRenderer() {
-		addModListener<RegisterRenderers>(
+		addModListener(
 			owner,
 			RegisterRenderers::class.java,
 			Consumer { evt: RegisterRenderers ->
@@ -124,7 +121,7 @@ open class EntityBuilder<T : Entity, P : Any> protected constructor(
 						val provider = renderer.get()
 						evt.registerEntityRenderer(entry) { context -> provider.apply(context) }
 					} catch (e: Exception) {
-						throw IllegalStateException("Failed to register renderer for Entity " + get().getId(), e)
+						throw IllegalStateException("Failed to register renderer for Entity " + get().id, e)
 					}
 				}
 			},
@@ -147,7 +144,7 @@ open class EntityBuilder<T : Entity, P : Any> protected constructor(
 	open fun attributes(attributes: Supplier<AttributeSupplier.Builder>): EntityBuilder<T, P> {
 		check(!attributesConfigured) { "Cannot configure attributes more than once" }
 		attributesConfigured = true
-		addModListener<EntityAttributeCreationEvent>(
+		addModListener(
 			owner,
 			EntityAttributeCreationEvent::class.java,
 			Consumer { e: EntityAttributeCreationEvent ->
@@ -162,7 +159,7 @@ open class EntityBuilder<T : Entity, P : Any> protected constructor(
 
 	/**
 	 * Register a spawn placement for this entity. The entity must extend [Mob] and allow construction with a
-	 * `null` [Level].
+	 * `null` [net.minecraft.world.level.Level].
 	 *
 	 *
 	 * Cannot be called more than once per builder.
@@ -187,11 +184,11 @@ open class EntityBuilder<T : Entity, P : Any> protected constructor(
 		spawnConfigured = true
 		this.onRegister(
 			NonNullConsumer { t: EntityType<T>? ->
-				addModListener<RegisterSpawnPlacementsEvent>(
+				addModListener(
 					owner,
 					RegisterSpawnPlacementsEvent::class.java,
 					Consumer { e: RegisterSpawnPlacementsEvent ->
-						e.register<T>(t, type, heightmap, predicate, operation)
+						e.register(t, type, heightmap, predicate, operation)
 					},
 				)
 			},
@@ -214,42 +211,39 @@ open class EntityBuilder<T : Entity, P : Any> protected constructor(
 			.item<SpawnEggItem, EntityBuilder<T, P>>(
 				this,
 				name + "_spawn_egg",
-				NonNullFunction { properties: Item.Properties ->
-					DeferredSpawnEggItem(
-						mobType,
-						baseColor,
-						highlightColor,
-						properties,
-					)
-				},
-			)
-			.model(
-				NonNullSupplier {
-					NonNullBiConsumer { ctx: DataGenContext<Item, SpawnEggItem>, prov: RegistrateItemModelGenerator ->
-						prov.createWithExistingModel(
-							ctx.get(),
-							prov.mcLoc("item/template_spawn_egg"),
-						)
-					}
-				},
-			)
-			.tab(CreativeModeTabs.SPAWN_EGGS)
+            ) { properties: Item.Properties ->
+                DeferredSpawnEggItem(
+                    mobType,
+                    baseColor,
+                    highlightColor,
+                    properties,
+                )
+            }
+            .model {
+                NonNullBiConsumer { ctx: DataGenContext<Item, SpawnEggItem>, prov: RegistrateItemModelGenerator ->
+                    prov.createWithExistingModel(
+                        ctx.get(),
+                        prov.mcLoc("item/template_spawn_egg"),
+                    )
+                }
+            }
+            .tab(CreativeModeTabs.SPAWN_EGGS)
 		consumer.accept(eggBuilder)
 		return eggBuilder.build()
 	}
 
 	/**
 	 * Assign the default translation, as specified by
-	 * [RegistrateLangProvider.getAutomaticName]. This is
+	 * [com.modularmc.registrate.providers.RegistrateLangProvider.getAutomaticName]. This is
 	 * the default, so it is generally
 	 * not necessary to call, unless for undoing previous changes.
 	 *
 	 * @return this [EntityBuilder]
 	 */
-	open fun defaultLang(): EntityBuilder<T, P> = lang(NonNullFunction { obj: EntityType<T> -> obj.descriptionId })
+	open fun defaultLang(): EntityBuilder<T, P> = lang { obj: EntityType<T> -> obj.descriptionId }
 
-	/** Configures the source text and translations of this entry.  */
-	open fun localization(configure: Consumer<LocalizationDeclaration.Builder>): EntityBuilder<T, P> = localization(NonNullFunction { obj: EntityType<T> -> obj.descriptionId }, configure)
+    /** Configures the source text and translations of this entry.  */
+	open fun localization(configure: Consumer<LocalizationDeclaration.Builder>): EntityBuilder<T, P> = localization({ obj: EntityType<T> -> obj.descriptionId }, configure)
 
 	/**
 	 * Set the translation for this entity.
@@ -258,7 +252,7 @@ open class EntityBuilder<T : Entity, P : Any> protected constructor(
 	 * A localized English name
 	 * @return this [EntityBuilder]
 	 */
-	open fun lang(name: String): EntityBuilder<T, P> = lang(NonNullFunction { obj: EntityType<T> -> obj.descriptionId }, name)
+	open fun lang(name: String): EntityBuilder<T, P> = lang({ obj: EntityType<T> -> obj.descriptionId }, name)
 
 	/**
 	 * Configure the loot table for this entity. This is different than most data gen callbacks as the callback does not
@@ -269,17 +263,15 @@ open class EntityBuilder<T : Entity, P : Any> protected constructor(
 	 * The callback which will be invoked during entity loot table creation.
 	 * @return this [EntityBuilder]
 	 */
-	open fun loot(cons: NonNullBiConsumer<RegistrateEntityLootTables, EntityType<T>>): EntityBuilder<T, P> = setData<RegistrateLootTableProvider>(
+	open fun loot(cons: NonNullBiConsumer<RegistrateEntityLootTables, EntityType<T>>) = setData(
 		ProviderType.LOOT,
-		NonNullBiConsumer { ctx: DataGenContext<EntityType<*>, EntityType<T>>, prov: RegistrateLootTableProvider ->
-			prov.addLootAction<RegistrateEntityLootTables>(
-				RegistrateLootTableProvider.LootType.ENTITY,
-				NonNullConsumer { tb: RegistrateEntityLootTables -> cons.accept(tb, ctx.entry) },
-			)
-		},
-	)
+    ) { ctx: DataGenContext<EntityType<*>, EntityType<T>>, prov: RegistrateLootTableProvider ->
+        prov.addLootAction(
+            RegistrateLootTableProvider.LootType.ENTITY,
+        ) { tb: RegistrateEntityLootTables -> cons.accept(tb, ctx.entry) }
+    }
 
-	/**
+    /**
 	 * Assign [TagKey]`s` to this entity. Multiple calls will add additional tags.
 	 *
 	 * @param tags
@@ -287,7 +279,7 @@ open class EntityBuilder<T : Entity, P : Any> protected constructor(
 	 * @return this [EntityBuilder]
 	 */
 	@SafeVarargs
-	fun tag(vararg tags: TagKey<EntityType<*>>): EntityBuilder<T, P> = tag<RegistrateTagsProvider.IntrinsicTags<EntityType<*>>>(ProviderType.ENTITY_TAGS, *tags)
+	fun tag(vararg tags: TagKey<EntityType<*>>) = tag(ProviderType.ENTITY_TAGS, *tags)
 
 	override fun createEntry(): EntityType<T> {
 		val builder: EntityType.Builder<T> = this.builder.get()
@@ -295,9 +287,9 @@ open class EntityBuilder<T : Entity, P : Any> protected constructor(
 		return builder.build(resourceKey.location().toString())
 	}
 
-	override fun createEntryWrapper(delegate: DeferredHolder<EntityType<*>, EntityType<T>>): RegistryEntry<EntityType<*>, EntityType<T>> = EntityEntry<T>(owner, delegate)
+	override fun createEntryWrapper(delegate: DeferredHolder<EntityType<*>, EntityType<T>>) = EntityEntry(owner, delegate)
 
-	public override fun register(): EntityEntry<T> = super.register() as EntityEntry<T>
+	override fun register(): EntityEntry<T> = super.register() as EntityEntry<T>
 
 	companion object {
 		/**
@@ -336,7 +328,7 @@ open class EntityBuilder<T : Entity, P : Any> protected constructor(
 			callback: BuilderCallback,
 			factory: EntityFactory<T>,
 			classification: MobCategory,
-		): EntityBuilder<T, P> = EntityBuilder<T, P>(owner, parent, name, callback, factory, classification)
+		) = EntityBuilder(owner, parent, name, callback, factory, classification)
 			.defaultLang()
 	}
 }

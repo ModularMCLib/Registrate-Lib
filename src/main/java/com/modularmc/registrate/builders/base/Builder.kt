@@ -52,11 +52,15 @@ interface Builder<R : Any, T : R, P : Any, S : Builder<R, T, P, S>> : NonNullSup
 		return this as S
 	}
 
-	fun <D : Any> dataMap(type: DataMapType<R, D>, value: D): S = dataMap(type, NonNullFunction { value })
+	fun <D : Any> dataMap(type: DataMapType<R, D>, value: D): S = dataMap(type) { value }
 
-	fun <D : Any> dataMap(type: DataMapType<R, D>, factory: NonNullFunction<DataGenContext<R, T>, D>): S = dataMap(type, NonNullBiFunction { context, _ -> factory.apply(context) })
+    fun <D : Any> dataMap(type: DataMapType<R, D>, factory: NonNullFunction<DataGenContext<R, T>, D>): S = dataMap(type) { context, _ ->
+        factory.apply(
+            context
+        )
+    }
 
-	@Suppress("UNCHECKED_CAST")
+    @Suppress("UNCHECKED_CAST")
 	fun <D : Any> dataMap(type: DataMapType<R, D>, factory: NonNullBiFunction<DataGenContext<R, T>, HolderLookup.Provider, D>): S {
 		owner.addDataGenerator(ProviderType.DATA_MAP) { provider ->
 			val context = DataGenContext.from(this)
@@ -68,7 +72,7 @@ interface Builder<R : Any, T : R, P : Any, S : Builder<R, T, P, S>> : NonNullSup
 	/** Adds a callback that runs after the object is inserted into its registry. */
 	@Suppress("UNCHECKED_CAST")
 	fun onRegister(callback: NonNullConsumer<in T>): S {
-		owner.addRegisterCallback<R, T>(name, registryKey, callback)
+		owner.addRegisterCallback(name, registryKey, callback)
 		return this as S
 	}
 
