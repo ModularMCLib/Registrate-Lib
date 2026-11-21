@@ -9,6 +9,7 @@
   "entity.testmod.testitem": "ɯǝʇıʇsǝ⟘",
   "fluid.testmod.testbucketfluid": "pınןɟʇǝʞɔnqʇsǝ⟘",
   "fluid.testmod.testfluid": "pınןɟʇsǝ⟘",
+  "gui.testmod.voltage": "Λ %1$s :ǝbɐʇןoΛ",
   "item.testmod.testbucketfluid_bucket": "ʇǝʞɔnᗺ pınןɟʇǝʞɔnqʇsǝ⟘",
   "item.testmod.testentity_spawn_egg": "bbƎ uʍɐdS ʎʇıʇuǝʇsǝ⟘",
   "item.testmod.testitem": "ɯǝʇıʇsǝ⟘",
@@ -18,6 +19,6 @@
   "testmod.custom.lang.brackets": "◁ϛ ʇǝʞɔɐɹᗺ▷ <ㄣ ʇǝʞɔɐɹᗺ> {Ɛ ʇǝʞɔɐɹᗺ} [ᄅ ʇǝʞɔɐɹᗺ] (Ɩ ʇǝʞɔɐɹᗺ)",
   "testmod.custom.lang.slashes": "/ ɥsɐןsʞɔɐq ɐ sı ǝɹǝɥ puɐ poob ʞooן spuɐɯɯɯoɔ\\",
   "testmod.custom.lang.with_placeholders1": "%2$s ᄅ ɹǝpןoɥǝɔɐןԀ %1$s Ɩ ɹǝpןoɥǝɔɐןԀ",
-  "testmod.custom.lang.with_placeholders2": "%3$s Ɛ ɹǝpןoɥǝɔɐןԀ %2$s ᄅ ɹǝpןoɥǝɔɐןԀ %1$s Ɩ ɹǝpןoɥǝɔɐןԀ",
+  "testmod.custom.lang.with_placeholders2": "%2$s Ɛ ɹǝpןoɥǝɔɐןԀ %2$s ᄅ ɹǝpןoɥǝɔɐןԀ %1$s Ɩ ɹǝpןoɥǝɔɐןԀ",
   "tooltip.testmod.testblock": "˙bbƎ"
 }

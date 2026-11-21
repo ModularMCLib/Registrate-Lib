@@ -90,9 +90,10 @@ neoForge {
 
             gameDirectory.set(file('run/data'))
             // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
-            programArguments.addAll('--mod', devTestModId)
-            programArguments.addAll('--all')
-            programArguments.addAll('--output', file('src/test/generated/resources/').getAbsolutePath())
+            programArguments.addAll('--mod', "${devTestModId},localetest", '--flat')
+            programArguments.add(providers.gradleProperty('testDataSide').orElse('all').map { "--${it}".toString() })
+            programArguments.add('--output')
+            programArguments.add(providers.gradleProperty('testDataOutput').orElse('src/test/generated/resources').map { file(it).absolutePath })
             programArguments.addAll('--existing', file('src/test/resources/').getAbsolutePath())
         }
 

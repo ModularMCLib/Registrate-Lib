@@ -39,7 +39,7 @@ public class MyMod {
 
     // 简单方式（注意：需确保不在构造之前访问）
     // Simple approach (ensure it's not accessed before construction)
-    public static final Registrate REGISTRATE = Registrate.create(MOD_ID);
+    public static final Registrate REGISTRATE = Registrate.create(MOD_ID).sourceLocale(MinecraftLocale.EN_US);
 
     public MyMod(IEventBus modEventBus) {
         // 在此处注册事件监听器
@@ -55,7 +55,7 @@ If you need lazy initialization to avoid creating too early during class loading
 
 ```java
 public static final NonNullSupplier<Registrate> REGISTRATE =
-        NonNullSupplier.lazy(() -> Registrate.create(MOD_ID));
+        NonNullSupplier.lazy(() -> Registrate.create(MOD_ID).sourceLocale(MinecraftLocale.EN_US));
 ```
 
 ## 注册你的第一个对象 / Registering Your First Object

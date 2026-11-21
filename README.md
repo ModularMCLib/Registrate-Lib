@@ -67,7 +67,7 @@ This repository is the `com.modularmc.registrate` fork maintained for the Modula
 First, create a `Registrate` object which will be used across your entire project.
 
 ```java
-public static final Registrate REGISTRATE = Registrate.create(MOD_ID);
+public static final Registrate REGISTRATE = Registrate.create(MOD_ID).sourceLocale(MinecraftLocale.EN_US);
 ```
 
 不一定要使用常量字段，可以在注册设置完成后传递或丢弃。  
@@ -77,7 +77,8 @@ Using a constant field is not necessary, it can be passed around and thrown away
 If declared static in your `@Mod` class, you must create the `Registrate` object lazily so it is not created too early during loading. This can be done easily like so:
 
 ```java
-public static final NonNullSupplier<Registrate> REGISTRATE = NonNullSupplier.lazy(() -> Registrate.create(MOD_ID));
+public static final NonNullSupplier<Registrate> REGISTRATE =
+        NonNullSupplier.lazy(() -> Registrate.create(MOD_ID).sourceLocale(MinecraftLocale.EN_US));
 ```
 
 接下来，开始添加对象。  
@@ -118,6 +119,8 @@ public static final BlockEntry<MyStairsBlock> MY_STAIRS = REGISTRATE.block("my_s
 
 这个自定义版本会创建 BlockItem（含默认模型和语言条目）、将方块添加到标签、配置楼梯属性方块状态，并添加自定义本地化。  
 This customized version will create a BlockItem (with its own default model and lang entry), add the block to a tag, configure the blockstate for stair properties, and add a custom localization.
+
+源语言、译文和注解处理器的接入方式见 [本地化与迁移](docs/localization.md)。
 
 <!-- 有关不同 API 和方法的概述，请查阅 [Javadocs](https://ci.tterrag.com/job/Registrate/job/1.21/javadoc/)。 -->
 有关不同 API 和方法的概述，请查阅 Javadocs（待定）。更高级的用法请阅读 [维基](https://github.com/ModularMCLib/RegistrateLib/wiki)（编写中）。  
