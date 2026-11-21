@@ -18,6 +18,7 @@ import it.unimi.dsi.fastutil.ints.Int2IntMap
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap
 import it.unimi.dsi.fastutil.objects.Object2ObjectMaps
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap
@@ -29,6 +30,8 @@ import java.util.function.Consumer
 class TranslationRegistry {
 	private val selections = Object2ObjectLinkedOpenHashMap<EntryKey, Selection>()
 	private val imports = ObjectArrayList<PendingImport>()
+	private val declarations = Reference2ObjectOpenHashMap<Terminology, Object2ObjectOpenHashMap<EntryKey, Candidate>>()
+	private val importRevisions = Reference2ObjectOpenHashMap<Candidate, SourceRevision>()
 	private val derivations = Reference2ObjectOpenHashMap<Terminology, LocaleDerivationGraph>()
 
 	@JvmRecord
@@ -78,11 +81,6 @@ class TranslationRegistry {
 			ties?.forEach(action)
 		}
 
-		fun sourceFor(terminology: Terminology): Declaration? {
-			fun belongsTo(candidate: Candidate) = candidate.original == null && candidate.declaration.terminology === terminology
-			return if (belongsTo(winner)) winner.declaration else ties?.firstOrNull(::belongsTo)?.declaration
-		}
-
 		fun verifyPlaceholders() {
 			val expected = placeholderSignature()
 			forEachWinner { candidate ->
@@ -104,13 +102,24 @@ class TranslationRegistry {
 	@JvmOverloads
 	fun add(key: TranslationKey, locale: MinecraftLocale, declaration: LocalizationDeclaration, source: TranslationSource, terminology: Terminology = Terminology.EMPTY) {
 		val context = Declaration(declaration, terminology)
-		val original = selections.add(EntryKey(key, locale), Candidate(declaration.source, source, context))
+		val sourceKey = EntryKey(key, locale)
+		val sourceCandidate = Candidate(declaration.source, source, context)
+		val original = selections.add(sourceKey, sourceCandidate)
+		val ownedDeclarations = declarations.computeIfAbsent(terminology) { Object2ObjectOpenHashMap() }
+		val ownedDeclaration = ownedDeclarations[sourceKey]
+		if (ownedDeclaration == null || sourceCandidate.comparePriority(ownedDeclaration) > 0) ownedDeclarations[sourceKey] = sourceCandidate
 		for ((target, text) in declaration.translations) {
 			selections.add(EntryKey(key, target), Candidate(text, source, context, original))
 		}
 	}
 
 	internal fun addImported(sourceLocale: MinecraftLocale, translation: ImportedTranslation, terminology: Terminology) {
+		val key = EntryKey(translation.key, sourceLocale)
+		require(declarations[terminology]?.containsKey(key) == true) {
+			"No source declaration for import $key at ${translation.location}"
+		}
+		val target = key.copy(locale = translation.locale)
+		require(target != key) { "Imported translation $target at ${translation.location} uses the source locale" }
 		imports.add(PendingImport(sourceLocale, translation, terminology))
 	}
 
@@ -147,32 +156,24 @@ class TranslationRegistry {
 
 		val selected = Object2ObjectLinkedOpenHashMap<EntryKey, Selection>()
 		val logger = datagen()
-		val revisions = Reference2ObjectOpenHashMap<Selection, SourceRevision>()
 		for (pending in imports) {
-			val translation = pending.translation
-			val key = EntryKey(translation.key, pending.sourceLocale)
-			val original = selections[key]
-			val declaration = original?.sourceFor(pending.terminology)
-			require(declaration != null) {
-				"No source declaration for import $key at ${translation.location}"
-			}
+			val key = EntryKey(pending.translation.key, pending.sourceLocale)
+			val declarationCandidate = declarations[pending.terminology]!![key]!!
+			val original = selections.getValue(key)
+			val declaration = declarationCandidate.declaration
+			val revision = importRevisions.getOrPut(declarationCandidate) { SourceRevision.of(declaration.localization.source) }
+			val translation = pending.translation.forRevision(revision)
+			reportImport?.accept(translation)
 
-			val revision = revisions.getOrPut(original) {
-				original.verifyText()
-				SourceRevision.of(declaration.localization.source)
-			}
-			val current = translation.forRevision(revision)
-			reportImport?.accept(current)
-
-			val target = key.copy(locale = current.locale)
-			if (current.status == STALE) {
-				logger.warn("Stale translation for {} at {} (reviewed revision {}, current revision {})", target, current.location, current.sourceRevision.value, revision.value)
-				if (!current.locked) continue
+			val target = key.copy(locale = translation.locale)
+			if (translation.status == STALE) {
+				logger.warn("Stale translation for {} at {} (reviewed revision {}, current revision {})", target, translation.location, translation.sourceRevision.value, revision.value)
+				if (!translation.locked) continue
 			}
 			val existing = selections[target]
-			if (target == key || (existing != null && existing.winner.source.kind.priority > Kind.IMPORTED.priority)) continue
-			val source = TranslationSource(Kind.IMPORTED, current.location)
-			selected.add(target, Candidate(current.text, source, declaration, original, current.status.priority(current.locked)))
+			if (existing != null && existing.winner.source.kind.priority > Kind.IMPORTED.priority) continue
+			val source = TranslationSource(Kind.IMPORTED, translation.location)
+			selected.add(target, Candidate(translation.text, source, declaration, original, translation.status.priority(translation.locked)))
 		}
 		return selected
 	}

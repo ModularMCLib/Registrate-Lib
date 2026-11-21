@@ -231,6 +231,7 @@ object LocalizationTests {
 			val reviewedKey = inventory.copy(value = "gui.testmod.reviewed")
 			val staleKey = inventory.copy(value = "gui.testmod.stale")
 			val lockedKey = inventory.copy(value = "gui.testmod.locked")
+			val sharedKey = inventory.copy(value = "gui.testmod.shared")
 			val annotatedKey = inventory.copy(value = EnglishLabels.MENU_TITLE)
 
 			val current = "Current source"
@@ -238,6 +239,8 @@ object LocalizationTests {
 			registry.add(reviewedKey, EN_US, sourceText(current), manual, terms)
 			registry.add(staleKey, EN_US, sourceText(previous), TranslationSource(Kind.AUTOMATIC, "Default label"), terms)
 			registry.add(lockedKey, EN_US, sourceText(current), manual, terms)
+			registry.add(sharedKey, EN_US, sourceText(previous), TranslationSource(Kind.AUTOMATIC, "Default shared label"), terms)
+			registry.add(sharedKey, EN_US, sourceText("Another mod source"), manual, Terminology())
 
 			fun importText(key: TranslationKey, text: String, source: String, status: TranslationStatus = APPROVED, locked: Boolean = false) =
 				ImportedTranslation(key, ZH_CN, text, SourceRevision.of(source), status, locked, "translations/${key.value}").also {
@@ -249,6 +252,7 @@ object LocalizationTests {
 			importText(reviewedKey, "草稿", current, DRAFT)
 			val stale = importText(staleKey, "旧译文", previous)
 			val locked = importText(lockedKey, "锁定旧译文", previous, locked = true)
+			val shared = importText(sharedKey, "共享译文", previous)
 			importText(lockedKey, "新译文", current)
 			importText(annotatedKey, "导入译文", "Test Container", locked = true)
 
@@ -264,6 +268,7 @@ object LocalizationTests {
 			helper.assertTrue(staleKey.value !in chinese, "Unlocked stale text is excluded from language output")
 			helper.assertTrue(locked.copy(status = STALE) in imports, "A locked import still reports its stale revision")
 			helper.assertValueEqual(locked.text, chinese.getValue(lockedKey.value), "The locked import preserves its wording")
+			helper.assertValueEqual(shared.text, chinese.getValue(sharedKey.value), "The import uses its own source when another mod has a higher-priority declaration for the same key")
 			helper.assertValueEqual("测试容器", chinese.getValue(annotatedKey.value), "The annotation's explicit translation takes priority")
 			helper.succeed()
 		}
