@@ -94,7 +94,7 @@ open class RegistrateLangProvider(private val owner: AbstractRegistrate<*>, priv
 		operations.add(Operation(key, value))
 	}
 
-	open fun collect(registry: TranslationRegistry) {
+	internal fun collect(registry: TranslationRegistry) {
 		val modId = owner.modid
 		val locale = owner.requireSourceLocale()
 		val terminology = owner.terminology()
@@ -114,7 +114,7 @@ open class RegistrateLangProvider(private val owner: AbstractRegistrate<*>, priv
 		}
 		operations.clear()
 		owner.collectRawTranslations(registry, locale)
-		IndexedTranslations.collect(modId, locale, registry, terminology, owner.localizationDefaultValues())
+		IndexedTranslations.collect(owner, locale, registry)
 		owner.collectImportedTranslations(registry, locale)
 	}
 

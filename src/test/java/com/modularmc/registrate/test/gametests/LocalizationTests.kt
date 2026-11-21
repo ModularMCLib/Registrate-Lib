@@ -1,6 +1,7 @@
 package com.modularmc.registrate.test.gametests
 
 import com.modularmc.registrate.AbstractRegistrate
+import com.modularmc.registrate.Registrate
 import com.modularmc.registrate.localization.DeclarationDefaults
 import com.modularmc.registrate.localization.ImportedTranslation
 import com.modularmc.registrate.localization.LocalizationDeclaration
@@ -373,7 +374,7 @@ object LocalizationTests {
 			val registry = TranslationRegistry()
 			val testMod = TestMod.instance()
 			RegistrateLangProvider(testMod.registrate(), PackOutput(Path.of("unused-language-output"))).collect(registry)
-			IndexedTranslations.collect(ChineseLocaleTestMod.MOD_ID, ZH_CN, registry)
+			IndexedTranslations.collect(Registrate.create(ChineseLocaleTestMod.MOD_ID).sourceLocale(ZH_CN), ZH_CN, registry)
 			val languages = registry.resolve()
 			helper.assertValueEqual("Test", languages.text(EN_US, TestMod.CUSTOM_LANG), "Java annotation")
 			helper.assertValueEqual("电势", languages.text(ZH_CN, TestMod.JAVA_DEFAULT_LABEL), "Java annotation uses mod defaults")

@@ -19,6 +19,7 @@ import com.modularmc.registrate.builders.base.AbstractBuilder
 import com.modularmc.registrate.builders.base.Builder
 import com.modularmc.registrate.builders.base.BuilderCallback
 import com.modularmc.registrate.builders.base.NoConfigBuilder
+import com.modularmc.registrate.export.RegistrateExportBuilder
 import com.modularmc.registrate.internal.RegistrationTracker
 import com.modularmc.registrate.internal.event.OneTimeEventReceiver.Companion.addModListener
 import com.modularmc.registrate.internal.lifecycle.RegistrateLifecycle
@@ -568,6 +569,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	private val importedTranslations = ObjectArrayList<ImportedTranslation>()
 	private var sourceLocale: MinecraftLocale? = null
 	private var defaultLocalization = DeclarationDefaults.EMPTY
+	private var localizationExportRequested = false
 	private val terminology = Terminology()
 	private val localeDerivations = EnumMap<MinecraftLocale, LocaleDerivation>(MinecraftLocale::class.java)
 
@@ -576,6 +578,15 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		sourceLocale = locale
 		return self()
 	}
+
+	/** Starts a chain for export files created during this Registrate's DataGen run. */
+	open fun export(): RegistrateExportBuilder = RegistrateExportBuilder(this)
+
+	internal fun requestLocalizationExport() {
+		localizationExportRequested = true
+	}
+
+	internal fun localizationExportRequested(): Boolean = localizationExportRequested
 
 	/** Sets the defaults applied to localization declarations created after this call. */
 	open fun localizationDefaults(defaults: DeclarationDefaults): S {
@@ -615,7 +626,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		if (localeDerivations.isNotEmpty()) registry.configureDerivations(terminology(), modid, localeDerivations.values)
 	}
 
-	open fun collectRawTranslations(registry: TranslationRegistry, locale: MinecraftLocale) {
+	internal fun collectRawTranslations(registry: TranslationRegistry, locale: MinecraftLocale) {
 		for (translation in extraLang) {
 			collectRawTranslation(registry, locale, translation)
 		}
@@ -706,7 +717,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		}
 	}
 
-	open fun collectEntryTranslations(registry: TranslationRegistry, locale: MinecraftLocale) {
+	internal fun collectEntryTranslations(registry: TranslationRegistry, locale: MinecraftLocale) {
 		registrationTracker.forEachLocalization { entry, localization ->
 			if (localization.kind == TranslationSource.Kind.AUTOMATIC && locale != MinecraftLocale.EN_US) {
 				return@forEachLocalization

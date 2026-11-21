@@ -344,6 +344,7 @@ public class TestMod {
 
     public TestMod(IEventBus eventBus, ModContainer container) {
         INSTANCE = this;
+        registrate.export().localization().build();
 
         var terminology = registrate.terminology();
         terminology.register(Domain.PHYSICS);

@@ -24,7 +24,7 @@ import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 
-open class RegistrateDataProvider(parent: AbstractRegistrate<*>, private val mod: String, event: GatherDataEvent) : DataProvider {
+open class RegistrateDataProvider(private val parent: AbstractRegistrate<*>, private val mod: String, event: GatherDataEvent) : DataProvider {
 	private val output = event.generator.packOutput
 	private val registriesLookup: CompletableFuture<HolderLookup.Provider> = event.lookupProvider
 	private val subProviders = Object2ObjectLinkedOpenHashMap<ProviderType<*>, RegistrateProvider>()
@@ -79,8 +79,17 @@ open class RegistrateDataProvider(parent: AbstractRegistrate<*>, private val mod
 		CompletableFuture.allOf(*runs.values.toTypedArray())
 	}
 
-	internal fun collectTranslations(registry: TranslationRegistry) {
-		(subProviders[ProviderType.LANG] as? RegistrateLangProvider)?.collect(registry)
+	internal val modId: String
+		get() = mod
+
+	internal fun hasLanguageProvider(): Boolean = ProviderType.LANG in subProviders
+
+	internal fun requestsLocalizationExport(): Boolean = parent.localizationExportRequested()
+
+	internal fun localizationSourceLocale() = parent.requireSourceLocale()
+
+	internal fun collectTranslations(registry: TranslationRegistry, exportRegistry: TranslationRegistry?) {
+		(subProviders[ProviderType.LANG] as? RegistrateLangProvider)?.collect(exportRegistry ?: registry)
 	}
 
 	override fun getName(): String = "Registrate Provider for $mod"
