@@ -27,13 +27,15 @@ import com.modularmc.registrate.internal.util.RegistrateLogger.core
 import com.modularmc.registrate.internal.util.RegistrateLogger.datagen
 import com.modularmc.registrate.internal.util.RegistrateLogger.modMessage
 import com.modularmc.registrate.localization.EntryLocalization
+import com.modularmc.registrate.localization.ImportedTranslation
 import com.modularmc.registrate.localization.LocalizationDeclaration
 import com.modularmc.registrate.localization.LocalizationDeclaration.Companion.sourceText
 import com.modularmc.registrate.localization.MinecraftLocale
 import com.modularmc.registrate.localization.TranslationKey
 import com.modularmc.registrate.localization.TranslationSource
+import com.modularmc.registrate.localization.locale.LocaleDerivation
 import com.modularmc.registrate.localization.resolution.TranslationRegistry
-import com.modularmc.registrate.localization.terminology.LocalizationCatalog
+import com.modularmc.registrate.localization.terminology.Terminology
 import com.modularmc.registrate.providers.RegistrateLangProvider.Companion.toEnglishName
 import com.modularmc.registrate.providers.core.DataProviderInitializer
 import com.modularmc.registrate.providers.core.GeneratorType
@@ -89,9 +91,11 @@ import net.neoforged.neoforge.registries.RegistryBuilder
 import com.google.common.collect.ArrayListMultimap
 import com.google.common.collect.HashBasedTable
 import com.mojang.serialization.Codec
+import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.logging.log4j.Level
 
+import java.util.EnumMap
 import java.util.Optional
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.function.BiConsumer
@@ -280,7 +284,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 
 	/**
 	 * Allows retrieval of a previously created entry, of the current name (from the last invocation of
-	 * [object]. Useful to retrieve a different entry than the final state of your
+	 * [object]). Useful to retrieve a different entry than the final state of your
 	 * chain may produce, e.g.
 	 *
 	 * ```java
@@ -551,8 +555,10 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 
 	private val extraLang = ArrayList<RawTranslation>()
 	private val generatedLang = ConcurrentLinkedQueue<RawTranslation>()
+	private val importedTranslations = ObjectArrayList<ImportedTranslation>()
 	private var sourceLocale: MinecraftLocale? = null
-	private val localizationCatalog = LocalizationCatalog()
+	private val terminology = Terminology()
+	private val localeDerivations = EnumMap<MinecraftLocale, LocaleDerivation>(MinecraftLocale::class.java)
 
 	/** Configures the source locale for this mod before data generation.  */
 	open fun sourceLocale(locale: MinecraftLocale): S {
@@ -567,7 +573,28 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		return locale
 	}
 
-	open fun localizationCatalog(): LocalizationCatalog = localizationCatalog
+	open fun terminology(): Terminology = terminology
+
+	/** Registers an imported target translation during mod setup for subsequent client DataGen runs. */
+	open fun importTranslation(translation: ImportedTranslation): S {
+		importedTranslations.add(translation)
+		return self()
+	}
+
+	internal fun collectImportedTranslations(registry: TranslationRegistry, locale: MinecraftLocale) {
+		val terminology = terminology()
+		for (translation in importedTranslations) registry.addImported(locale, translation, terminology)
+	}
+
+	/** Configures how DataGen fills a missing locale for this mod. The rule for a target can be replaced during setup. */
+	open fun deriveLocale(derivation: LocaleDerivation): S {
+		localeDerivations[derivation.output] = derivation
+		return self()
+	}
+
+	internal fun configureLocaleDerivations(registry: TranslationRegistry) {
+		if (localeDerivations.isNotEmpty()) registry.configureDerivations(terminology(), modid, localeDerivations.values)
+	}
 
 	open fun collectRawTranslations(registry: TranslationRegistry, locale: MinecraftLocale) {
 		for (translation in extraLang) {
@@ -581,7 +608,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 
 	private fun collectRawTranslation(registry: TranslationRegistry, locale: MinecraftLocale, translation: RawTranslation) {
 		if (translation.source.kind != TranslationSource.Kind.AUTOMATIC || locale == MinecraftLocale.EN_US) {
-			registry.add(translation.key, locale, translation.declaration, translation.source)
+			registry.add(translation.key, locale, translation.declaration, translation.source, terminology())
 		}
 	}
 
@@ -668,9 +695,9 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 			val key = TranslationKey(modid, localization.key.get())
 			val source = TranslationSource(
 				localization.kind,
-				"Builder ${entry.id} in ${entry.key!!.registry()}",
+				"Builder ${entry.id} in ${entry.key.registry()}",
 			)
-			registry.add(key, locale, localization.declaration.get(), source)
+			registry.add(key, locale, localization.declaration.get(), source, terminology())
 		}
 	}
 
@@ -944,7 +971,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		addModListener(
 			this,
 			NewRegistryEvent::class.java,
-			Consumer { e: NewRegistryEvent -> e.register<R>(builder.apply(registryId).create()) },
+			Consumer { e: NewRegistryEvent -> e.register(builder.apply(registryId).create()) },
 		)
 		return registryId
 	}
@@ -988,7 +1015,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		addModListener(
 			this,
 			NewRegistry::class.java,
-			Consumer { event: NewRegistry -> event.dataPackRegistry<R>(registryId, codec, networkCodec) },
+			Consumer { event: NewRegistry -> event.dataPackRegistry(registryId, codec, networkCodec) },
 		)
 		return registryId
 	}
@@ -1359,14 +1386,14 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 			Registries.CREATIVE_MODE_TAB,
 			Identifier.fromNamespaceAndPath(this.modid, name),
 		)
-		return this.generic<CreativeModeTab, CreativeModeTab, P>(
+		return this.generic(
 			parent,
 			name,
 			Registries.CREATIVE_MODE_TAB,
 		) {
 			val builder = CreativeModeTab.builder()
 				.icon {
-					getAll<Item, Item>(Registries.ITEM).firstOrNull()?.get()?.let(::ItemStack) ?: ItemStack.EMPTY
+					getAll(Registries.ITEM).firstOrNull()?.get()?.let(::ItemStack) ?: ItemStack.EMPTY
 				}
 				.title(
 					addRawLang(
