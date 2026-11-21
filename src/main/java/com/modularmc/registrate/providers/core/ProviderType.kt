@@ -146,6 +146,13 @@ fun interface ProviderType<T : RegistrateProvider> : GeneratorType<T> {
 			return type
 		}
 
+		/** Rebinds [name] to [type], replacing its current provider and any previous name for [type]. */
+		@JvmStatic
+		fun <T : RegistrateProvider> replaceProvider(name: String, type: ProviderType<T>): ProviderType<T> {
+			RegistrateDataProvider.TYPES.forcePut(name, type)
+			return type
+		}
+
 		@JvmStatic
 		fun <T : RegistrateProvider> registerClientProvider(name: String, supplier: NonNullSupplier<ProviderType<T>>): ProviderType<T> {
 			val type = if (DatagenModLoader.isRunningDataGen()) {

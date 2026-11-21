@@ -549,6 +549,15 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		return self()
 	}
 
+	/** Adds a callback before other callbacks registered for the same generator type. */
+	open fun <T : Any> addDataGeneratorFirst(type: GeneratorType<out T>, cons: NonNullConsumer<out T>): S {
+		if (dataGeneration.get()) {
+			check(provider == null) { "Cannot add data generator after construction of root generator" }
+			datagens.get(type).addFirst(cons)
+		}
+		return self()
+	}
+
 	open val dataGenInitializer: DataProviderInitializer by lazy(LazyThreadSafetyMode.NONE, ::DataProviderInitializer)
 
 	@JvmRecord
