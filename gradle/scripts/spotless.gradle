@@ -9,7 +9,7 @@ spotless {
         endWithNewline()
     }
     java {
-        target 'src/main/java/**/*.java', 'src/test/java/**/*.java', 'localization-processor/src/main/java/**/*.java'
+        target 'src/*/java/**/*.java',  'localization-processor/src/main/java/**/*.java'
 
         def orderFile = file("$rootDir/gradle/spotless/spotless.importorder")
         def formatFile = file("$rootDir/gradle/spotless/spotless.eclipseformat.xml")
@@ -27,8 +27,16 @@ spotless {
 
         def orderFile = file("$rootDir/gradle/spotless/spotless.ktlint")
         ktlint().setEditorConfigPath(orderFile)
+                .editorConfigOverride([
+                        'ktlint_standard_no-unused-imports': 'enabled',
+                ])
 
         toggleOffOn()
+        replaceRegex(
+                'empty Kotlin function bodies',
+                /(?m)(fun[^\n{=]*\([^)]*\)(?:\s*:\s*[^\n{=]+)?\s*)\{\r?\n[ \t]*\}/,
+                '$1{}'
+        )
         trimTrailingWhitespace()
         leadingSpacesToTabs()
         endWithNewline()

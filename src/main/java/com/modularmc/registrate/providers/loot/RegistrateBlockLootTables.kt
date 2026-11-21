@@ -4,7 +4,6 @@
 package com.modularmc.registrate.providers.loot
 
 import com.modularmc.registrate.AbstractRegistrate
-import com.modularmc.registrate.util.entry.RegistryEntry
 
 import net.minecraft.core.HolderLookup
 import net.minecraft.core.registries.Registries
@@ -22,7 +21,6 @@ import net.minecraft.world.level.storage.loot.predicates.LootItemCondition
 import net.minecraft.world.level.storage.loot.providers.number.NumberProvider
 
 import java.util.function.Consumer
-import java.util.stream.Collectors
 import javax.annotation.processing.Generated
 
 open class RegistrateBlockLootTables(provider: HolderLookup.Provider, private val parent: AbstractRegistrate<*>, private val callback: Consumer<RegistrateBlockLootTables>) :

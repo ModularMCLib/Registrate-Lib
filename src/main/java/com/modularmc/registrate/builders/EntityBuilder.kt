@@ -10,13 +10,11 @@ import com.modularmc.registrate.internal.event.OneTimeEventReceiver.Companion.ad
 import com.modularmc.registrate.internal.util.RegistrateDistExecutor.unsafeRunWhenOn
 import com.modularmc.registrate.localization.LocalizationDeclaration
 import com.modularmc.registrate.providers.DataGenContext
-import com.modularmc.registrate.providers.RegistrateTagsProvider
 import com.modularmc.registrate.providers.core.ProviderType
 import com.modularmc.registrate.providers.generators.RegistrateItemModelGenerator
 import com.modularmc.registrate.providers.loot.RegistrateEntityLootTables
 import com.modularmc.registrate.providers.loot.RegistrateLootTableProvider
 import com.modularmc.registrate.util.entry.EntityEntry
-import com.modularmc.registrate.util.entry.RegistryEntry
 import com.modularmc.registrate.util.nullness.NonNullBiConsumer
 import com.modularmc.registrate.util.nullness.NonNullConsumer
 import com.modularmc.registrate.util.nullness.NonNullFunction

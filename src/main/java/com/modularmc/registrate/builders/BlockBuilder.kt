@@ -8,7 +8,6 @@ import com.modularmc.registrate.internal.util.RegistrateDistExecutor.unsafeRunWh
 import com.modularmc.registrate.localization.LocalizationDeclaration
 import com.modularmc.registrate.providers.DataGenContext
 import com.modularmc.registrate.providers.RegistrateLangProvider
-import com.modularmc.registrate.providers.RegistrateTagsProvider
 import com.modularmc.registrate.providers.core.ProviderType
 import com.modularmc.registrate.providers.generators.RegistrateBlockModelGenerator
 import com.modularmc.registrate.providers.generators.RegistrateItemModelGenerator
@@ -16,12 +15,10 @@ import com.modularmc.registrate.providers.generators.RegistrateRecipeProvider
 import com.modularmc.registrate.providers.loot.RegistrateBlockLootTables
 import com.modularmc.registrate.providers.loot.RegistrateLootTableProvider
 import com.modularmc.registrate.util.entry.BlockEntry
-import com.modularmc.registrate.util.entry.RegistryEntry
 import com.modularmc.registrate.util.nullness.*
 
 import net.minecraft.client.color.block.BlockColor
 import net.minecraft.core.registries.Registries
-import net.minecraft.resources.ResourceLocation
 import net.minecraft.tags.TagKey
 import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.Item

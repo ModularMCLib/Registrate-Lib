@@ -6,7 +6,6 @@ import com.modularmc.registrate.builders.base.BuilderCallback
 import com.modularmc.registrate.internal.event.OneTimeEventReceiver.Companion.addModListener
 import com.modularmc.registrate.internal.util.RegistrateDistExecutor.unsafeRunWhenOn
 import com.modularmc.registrate.util.entry.BlockEntityEntry
-import com.modularmc.registrate.util.entry.RegistryEntry
 import com.modularmc.registrate.util.nullness.NonNullFunction
 import com.modularmc.registrate.util.nullness.NonNullSupplier
 
@@ -18,7 +17,6 @@ import net.minecraft.core.registries.Registries
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.entity.BlockEntityType
-import net.minecraft.world.level.block.entity.BlockEntityType.BlockEntitySupplier
 import net.minecraft.world.level.block.state.BlockState
 import net.neoforged.api.distmarker.Dist
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent
@@ -29,7 +27,6 @@ import net.neoforged.neoforge.registries.DeferredHolder
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 
 import java.util.function.Consumer
-import java.util.function.Supplier
 
 /**
  * A builder for block entities, allows for customization of the valid blocks.
