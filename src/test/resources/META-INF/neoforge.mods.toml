@@ -43,3 +43,16 @@ type="required"
 versionRange="[2.0.0,)"
 ordering="AFTER"
 side="BOTH"
+
+[[mods]]
+modId="localetest"
+version="${file.jarVersion}"
+displayName="Localization Test Mod"
+description="Exercises a second source locale in Registrate DataGen."
+
+[[dependencies.localetest]]
+modId="registratelib"
+type="required"
+versionRange="[2.0.0,)"
+ordering="AFTER"
+side="BOTH"

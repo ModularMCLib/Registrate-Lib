@@ -1,8 +1,4 @@
-import org.gradle.internal.os.OperatingSystem
-
-static def isJetBrainsRuntime() {
-    return System.getProperty('java.vm.vendor').contains('JetBrains')
-}
+import org.slf4j.event.Level
 
 def devTestModId = 'testmod'
 
@@ -98,15 +94,16 @@ neoForge {
         }
 
         Testdata {
-            type = 'clientData'
+            type = providers.gradleProperty('testDataSide').getOrElse('all') == 'server' ? 'serverData' : 'clientData'
             sourceSet = sourceSets.test
             ideName = "Test Data Generation"
 
             gameDirectory.set(file('run/data'))
             // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
-            programArguments.addAll('--mod', "${devTestModId}")
+            programArguments.addAll('--mod', "${devTestModId},localetest", '--flat')
             programArguments.addAll('--all')
-            programArguments.addAll('--output', file('src/test/generated/resources/').getAbsolutePath())
+            programArguments.add('--output')
+            programArguments.add(providers.gradleProperty('testDataOutput').orElse('src/test/generated/resources').map { file(it).absolutePath })
             programArguments.addAll('--existing', file('src/test/resources/').getAbsolutePath())
         }
 
@@ -125,7 +122,7 @@ neoForge {
             // Recommended logging level for the console
             // You can set various levels here.
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
-            logLevel = org.slf4j.event.Level.INFO
+            logLevel = Level.INFO
         }
     }
 }

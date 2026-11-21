@@ -86,5 +86,5 @@ Treat the root package plus `builders` and `util.entry` as the main downstream-f
   Keep public entrypoints small and push complexity into focused layers
 - 对下游模组预期集成的扩展点进行文档化
   Document extension points where downstream mods are expected to integrate
-- 在此开发分支上，优先采用 26.1 原生结构而非保持遗留兼容性
-  Favor 26.1-native structure over preserving legacy compatibility on this dev branch
+- 使用 Minecraft 26.1.2 和 NeoForge 的模型、配方与注册 API
+  Use the Minecraft 26.1.2 and NeoForge model, recipe, and registry APIs

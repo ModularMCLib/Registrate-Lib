@@ -3,6 +3,10 @@ jar {
     exclude "**/SimplifiedToTraditional.properties"
 }
 
+tasks.named('assemble') {
+    dependsOn(':localization-processor:jar')
+}
+
 tasks.register('slimJar', Jar) {
     dependsOn("classes")
     archiveClassifier = "slim"
@@ -11,14 +15,6 @@ tasks.register('slimJar', Jar) {
 
 java {
     withSourcesJar()
-}
-
-// Use delombok'd files for sources
-sourcesJar {
-    exclude {
-        sourceSets.main.allSource.contains it.file
-    }
-    from delombok
 }
 
 base {
