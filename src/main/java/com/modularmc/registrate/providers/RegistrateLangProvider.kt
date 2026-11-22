@@ -27,6 +27,7 @@ import net.minecraft.world.level.block.Block
 import net.neoforged.fml.LogicalSide
 import net.neoforged.neoforge.common.data.LanguageProvider
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import org.apache.commons.lang3.StringUtils
 
 import java.util.concurrent.CompletableFuture
@@ -37,7 +38,7 @@ open class RegistrateLangProvider(private val owner: AbstractRegistrate<*>, priv
 	RegistrateProvider {
 	private class Operation(val key: String, val value: String)
 
-	private val operations = ArrayList<Operation>()
+	private val operations = ObjectArrayList<Operation>()
 
 	override fun getSide(): LogicalSide = LogicalSide.CLIENT
 

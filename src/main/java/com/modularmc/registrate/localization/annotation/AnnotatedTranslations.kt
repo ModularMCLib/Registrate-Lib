@@ -27,7 +27,7 @@ internal object AnnotatedTranslations {
 		val defaults = owner.localizationDefaultValues()
 		val terminology = owner.terminology()
 		val modFile = ModList.get().getModFileById(modId)
-		val implicitModId = if (modFile.mods.size == 1) modId else null
+		val singleModFile = modFile.mods.size == 1
 
 		fun add(namespace: String, key: String, values: Map<*, *>, location: String) {
 			val declaration = LocalizationDeclaration(
@@ -46,10 +46,12 @@ internal object AnnotatedTranslations {
 			val type = annotation.annotationType()
 			if (type != trans && type != transVariants) continue
 			val values = annotation.annotationData()
-			val declaredModId = (values["modId"] as String?).orEmpty().ifEmpty {
-				implicitModId ?: error("${annotation.location()} must declare modId because its file contains multiple mods")
+			val declaredModId = values["modId"] as String?
+			if (declaredModId.isNullOrEmpty()) {
+				check(singleModFile) { "${annotation.location()} must declare modId because its file contains multiple mods" }
+			} else if (declaredModId != modId) {
+				continue
 			}
-			if (declaredModId != modId) continue
 
 			val namespace = (values["namespace"] as String?).orEmpty().ifEmpty { modId }
 			val location = annotation.location()

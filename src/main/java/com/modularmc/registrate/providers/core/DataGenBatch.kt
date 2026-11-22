@@ -18,7 +18,7 @@ import java.util.concurrent.CompletableFuture
 
 /** Groups the providers attached to the same output before NeoForge starts the DataGen run. */
 internal class DataGenBatch private constructor(private val output: PackOutput, private val root: Path) : DataProvider {
-	private val participants = ArrayList<RegistrateDataProvider>()
+	private val participants = ObjectArrayList<RegistrateDataProvider>()
 
 	override fun run(cache: CachedOutput): CompletableFuture<*> {
 		synchronized(pending) { pending.remove(root) }

@@ -67,7 +67,7 @@ internal class TranslationRegistry(private val parent: TranslationRegistry? = nu
 	}
 
 	private class Selection(private val key: EntryKey, var winner: Candidate) {
-		private var ties: MutableList<Candidate>? = null
+		private var ties: ObjectArrayList<Candidate>? = null
 		private var signature: Int2IntMap? = null
 
 		fun add(candidate: Candidate) {
@@ -77,7 +77,7 @@ internal class TranslationRegistry(private val parent: TranslationRegistry? = nu
 				ties = null
 				signature = null
 			} else if (precedence == 0) {
-				val candidates = ties ?: ArrayList<Candidate>(1).also { ties = it }
+				val candidates = ties ?: ObjectArrayList<Candidate>(1).also { ties = it }
 				candidates.add(candidate)
 			}
 		}
@@ -161,8 +161,8 @@ internal class TranslationRegistry(private val parent: TranslationRegistry? = nu
 		val resolved = resolveAll(reportWarnings = false)
 		val entries = Object2ObjectLinkedOpenHashMap<TranslationKey, ExportEntry>()
 		for (owned in declarations.values) {
-			for ((key, candidate) in owned) {
-				if (key.locale == sourceLocale) entries.putIfAbsent(key.key, ExportEntry(candidate))
+			owned.object2ObjectEntrySet().fastForEach { (key, candidate) ->
+				if (key.locale == sourceLocale) entries.computeIfAbsent(key.key) { ExportEntry(candidate) }
 			}
 		}
 
@@ -210,16 +210,17 @@ internal class TranslationRegistry(private val parent: TranslationRegistry? = nu
 		}
 
 		val result = ObjectArrayList<LocalizationDocument.Entry>(entries.size)
-		for ((key, exported) in entries) {
+		entries.object2ObjectEntrySet().fastForEach { (key, exported) ->
 			val declaration = exported.candidate.declaration
 			val localization = declaration.localization
-			val glossaryIds = ObjectOpenHashSet<String>()
+			val glossaryIds = ObjectOpenHashSet<String>(localization.glossary.size + localization.glossaryIds.size + 1)
 			for (term in localization.glossary) glossaryIds.add(term.id)
 			glossaryIds.addAll(localization.glossaryIds)
-			resolved.glossaryTerms[declaration]?.let { glossaryIds.add(it.id) }
-			val unitIds = ObjectOpenHashSet<String>()
-			unitIds.addAll(localization.unitIds)
-			resolved.glossaryTerms[declaration]?.let { unitIds.addAll(it.unitIds) }
+			val unitIds = ObjectOpenHashSet(localization.unitIds)
+			resolved.glossaryTerms[declaration]?.let { term ->
+				glossaryIds.add(term.id)
+				unitIds.addAll(term.unitIds)
+			}
 			val domains = ObjectArrayList<String>(localization.domains.size)
 			for (domain in localization.domains) domains.add(domain.id)
 			domains.sort()
