@@ -19,6 +19,7 @@ import com.modularmc.registrate.builders.base.AbstractBuilder
 import com.modularmc.registrate.builders.base.Builder
 import com.modularmc.registrate.builders.base.BuilderCallback
 import com.modularmc.registrate.builders.base.NoConfigBuilder
+import com.modularmc.registrate.export.RegistrateExportBuilder
 import com.modularmc.registrate.internal.RegistrationTracker
 import com.modularmc.registrate.internal.event.OneTimeEventReceiver.Companion.addModListener
 import com.modularmc.registrate.internal.lifecycle.RegistrateLifecycle
@@ -26,6 +27,7 @@ import com.modularmc.registrate.internal.util.DebugMarkers
 import com.modularmc.registrate.internal.util.RegistrateLogger.core
 import com.modularmc.registrate.internal.util.RegistrateLogger.datagen
 import com.modularmc.registrate.internal.util.RegistrateLogger.modMessage
+import com.modularmc.registrate.localization.DeclarationDefaults
 import com.modularmc.registrate.localization.EntryLocalization
 import com.modularmc.registrate.localization.ImportedTranslation
 import com.modularmc.registrate.localization.LocalizationDeclaration
@@ -95,6 +97,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import org.apache.commons.lang3.tuple.Pair
 import org.apache.logging.log4j.Level
 
+import java.nio.file.Path
 import java.util.EnumMap
 import java.util.Optional
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -548,6 +551,15 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		return self()
 	}
 
+	/** Adds a callback before other callbacks registered for the same generator type. */
+	open fun <T : Any> addDataGeneratorFirst(type: GeneratorType<out T>, cons: NonNullConsumer<out T>): S {
+		if (dataGeneration.get()) {
+			check(provider == null) { "Cannot add data generator after construction of root generator" }
+			datagens.get(type).addFirst(cons)
+		}
+		return self()
+	}
+
 	open val dataGenInitializer: DataProviderInitializer by lazy(LazyThreadSafetyMode.NONE, ::DataProviderInitializer)
 
 	@JvmRecord
@@ -557,6 +569,8 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	private val generatedLang = ConcurrentLinkedQueue<RawTranslation>()
 	private val importedTranslations = ObjectArrayList<ImportedTranslation>()
 	private var sourceLocale: MinecraftLocale? = null
+	private var defaultLocalization = DeclarationDefaults.EMPTY
+	private var localizationExportPath: Path? = null
 	private val terminology = Terminology()
 	private val localeDerivations = EnumMap<MinecraftLocale, LocaleDerivation>(MinecraftLocale::class.java)
 
@@ -565,6 +579,23 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		sourceLocale = locale
 		return self()
 	}
+
+	/** Starts a chain for export files created during this Registrate's DataGen run. */
+	open fun export(): RegistrateExportBuilder = RegistrateExportBuilder(this)
+
+	internal fun requestLocalizationExport(path: Path) {
+		localizationExportPath = path
+	}
+
+	internal fun localizationExportPath(): Path? = localizationExportPath
+
+	/** Sets the defaults applied to localization declarations created after this call. */
+	open fun localizationDefaults(defaults: DeclarationDefaults): S {
+		defaultLocalization = defaults
+		return self()
+	}
+
+	internal fun localizationDefaultValues(): DeclarationDefaults = defaultLocalization
 
 	/** Returns the source locale after validating this mod's configuration.  */
 	open fun requireSourceLocale(): MinecraftLocale {
@@ -596,7 +627,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		if (localeDerivations.isNotEmpty()) registry.configureDerivations(terminology(), modid, localeDerivations.values)
 	}
 
-	open fun collectRawTranslations(registry: TranslationRegistry, locale: MinecraftLocale) {
+	internal fun collectRawTranslations(registry: TranslationRegistry, locale: MinecraftLocale) {
 		for (translation in extraLang) {
 			collectRawTranslation(registry, locale, translation)
 		}
@@ -659,7 +690,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 
 	private fun addRawLang(key: String, value: String, kind: TranslationSource.Kind): MutableComponent {
 		if (dataGeneration.get()) {
-			addLocalization(TranslationKey(modid, key), sourceText(value), kind)
+			addLocalization(TranslationKey(modid, key), sourceText(value, defaultLocalization), kind)
 		}
 		return Component.translatable(key)
 	}
@@ -669,7 +700,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		if (dataGeneration.get()) {
 			val builder = LocalizationDeclaration.Builder()
 			configure.accept(builder)
-			addLocalization(key, builder.build(), TranslationSource.Kind.DECLARED)
+			addLocalization(key, builder.build(defaultLocalization), TranslationSource.Kind.DECLARED)
 		}
 		return Component.translatable(key.value)
 	}
@@ -687,7 +718,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		}
 	}
 
-	open fun collectEntryTranslations(registry: TranslationRegistry, locale: MinecraftLocale) {
+	internal fun collectEntryTranslations(registry: TranslationRegistry, locale: MinecraftLocale) {
 		registrationTracker.forEachLocalization { entry, localization ->
 			if (localization.kind == TranslationSource.Kind.AUTOMATIC && locale != MinecraftLocale.EN_US) {
 				return@forEachLocalization

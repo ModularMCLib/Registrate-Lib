@@ -5,7 +5,7 @@ import com.modularmc.registrate.localization.LocalizationDeclaration
 import com.modularmc.registrate.localization.TranslationKey
 import com.modularmc.registrate.localization.TranslationSource
 import com.modularmc.registrate.localization.TranslationSource.Kind
-import com.modularmc.registrate.localization.index.IndexedTranslations
+import com.modularmc.registrate.localization.annotation.AnnotatedTranslations
 import com.modularmc.registrate.localization.resolution.TranslationRegistry
 import com.modularmc.registrate.providers.core.LanguageOutput
 import com.modularmc.registrate.providers.core.ProviderType
@@ -27,6 +27,7 @@ import net.minecraft.world.level.block.Block
 import net.neoforged.fml.LogicalSide
 import net.neoforged.neoforge.common.data.LanguageProvider
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import org.apache.commons.lang3.StringUtils
 
 import java.util.concurrent.CompletableFuture
@@ -37,7 +38,7 @@ open class RegistrateLangProvider(private val owner: AbstractRegistrate<*>, priv
 	RegistrateProvider {
 	private class Operation(val key: String, val value: String)
 
-	private val operations = ArrayList<Operation>()
+	private val operations = ObjectArrayList<Operation>()
 
 	override fun getSide(): LogicalSide = LogicalSide.CLIENT
 
@@ -94,7 +95,7 @@ open class RegistrateLangProvider(private val owner: AbstractRegistrate<*>, priv
 		operations.add(Operation(key, value))
 	}
 
-	open fun collect(registry: TranslationRegistry) {
+	internal fun collect(registry: TranslationRegistry) {
 		val modId = owner.modid
 		val locale = owner.requireSourceLocale()
 		val terminology = owner.terminology()
@@ -104,11 +105,17 @@ open class RegistrateLangProvider(private val owner: AbstractRegistrate<*>, priv
 		for (operation in operations) {
 			val key = operation.key
 			val source = TranslationSource(Kind.DECLARED, "[$modId] ProviderType.LANG ($key)")
-			registry.add(TranslationKey(modId, key), locale, LocalizationDeclaration.sourceText(operation.value), source, terminology)
+			registry.add(
+				TranslationKey(modId, key),
+				locale,
+				LocalizationDeclaration.sourceText(operation.value, owner.localizationDefaultValues()),
+				source,
+				terminology,
+			)
 		}
 		operations.clear()
 		owner.collectRawTranslations(registry, locale)
-		IndexedTranslations.collect(modId, locale, registry, terminology)
+		AnnotatedTranslations.collect(owner, locale, registry)
 		owner.collectImportedTranslations(registry, locale)
 	}
 

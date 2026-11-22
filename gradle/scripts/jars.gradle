@@ -3,10 +3,6 @@ jar {
     exclude "**/SimplifiedToTraditional.properties"
 }
 
-tasks.named('assemble') {
-    dependsOn(':localization-processor:jar')
-}
-
 tasks.register('slimJar', Jar) {
     dependsOn("classes")
     archiveClassifier = "slim"

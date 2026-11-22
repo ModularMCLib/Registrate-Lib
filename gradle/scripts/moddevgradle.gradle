@@ -1,7 +1,5 @@
 import org.slf4j.event.Level
 
-def devTestModId = 'testmod'
-
 neoForge {
     version = libs.versions.neoForge.get()
 
@@ -20,7 +18,6 @@ neoForge {
 //
 //    interfaceInjectionData = project.files('injected_interfaces/interfaces.json')
 
-    addModdingDependenciesTo(sourceSets.test)
     addModdingDependenciesTo(sourceSets.extra)
 
     mods {
@@ -30,9 +27,6 @@ neoForge {
             sourceSet(sourceSets.client)
             sourceSet(sourceSets.extra)
             sourceSet(sourceSets.clientExtra)
-        }
-        "${devTestModId}" {
-            sourceSet(sourceSets.test)
         }
     }
 
@@ -44,7 +38,6 @@ neoForge {
 
 
             gameDirectory.set(file('run/client'))
-            systemProperty('neoforge.enabledGameTestNamespaces', devTestModId)
         }
 
         server {
@@ -54,74 +47,12 @@ neoForge {
 
             gameDirectory.set(file('run/server'))
             programArguments.addAll('--nogui', '--world', 'world-extra')
-            systemProperty('neoforge.enabledGameTestNamespaces', devTestModId)
-        }
-
-        // This run config launches GameTestServer and runs all registered gametests, then exits.
-        // By default, the server will crash when no gametests are provided.
-        // The gametest system is also enabled by default for other run configs under the /test command.
-        gameTestServer {
-            type = "gameTestServer"
-            sourceSet = sourceSets.test
-            ideName = "Game Tests"
-
-            gameDirectory.set(file('run/gametest/server'))
-            systemProperty('neoforge.enabledGameTestNamespaces', devTestModId)
-            environment('TEST', 'true')
-        }
-
-        gameTestClient {
-            client()
-            sourceSet = sourceSets.test
-            ideName = "Game Tests (Client)"
-
-            gameDirectory.set(file('run/gametest/client'))
-            systemProperty('neoforge.enabledGameTestNamespaces', devTestModId)
-            environment('TEST', 'true')
-        }
-
-        data {
-            type = 'clientData'
-            sourceSet = sourceSets.main
-            ideName = "Data Generation"
-
-            gameDirectory.set(file('run/data'))
-            // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
-            programArguments.addAll('--mod', project.mod_id)
-            programArguments.addAll('--all')
-            programArguments.addAll('--output', file('src/generated/resources/').getAbsolutePath())
-            programArguments.addAll('--existing', file('src/main/resources/').getAbsolutePath())
-        }
-
-        Testdata {
-            type = providers.gradleProperty('testDataSide').getOrElse('all') == 'server' ? 'serverData' : 'clientData'
-            sourceSet = sourceSets.test
-            ideName = "Test Data Generation"
-
-            gameDirectory.set(file('run/data'))
-            // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
-            programArguments.addAll('--mod', "${devTestModId},localetest", '--flat')
-            programArguments.addAll('--all')
-            programArguments.add('--output')
-            programArguments.add(providers.gradleProperty('testDataOutput').orElse('src/test/generated/resources').map { file(it).absolutePath })
-            programArguments.addAll('--existing', file('src/test/resources/').getAbsolutePath())
         }
 
         // applies to all the run configs above
         configureEach {
-            // Recommended logging data for a userdev environment
-            // The markers can be added/remove as needed separated by commas.
-            // "SCAN": For mods scan.
-            // "REGISTRIES": For firing of registry events.
-            // "REGISTRYDUMP": For getting the contents of all registries.
             systemProperty 'forge.logging.markers', 'REGISTRIES'
-
-            // Enable assertions for our classes in dev environment
             jvmArgument('-ea:com.modularmc.registrate...')
-
-            // Recommended logging level for the console
-            // You can set various levels here.
-            // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
             logLevel = Level.INFO
         }
     }

@@ -75,8 +75,8 @@ Treat the root package plus `builders` and `util.entry` as the main downstream-f
   Event-bus plumbing and other implementation-only helpers belong under `internal`
 - 实例级 NeoForge 生命周期编排放在 `internal.lifecycle`
   Instance-scoped NeoForge lifecycle orchestration belongs in `internal.lifecycle`
-- 仅测试用的框架放在 `src/test/java`
-  Test-only scaffolding belongs under `src/test/java`
+- 仅测试用的框架放在 `test/src/main/java`
+  Test-only scaffolding belongs under `test/src/main/java`
 
 ## 现代化原则 / Modernization Principles
 

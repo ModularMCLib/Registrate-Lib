@@ -1,7 +1,9 @@
 package com.modularmc.registrate.localization.locale
 
 import com.modularmc.registrate.localization.MinecraftLocale
+import com.modularmc.registrate.localization.MinecraftLocale.EN_GB
 import com.modularmc.registrate.localization.MinecraftLocale.EN_UD
+import com.modularmc.registrate.localization.MinecraftLocale.ZH_TW
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList
 
@@ -14,6 +16,8 @@ internal class LocaleDerivationGraph(modId: String, derivations: Collection<Loca
 	init {
 		val byTarget = EnumMap<MinecraftLocale, LocaleDerivation>(MinecraftLocale::class.java)
 		byTarget[EN_UD] = LocaleDerivation.UPSIDE_DOWN
+		byTarget[EN_GB] = LocaleDerivation.BRITISH_ENGLISH
+		byTarget[ZH_TW] = LocaleDerivation.TRADITIONAL_CHINESE
 		for (derivation in derivations) byTarget[derivation.output] = derivation
 
 		val done = EnumSet.noneOf(MinecraftLocale::class.java)

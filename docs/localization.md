@@ -7,9 +7,15 @@
 ```java
 import com.modularmc.registrate.Registrate;
 import com.modularmc.registrate.localization.MinecraftLocale;
+import java.nio.file.Path;
 
 Registrate registrate = Registrate.create(MOD_ID).sourceLocale(MinecraftLocale.EN_US);
+registrate.export().localization()
+        .path(Path.of("build", "localization", "mymod.json"))
+        .build();
 ```
+
+`path` is the destination JSON file. Relative paths resolve against the DataGen process working directory. The export request is fulfilled after language callbacks have run once; the same declarations produce both Minecraft language files and the exchange document.
 
 ## 声明文本
 
@@ -30,7 +36,7 @@ var title = registrate.addLocalization(new TranslationKey(MOD_ID, "gui.mymod.vol
 
 `addLocalization` 返回可用于 GUI 的翻译组件。进度标题等跨侧文本可在模组构造期间声明，在服务端 DataGen 的进度回调中引用组件。`addLang`、`addRawLang` 和 `ProviderType.LANG` 回调都使用同一个源 Locale。
 
-在 `registrate.terminology()` 中登记 `Domain`、`GlossaryTerm` 和 `MeasurementUnit`。Builder 的 `.defaults(defaults)` 可复用领域、文本类型和术语。条目的显式参数覆盖对应的默认值。
+在 `registrate.terminology()` 中登记 `Domain`、`GlossaryTerm` 和 `MeasurementUnit`。用 `.localizationDefaults(defaults)` 设置模组级默认值，Builder 的 `.defaults(defaults)` 可设置条目级默认值。条目的显式参数覆盖对应默认值。
 
 ### 按语境选取术语
 
@@ -47,6 +53,12 @@ var title = registrate.addLocalization(new TranslationKey(MOD_ID, "gui.mymod.vol
 `registrate.deriveLocale(new LocaleDerivation(EN_US, EN_GB, converter))` 为模组注册转换规则。转换器处理未受保护的文本片段，可读取语言、Key 和声明。`LocaleDerivation.fallback(EN_GB, EN_AU)` 在缺少目标译文时使用已解析的输入语言。规则允许组成多步路径，循环会在 DataGen 收集时报告。已有译文优先于转换和回退。
 
 转换会保留 Minecraft 参数、样式标记、URL、换行和已声明的单位符号。默认的 `en_us → en_ud` 同样遵循这些规则，并用显式索引保持倒置后的参数含义。
+
+### 导出交换数据
+
+导出文档的 `formatVersion` 当前为 `1`。每个条目保留输出命名空间、原始 Key、源文本、SHA-256 源修订、领域、TextType、词条与单位引用、占位符签名和译文候选。译文记录包含 Locale、文本、来源类型与位置、源修订、审核状态和锁定标记。自动 Locale 变体也会进入记录，`source.location` 标明原始声明与转换路径。
+
+JSON Schema 位于 [`localization-exchange.schema.json`](localization-exchange.schema.json)。条目按命名空间和 Key 排序，译文按 Locale、来源类型和来源位置排序。显式译文的 `status` 为 `null`；导入译文保留当前审核状态和其审核时使用的源修订。
 
 ### 导入人工译文
 
@@ -71,33 +83,25 @@ registrate.importTranslation(new ImportedTranslation(
 
 DataGen 用模组当前选中的源文本核对修订。源文本变化会将译文标为 `STALE`。锁定译文仍可参与选择，未锁定的过期译文仅用于诊断，此时配置的术语、转换和回退规则可以继续解析目标 Locale。开发者显式声明优先，其次是锁定的导入译文和当前修订的普通导入译文。同一层级中，已批准、审核中和草稿依次参与选择。
 
-## 接入注解处理器
+## 注解声明
 
-用 `./gradlew :localization-processor:jar` 构建与库版本对应的处理器。Java 源码使用 `annotationProcessor`，Kotlin 源码使用 KSP 插件和 `ksp`。混合项目可同时使用两项配置，主库作为模组依赖。
+添加 RegistrateLib 模组依赖即可在 Java 和 Kotlin 源码中使用本地化注解。DataGen 从 NeoForge 的扫描结果读取所属模组文件中的声明。升级时移除 RegistrateLib 的 `annotationProcessor` 和 `ksp` 依赖。旧构建目录里有索引文件时，清理一次再构建。
 
-```groovy
-dependencies {
-    def processor = files("libs/registratelib-26.1.2-${registratelib_version}-localization-processor.jar")
-    annotationProcessor(processor)
-    ksp(processor)
-}
-```
-
-`@Trans` 和 `@TransVariants` 可以声明在类型或字段上。`modId` 选择声明归属的模组和源 Locale。省略 `namespace` 时，资源命名空间取 `modId`。
+`@Trans` 和 `@TransVariants` 可以声明在类型或字段上。文件只包含一个 Mod 时可以省略 `modId`，DataGen 使用该 Mod 的源 Locale。文件包含多个 Mod 时，每条声明都必须填写 `modId`。省略 `namespace` 时，资源命名空间取所属 Mod 的 ID。
 
 ```java
-@TransVariants(modId = "mymod", keyPrefix = "gui.mymod.power", value = {
+@TransVariants(keyPrefix = "gui.mymod.power", value = {
         @Variant(id = "low", source = "Low power"),
         @Variant(id = "high", source = "High power")
 })
 final class Labels {
-    @Trans(modId = "mymod", key = "gui.mymod.container", source = "Test Container",
+    @Trans(key = "gui.mymod.container", source = "Test Container",
             translations = @Translation(locale = MinecraftLocale.ZH_CN, text = "测试容器"))
     static final String CONTAINER = "gui.mymod.container";
 }
 ```
 
-Kotlin 中在带有后备字段的属性上使用 `@field:Trans` 或 `@field:TransVariants`。两个处理器按 Mod ID 写入各自的版本化声明索引，DataGen 从所属模组读取并合并。变体的 Key 由前缀和 ID 拼接，例如 `gui.mymod.power.low`。同一命名空间、Key 和 Locale 下，同级异值声明会报告双方来源。`%s` 的隐式索引按出现顺序分配，译文可用 `%1$s` 等显式索引重排。
+Kotlin 中在带有后备字段的属性上使用 `@field:Trans` 或 `@field:TransVariants`。变体的 Key 由前缀和 ID 拼接，例如 `gui.mymod.power.low`。同一命名空间、Key 和 Locale 下，同级异值声明会报告双方来源，并用类名、字段名和变体 ID 定位注解。`%s` 的隐式索引按出现顺序分配，译文可用 `%1$s` 等显式索引重排。
 
 ## 注册兼容性
 

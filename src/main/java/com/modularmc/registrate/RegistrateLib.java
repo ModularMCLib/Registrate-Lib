@@ -13,7 +13,7 @@ import org.apache.logging.log4j.Logger;
  * This library is intended to load as its own NeoForge mod so downstream
  * mods can depend on it as a prerequisite during development. Integration
  * scenarios, sample registrations, and visual validation belong in the test
- * harness under {@code src/test}.
+ * harness under {@code test/src/main}.
  */
 @Mod(RegistrateLib.MOD_ID)
 public final class RegistrateLib {
