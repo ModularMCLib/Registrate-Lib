@@ -10,6 +10,7 @@ import com.modularmc.registrate.localization.resolution.TranslationRegistry
 
 import net.neoforged.fml.ModList
 import net.neoforged.fml.loading.modscan.ModAnnotation.EnumHolder
+import net.neoforged.neoforgespi.language.ModFileScanData.AnnotationData
 
 import org.objectweb.asm.Type
 
@@ -25,7 +26,8 @@ internal object AnnotatedTranslations {
 		val modId = owner.modid
 		val defaults = owner.localizationDefaultValues()
 		val terminology = owner.terminology()
-		val annotations = ModList.get().getModFileById(modId).file.scanResult.annotations
+		val modFile = ModList.get().getModFileById(modId)
+		val implicitModId = if (modFile.mods.size == 1) modId else null
 
 		fun add(namespace: String, key: String, values: Map<*, *>, location: String) {
 			val declaration = LocalizationDeclaration(
@@ -40,15 +42,17 @@ internal object AnnotatedTranslations {
 			registry.add(TranslationKey(namespace, key), locale, declaration, TranslationSource(DECLARED, location), terminology)
 		}
 
-		for (annotation in annotations) {
+		for (annotation in modFile.file.scanResult.annotations) {
 			val type = annotation.annotationType()
 			if (type != trans && type != transVariants) continue
 			val values = annotation.annotationData()
-			if (values["modId"] != modId) continue
+			val declaredModId = (values["modId"] as String?).orEmpty().ifEmpty {
+				implicitModId ?: error("${annotation.location()} must declare modId because its file contains multiple mods")
+			}
+			if (declaredModId != modId) continue
 
 			val namespace = (values["namespace"] as String?).orEmpty().ifEmpty { modId }
-			val className = annotation.clazz().className
-			val location = if (annotation.targetType() == ElementType.FIELD) "$className#${annotation.memberName()}" else className
+			val location = annotation.location()
 			if (type == trans) {
 				add(namespace, values["key"] as String, values, "@Trans $location")
 			} else {
@@ -61,6 +65,11 @@ internal object AnnotatedTranslations {
 				}
 			}
 		}
+	}
+
+	private fun AnnotationData.location(): String {
+		val className = clazz().className
+		return if (targetType() == ElementType.FIELD) "$className#${memberName()}" else className
 	}
 
 	private fun translations(values: Map<*, *>): Map<MinecraftLocale, String> {

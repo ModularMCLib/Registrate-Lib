@@ -87,15 +87,15 @@ DataGen 用模组当前选中的源文本核对修订。源文本变化会将译
 
 添加 RegistrateLib 模组依赖即可在 Java 和 Kotlin 源码中使用本地化注解。DataGen 从 NeoForge 的扫描结果读取所属模组文件中的声明。升级时移除 RegistrateLib 的 `annotationProcessor` 和 `ksp` 依赖。旧构建目录里有索引文件时，清理一次再构建。
 
-`@Trans` 和 `@TransVariants` 可以声明在类型或字段上。`modId` 选择声明归属的模组和源 Locale。省略 `namespace` 时，资源命名空间取 `modId`。
+`@Trans` 和 `@TransVariants` 可以声明在类型或字段上。文件只包含一个 Mod 时可以省略 `modId`，DataGen 使用该 Mod 的源 Locale。文件包含多个 Mod 时，每条声明都必须填写 `modId`。省略 `namespace` 时，资源命名空间取所属 Mod 的 ID。
 
 ```java
-@TransVariants(modId = "mymod", keyPrefix = "gui.mymod.power", value = {
+@TransVariants(keyPrefix = "gui.mymod.power", value = {
         @Variant(id = "low", source = "Low power"),
         @Variant(id = "high", source = "High power")
 })
 final class Labels {
-    @Trans(modId = "mymod", key = "gui.mymod.container", source = "Test Container",
+    @Trans(key = "gui.mymod.container", source = "Test Container",
             translations = @Translation(locale = MinecraftLocale.ZH_CN, text = "测试容器"))
     static final String CONTAINER = "gui.mymod.container";
 }
