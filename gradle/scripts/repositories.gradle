@@ -8,7 +8,6 @@ repositories {
             includeGroup("it.unimi.dsi")
             includeGroup("org.lwjgl")
             includeGroup("com.google.guava")
-            includeGroup("com.google.devtools.ksp")
             includeGroup("org.jacoco")
             includeGroupAndSubgroups("io.netty")
             includeGroupAndSubgroups("org.jetbrains")

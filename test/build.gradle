@@ -5,7 +5,6 @@ plugins {
     id 'java-library'
     alias libs.plugins.modDevGradle
     alias libs.plugins.kotlin.jvm
-    alias libs.plugins.ksp
 }
 
 group = rootProject.group
@@ -89,7 +88,6 @@ repositories {
             includeGroup("it.unimi.dsi")
             includeGroup("org.lwjgl")
             includeGroup("com.google.guava")
-            includeGroup("com.google.devtools.ksp")
             includeGroup("org.jacoco")
             includeGroupAndSubgroups("io.netty")
             includeGroupAndSubgroups("org.jetbrains")
@@ -103,8 +101,6 @@ dependencies {
     implementation(libs.testframework)
     compileOnly(libs.jetbrains.annotations)
     compileOnly(libs.jspecify)
-    annotationProcessor(project(':localization-processor'))
-    ksp(project(':localization-processor'))
 }
 
 tasks.withType(JavaCompile).configureEach {

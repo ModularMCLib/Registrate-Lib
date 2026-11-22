@@ -83,17 +83,9 @@ registrate.importTranslation(new ImportedTranslation(
 
 DataGen 用模组当前选中的源文本核对修订。源文本变化会将译文标为 `STALE`。锁定译文仍可参与选择，未锁定的过期译文仅用于诊断，此时配置的术语、转换和回退规则可以继续解析目标 Locale。开发者显式声明优先，其次是锁定的导入译文和当前修订的普通导入译文。同一层级中，已批准、审核中和草稿依次参与选择。
 
-## 接入注解处理器
+## 注解声明
 
-用 `./gradlew :localization-processor:jar` 构建与库版本对应的处理器。Java 源码使用 `annotationProcessor`，Kotlin 源码使用 KSP 插件和 `ksp`。混合项目可同时使用两项配置，主库作为模组依赖。
-
-```groovy
-dependencies {
-    def processor = files("libs/registratelib-26.1.2-${registratelib_version}-localization-processor.jar")
-    annotationProcessor(processor)
-    ksp(processor)
-}
-```
+添加 RegistrateLib 模组依赖即可在 Java 和 Kotlin 源码中使用本地化注解。DataGen 从 NeoForge 的扫描结果读取所属模组文件中的声明。升级时移除 RegistrateLib 的 `annotationProcessor` 和 `ksp` 依赖。旧构建目录里有索引文件时，清理一次再构建。
 
 `@Trans` 和 `@TransVariants` 可以声明在类型或字段上。`modId` 选择声明归属的模组和源 Locale。省略 `namespace` 时，资源命名空间取 `modId`。
 
@@ -109,7 +101,7 @@ final class Labels {
 }
 ```
 
-Kotlin 中在带有后备字段的属性上使用 `@field:Trans` 或 `@field:TransVariants`。两个处理器按 Mod ID 写入各自的版本化声明索引，DataGen 从所属模组读取并合并。变体的 Key 由前缀和 ID 拼接，例如 `gui.mymod.power.low`。同一命名空间、Key 和 Locale 下，同级异值声明会报告双方来源。`%s` 的隐式索引按出现顺序分配，译文可用 `%1$s` 等显式索引重排。
+Kotlin 中在带有后备字段的属性上使用 `@field:Trans` 或 `@field:TransVariants`。变体的 Key 由前缀和 ID 拼接，例如 `gui.mymod.power.low`。同一命名空间、Key 和 Locale 下，同级异值声明会报告双方来源，并用类名、字段名和变体 ID 定位注解。`%s` 的隐式索引按出现顺序分配，译文可用 `%1$s` 等显式索引重排。
 
 ## 注册兼容性
 

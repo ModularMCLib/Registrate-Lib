@@ -9,7 +9,6 @@ plugins {
     //alias libs.plugins.shadow
     alias libs.plugins.spotless
     alias libs.plugins.kotlin.jvm
-    alias libs.plugins.ksp
 }
 
 group = maven_group
