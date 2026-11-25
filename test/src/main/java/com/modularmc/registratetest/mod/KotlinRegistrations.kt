@@ -14,7 +14,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType
 import net.minecraft.world.level.block.state.BlockState
 import net.neoforged.neoforge.fluids.FluidType
 
-/** Kotlin registration examples using the test mod's Registrate instance. */
+/** 示例模组的 Kotlin 注册用法，复用模组已有的 Registrate 实例。 */
 class KotlinRegistrations(registrate: Registrate) {
 	val magicItemModelTest = registrate.block("magic_item_model", ::Block)
 		.blockstate {
@@ -39,5 +39,6 @@ class KotlinRegistrations(registrate: Registrate) {
 		.noBucket()
 		.register()
 
+	/** 示例方块实体，用于覆盖 Kotlin 构建链对方块实体类型的注册。 */
 	class TestDummyBlockEntity(type: BlockEntityType<out TestDummyBlockEntity>, pos: BlockPos, state: BlockState) : BlockEntity(type, pos, state)
 }

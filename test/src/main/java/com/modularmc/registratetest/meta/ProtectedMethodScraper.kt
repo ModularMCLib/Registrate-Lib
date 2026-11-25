@@ -17,7 +17,7 @@ import javax.tools.JavaFileObject
 import javax.tools.SimpleJavaFileObject
 import javax.tools.ToolProvider
 
-/** Reads protected method signatures from a pasted Java class using the JDK parser. */
+/** 用 JDK 语法分析器从粘贴的 Java 类源码中读取受保护的方法签名。 */
 internal object ProtectedMethodScraper {
 	data class Declarations(val imports: List<String>, val methods: List<MethodTree>)
 

@@ -13,7 +13,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import javax.lang.model.element.Modifier
 
-/** Updates the public overrides and companion methods in a Kotlin DataGen provider. */
+/** 根据原版方法签名重新生成 Kotlin 数据提供器中的公共重写和伴生对象方法。 */
 internal class MethodGenerator(private val owner: String, private val updater: Class<*>) {
 	private data class Exclusion(val name: String, val parameterTypes: List<String>?)
 

@@ -16,6 +16,7 @@ import net.neoforged.testframework.annotation.TestHolder
 import net.neoforged.testframework.gametest.EmptyTemplate
 import net.neoforged.testframework.gametest.GameTest
 
+/** 演示多个本地化提示行共用一个模板和参数列表。 */
 @ForEachTest(groups = ["registrate-runtime"])
 object ComponentTemplateExample {
 	private val amount = TranslationKey(TestMod.MOD_ID, "tooltip.testmod.template.amount")
@@ -29,6 +30,7 @@ object ComponentTemplateExample {
 		ComponentTemplate.Line(summary, Style.EMPTY),
 	)
 
+	/** 为模板使用的键登记英文源文和简体中文译文。 */
 	@JvmStatic
 	fun declare(registrate: Registrate) {
 		registrate.addLocalization(amount) { it.source("Required %1\$s").translation(ZH_CN, "需要 %1\$s") }
@@ -36,6 +38,7 @@ object ComponentTemplateExample {
 		registrate.addLocalization(summary) { it.source("%2\$s x %1\$s").translation(ZH_CN, "%1\$s 个 %2\$s") }
 	}
 
+	/** 检查多行模板的参数和样式，并验证多次构建产生独立组件。 */
 	@JvmStatic
 	@GameTest
 	@EmptyTemplate(floor = true)
