@@ -147,7 +147,10 @@ object ComponentUtils {
 
 	/** 创建与 [join] 一致的流收集器，按流的遍历顺序拼接组件。 */
 	@JvmStatic
-	fun joining(separator: Component): Collector<Component, *, MutableComponent> = Collectors.collectingAndThen(Collectors.toList<Component>()) { join(it, separator) }
+	fun joining(separator: Component): Collector<Component, *, MutableComponent> {
+		val parts = Collectors.toCollection { ObjectArrayList<Component>() }
+		return Collectors.collectingAndThen(parts) { join(it, separator) }
+	}
 
 	/**
 	 * 按游戏刻从色板中循环选色，返回只修改文本颜色的样式变换。

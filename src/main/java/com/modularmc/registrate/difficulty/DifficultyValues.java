@@ -1,9 +1,9 @@
 package com.modularmc.registrate.difficulty;
 
+import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import org.jspecify.annotations.NullMarked;
 
 import java.util.EnumMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -16,7 +16,7 @@ import java.util.Map;
 @NullMarked
 public final class DifficultyValues<D extends Enum<D> & DifficultyLevel, V> {
 
-    private final Map<String, D> levelsById;
+    private final Object2ObjectLinkedOpenHashMap<String, D> levelsById;
     private final EnumMap<D, V> valuesByLevel;
 
     /**
@@ -30,7 +30,7 @@ public final class DifficultyValues<D extends Enum<D> & DifficultyLevel, V> {
     public DifficultyValues(D[] levels, Map<D, ? extends V> values) {
         if (levels.length < 2) throw new IllegalArgumentException("At least two difficulty levels are required");
 
-        levelsById = LinkedHashMap.newLinkedHashMap(levels.length);
+        levelsById = new Object2ObjectLinkedOpenHashMap<>(levels.length);
         valuesByLevel = new EnumMap<>(levels[0].getDeclaringClass());
         for (D level : levels) {
             String id = level.getSerializedName();
