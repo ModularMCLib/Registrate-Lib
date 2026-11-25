@@ -17,17 +17,21 @@ import net.neoforged.fml.LogicalSide
 
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 
+/** 在同一轮任务中生成方块状态和物品模型，使两个生成器共享已经登记的物品模型信息。 */
 open class RegistrateModelProvider(private val parent: AbstractRegistrate<*>, output: PackOutput) :
 	ModelProvider(output, parent.modid),
 	RegistrateProvider {
+	/** 先生成方块状态和模型，再运行物品模型回调。两步使用相同的物品模型输出记录。 */
 	override fun registerModels(blockModels: BlockModelGenerators, itemModels: ItemModelGenerators) {
 		val output = ItemModelCollector(itemModels.itemModelOutput)
 		RegistrateBlockModelGenerator(parent, blockModels.blockStateOutput, output, blockModels.modelOutput).run()
 		RegistrateItemModelGenerator(parent, output, itemModels.modelOutput).run()
 	}
 
+	/** 返回模型生成任务在日志中显示的名称。 */
 	override fun getName(): String = "Blockstates and item models"
 
+	/** 方块状态和物品模型作为客户端资源生成。 */
 	override fun getSide(): LogicalSide = LogicalSide.CLIENT
 
 	internal class ItemModelCollector(private val output: ItemModelOutput) : ItemModelOutput {
