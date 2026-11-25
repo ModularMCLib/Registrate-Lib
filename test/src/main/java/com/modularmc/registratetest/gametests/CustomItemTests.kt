@@ -8,8 +8,10 @@ import net.neoforged.testframework.annotation.TestHolder
 import net.neoforged.testframework.gametest.EmptyTemplate
 import net.neoforged.testframework.gametest.GameTest
 
+/** 覆盖自定义物品的注册和默认堆叠数据。 */
 @ForEachTest(groups = ["custom-item"])
 object CustomItemTests {
+	/** 在游戏测试中读取示例模组的自定义物品，检查实际堆叠的数据组件。 */
 	@JvmStatic
 	@GameTest
 	@EmptyTemplate(floor = true)

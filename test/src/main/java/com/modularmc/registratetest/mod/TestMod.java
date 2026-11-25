@@ -13,6 +13,7 @@ import com.modularmc.registrate.localization.terminology.Terminology.Measurement
 import com.modularmc.registrate.providers.DataGenContext;
 import com.modularmc.registrate.providers.core.ProviderType;
 import com.modularmc.registrate.providers.generators.RegistrateItemModelGenerator;
+import com.modularmc.registratetest.mod.localization.ComponentTemplateExample;
 import com.modularmc.registratetest.mod.localization.EnglishLabels;
 import com.modularmc.registrate.util.DataIngredient;
 import com.modularmc.registrate.util.entry.*;
@@ -126,6 +127,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/** 注册示例方块、物品、流体等内容，并为数据生成和游戏测试提供集成用例。 */
 @Mod(TestMod.MOD_ID)
 public class TestMod {
 
@@ -140,8 +142,10 @@ public class TestMod {
     private static final GlossaryTerm POTENTIAL = new GlossaryTerm("electric_potential", "electric potential", List.of(Domain.PHYSICS), Map.of(MinecraftLocale.ZH_CN, "电势"));
     private static final DeclarationDefaults TECHNOLOGY = new DeclarationDefaults(List.of(Domain.ENGINEERING, Domain.PHYSICS), TextType.ITEM, List.of(POTENTIAL));
 
+    /** 带菜单和方块实体的示例方块，用于覆盖关联条目和本地化标题。 */
     public static final class TestBlock extends Block implements EntityBlock {
 
+        /** 使用注册构建器提供的最终属性创建示例方块。 */
         public TestBlock(Properties properties) {
             super(properties);
         }
@@ -171,6 +175,7 @@ public class TestMod {
             return InteractionResult.SUCCESS;
         }
 
+        /** 用示例模组注册的方块实体类型创建当前位置的实例。 */
         @Override
         public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
             return TestMod.instance().testblockbe.create(pos, state);
@@ -217,13 +222,16 @@ public class TestMod {
         }
     }
 
+    /** 用于测试自定义实体类型注册的猪实体。 */
     public static final class TestEntity extends Pig {
 
+        /** 由已注册的实体工厂根据实体类型和目标世界构造实例。 */
         public TestEntity(EntityType<? extends Pig> p_i50250_1_, Level p_i50250_2_) {
             super(p_i50250_1_, p_i50250_2_);
         }
     }
 
+    /** 用于示例自定义注册表的最小条目类型。 */
     public static final class TestCustomRegistryEntry {}
 
     private final Registrate registrate = Registrate.create(MOD_ID).sourceLocale(MinecraftLocale.EN_US).localizationDefaults(TECHNOLOGY);
@@ -343,6 +351,7 @@ public class TestMod {
 
     private static TestMod INSTANCE;
 
+    /** 初始化示例模组，登记数据生成回调、运行时订阅和游戏测试。 */
     public TestMod(IEventBus eventBus, ModContainer container) {
         INSTANCE = this;
         registrate.export().localization()
@@ -356,6 +365,7 @@ public class TestMod {
         registrate.addLocalization(new TranslationKey(MOD_ID, "gui.testmod.voltage"),
                 text -> text.type(TextType.GUI_LABEL)
                         .source("Voltage: %s V").translation(MinecraftLocale.ZH_CN, "电压：%1$s V"));
+        ComponentTemplateExample.declare(registrate);
         registrate.addRawLang("testmod.custom.lang.with_placeholders1", "Placeholder 1 %s Placeholder 2 %s");
         registrate.addRawLang("testmod.custom.lang.with_placeholders2", "Placeholder 1 %s Placeholder 2 %2$s Placeholder 3 %s");
         registrate.addRawLang("testmod.custom.lang.brackets", "(Bracket 1) [Bracket 2] {Bracket 3} <Bracket 4> ◁Bracket 5▷");
@@ -372,34 +382,34 @@ public class TestMod {
                         Identifier.withDefaultNamespace("textures/gui/advancements/backgrounds/stone.png"), AdvancementType.TASK, true, true, false)
                 .save(adv, rootAdvancement.toString()));
         registrate.addDataGenerator(ProviderType.GENERIC_SERVER, provider -> provider.add(data -> {
-            // generic server side provider to generate custom dimension
-            // to teleport to this dimension use the following command
+            // 使用通用服务端数据提供器生成自定义维度。
+            // 使用下方命令传送到这个维度。
             // /execute as @s in testmod:test_dimension run tp @s 0 64 0
-            // you can validate you are in this dimension by checking the debug screen
-            // right underneath the `Chunks[C]` and `Chunk[S]` should be the dimension name
+            // 打开调试界面，查看当前所在的维度。
+            // 维度名称显示在 `Chunks[C]` 和 `Chunk[S]` 的下方。
             var testDimensionTypeKey = ResourceKey.create(Registries.DIMENSION_TYPE, Identifier.fromNamespaceAndPath("testmod", "test_dimension_type"));
 
             return new DatapackBuiltinEntriesProvider(
                     data.output(),
                     data.registries(),
                     new RegistrySetBuilder()
-                            // custom dimension type, just a simple overworld-like dimension
+                            // 自定义维度类型沿用近似主世界的环境设置。
                             .add(Registries.DIMENSION_TYPE, context -> context.register(
                                     testDimensionTypeKey,
                                     new DimensionType(
-                                            /* hasFixedTime */ false,
-                                            /* hasSky */ true,
-                                            /* hasCeiling */ false,
-                                            /* hasEnderDragonFight */ false,
-                                            /* coordinateScale */ 1D,
-                                            /* minY */ -64,
-                                            /* height */ 384,
-                                            /* localHeight */ 384,
-                                            /* infiniBurn */ BlockTags.INFINIBURN_OVERWORLD,
-                                            /* ambientLight */ 0F,
+                                            /* 是否固定时间 */ false,
+                                            /* 是否有天空 */ true,
+                                            /* 是否有顶层 */ false,
+                                            /* 是否有末影龙战斗 */ false,
+                                            /* 坐标缩放比例 */ 1D,
+                                            /* 最低纵坐标 */ -64,
+                                            /* 世界高度 */ 384,
+                                            /* 可用逻辑高度 */ 384,
+                                            /* 永燃方块标签 */ BlockTags.INFINIBURN_OVERWORLD,
+                                            /* 环境光亮度 */ 0F,
                                             new DimensionType.MonsterSettings(
-                                                    /* monsterSpawnLightTest */ UniformInt.of(0, 7),
-                                                    /* monsterSpawnBlockLightLimit */ 0),
+                                                    /* 怪物生成的光照判定 */ UniformInt.of(0, 7),
+                                                    /* 怪物生成的方块光照上限 */ 0),
                                             DimensionType.Skybox.OVERWORLD,
                                             CardinalLighting.Type.DEFAULT,
                                             EnvironmentAttributeMap.builder()
@@ -416,8 +426,8 @@ public class TestMod {
                                                     .build(),
                                             context.lookup(Registries.TIMELINE).getOrThrow(TimelineTags.IN_OVERWORLD),
                                             Optional.of(context.lookup(Registries.WORLD_CLOCK).getOrThrow(WorldClocks.OVERWORLD)))))
-                            // register custom dimension for the dimension type
-                            // simple single biome (plains) dimension
+                            // 为上面定义的维度类型注册自定义维度。
+                            // 整个维度只使用平原生物群系。
                             .add(Registries.LEVEL_STEM, context -> {
                                 var plains = context.lookup(Registries.BIOME).getOrThrow(Biomes.PLAINS);
                                 var testDimensionType = context.lookup(Registries.DIMENSION_TYPE).getOrThrow(testDimensionTypeKey);
@@ -436,7 +446,7 @@ public class TestMod {
 
         eventBus.addListener(this::onCommonSetup);
 
-        // Setup gametests for normal run config
+        // 为普通游戏运行配置启用游戏测试。
         final MutableTestFramework framework = FrameworkConfiguration
                 .builder(Identifier.fromNamespaceAndPath(MOD_ID, "tests"))
                 .clientConfiguration(() -> ClientConfiguration.builder()
@@ -465,7 +475,7 @@ public class TestMod {
         testitem.is(Items.SNOWBALL);
         testblockitem.is(Items.STONE);
         testblockbe.is(BlockEntityType.CHEST);
-        // testbiome.is(Feature.BAMBOO); // should not compile
+        // testbiome.is(Feature.BAMBOO); // 此用法无法通过编译
         if (testfluid.getBucket().isPresent()) throw new IllegalStateException("Expected no bucket entry for test fluid");
         if (testfluid.getSiblingOptional(Registries.ITEM).isPresent()) throw new IllegalStateException("Expected no item sibling for test fluid");
         if (testfluid.getBlock().isPresent()) throw new IllegalStateException("Expected no block sibling for test fluid");
@@ -480,10 +490,12 @@ public class TestMod {
         }
     }
 
+    /** 返回 NeoForge 在模组加载期间创建的示例模组实例。 */
     public static TestMod instance() {
         return INSTANCE;
     }
 
+    /** 返回 Java 和 Kotlin 示例条目共用的 Registrate 实例，供集成测试查询。 */
     @VisibleForTesting
     public Registrate registrate() {
         return registrate;

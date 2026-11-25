@@ -1,6 +1,6 @@
 package com.modularmc.registrate.localization
 
-/** Languages shipped with Minecraft 1.21.1. */
+/** Minecraft 提供的语言选项。 */
 enum class MinecraftLocale {
 	AF_ZA,
 	AR_SA,
@@ -143,5 +143,6 @@ enum class MinecraftLocale {
 
 	private val code = name.lowercase()
 
+	/** 返回形如 `zh_cn` 的语言文件代码。 */
 	fun code(): String = code
 }

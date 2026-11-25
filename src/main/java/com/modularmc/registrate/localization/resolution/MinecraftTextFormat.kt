@@ -25,6 +25,7 @@ internal object MinecraftTextFormat {
 
 	private data class Token(val start: Int, val end: Int, val argument: Int)
 
+	/** 统计可识别的格式占位符及其次数，用于比较源文和译文引用的参数是否一致。 */
 	fun signature(text: String): Int2IntMap {
 		val firstPercent = text.indexOf('%')
 		if (firstPercent < 0) return Int2IntMaps.EMPTY_MAP
@@ -48,6 +49,7 @@ internal object MinecraftTextFormat {
 		return signature
 	}
 
+	/** 逐段转换纯文本，保留 Minecraft 格式码、占位符及 [symbols] 指定的单位符号。 */
 	fun convert(text: String, symbols: Collection<String>, convertRun: (String) -> String): String {
 		val matcher = tokenPattern(symbols).matcher(text)
 		if (!matcher.find()) return convertRun(text)
@@ -63,6 +65,7 @@ internal object MinecraftTextFormat {
 		return result.toString()
 	}
 
+	/** 将可见文字变为倒置文本，同时尽量保持样式边界和不可拆分的格式标记。 */
 	fun upsideDown(text: String, symbols: Collection<String>): String {
 		val result = StringBuilder(text.length)
 		val matcher = tokenPattern(symbols).matcher(text)
@@ -76,7 +79,7 @@ internal object MinecraftTextFormat {
 		var nextArgument = 1
 		do {
 			if (matcher.start(2) >= 0) {
-				// Line separators and style changes delimit runs so they stay attached to the same text.
+				// 换行和样式切换会断开文本片段，反转时让样式留在原来的文本上。
 				reverseRun(text, start, matcher.start(), tokens, result)
 				result.append(text, matcher.start(), matcher.end())
 				tokens.clear()

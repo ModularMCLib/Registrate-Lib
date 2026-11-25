@@ -94,6 +94,10 @@ repositories {
             includeGroupAndSubgroups("org.ow2")
         }
     }
+    maven {
+        name = "fury"
+        url = uri("https://maven.fury.io/modularmclib/")
+    }
 }
 
 dependencies {

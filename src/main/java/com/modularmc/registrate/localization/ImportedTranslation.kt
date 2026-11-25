@@ -4,20 +4,20 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.HexFormat
 
-/** Identifies the source text against which a translation was reviewed. */
+/** 标识译文审校时对应的源文版本，用于判断源文是否已变更。 */
 @JvmRecord
 data class SourceRevision(val value: String) {
 	companion object {
 		private val digest = ThreadLocal.withInitial { MessageDigest.getInstance("SHA-256") }
 		private val hex = HexFormat.of()
 
-		/** Computes the SHA-256 of the UTF-8 source text. */
+		/** 按 UTF-8 编码计算源文的 SHA-256 摘要。 */
 		@JvmStatic
 		fun of(source: String): SourceRevision = SourceRevision(hex.formatHex(digest.get().digest(source.toByteArray(StandardCharsets.UTF_8))))
 	}
 }
 
-/** Review state attached to a translation imported from another source. */
+/** 记录外部译文的审校状态，供数据生成时比较导入译文的优先级。 */
 enum class TranslationStatus(private val priority: Int) {
 	STALE(0),
 	DRAFT(1),
@@ -28,7 +28,7 @@ enum class TranslationStatus(private val priority: Int) {
 	internal fun priority(locked: Boolean): Int = priority + if (locked) entries.size else 0
 }
 
-/** A translation received from another source. [location] identifies its origin in DataGen diagnostics. */
+/** 从外部导入的译文。[location] 记录来源，供数据生成时定位问题。 */
 @JvmRecord
 data class ImportedTranslation(
 	val key: TranslationKey,

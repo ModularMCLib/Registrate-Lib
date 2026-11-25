@@ -1,4 +1,5 @@
 [versions]
+mmclutils = "0.1.0-SNAPSHOT"
 
 
 ## modrinth maven ##
@@ -9,5 +10,6 @@
 
 
 [libraries]
+mmclutils = { module = "com.modularmc.mmclutils:mmclutils-26.1.2", version.ref = "mmclutils" }
 
 [bundles]

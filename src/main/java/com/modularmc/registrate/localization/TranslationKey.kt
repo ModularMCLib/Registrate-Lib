@@ -1,5 +1,5 @@
 package com.modularmc.registrate.localization
 
-/** The literal Minecraft translation key and the namespace of the language file that owns it. */
+/** 由 Minecraft 使用的原始翻译键和负责输出它的语言文件命名空间组成。 */
 @JvmRecord
 data class TranslationKey(val namespace: String, val value: String)

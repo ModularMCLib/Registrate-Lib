@@ -25,6 +25,10 @@ repositories {
         name = "ModMaven"
         url = "https://modmaven.dev"
     }
+    maven {
+        name = "fury"
+        url = uri("https://maven.fury.io/modularmclib/")
+    }
     exclusiveContent { // terraformers - EMI
         forRepository { maven { url = "https://maven.terraformersmc.com/releases/" } }
         filter { includeGroup("dev.emi") }

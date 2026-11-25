@@ -7,6 +7,7 @@ import com.modularmc.registrate.localization.annotation.Translation
 import com.modularmc.registrate.localization.annotation.Variant
 import com.modularmc.registratetest.mod.TestMod
 
+/** 用注解声明示例模组的电力状态变体和界面翻译键。 */
 @TransVariants(
 	modId = TestMod.MOD_ID,
 	keyPrefix = "gui.testmod.power.",

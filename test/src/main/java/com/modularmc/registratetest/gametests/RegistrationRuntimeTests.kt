@@ -15,8 +15,10 @@ import net.neoforged.testframework.annotation.TestHolder
 import net.neoforged.testframework.gametest.EmptyTemplate
 import net.neoforged.testframework.gametest.GameTest
 
+/** 在游戏运行环境中覆盖注册条目、本地化和跨语言注册入口。 */
 @ForEachTest(groups = ["registrate-runtime"])
 object RegistrationRuntimeTests {
+	/** 检查方块物品命名规则，以及有无方块和桶的流体引用。 */
 	@JvmStatic
 	@GameTest
 	@EmptyTemplate(floor = true)
@@ -40,6 +42,7 @@ object RegistrationRuntimeTests {
 		}
 	}
 
+	/** 检查示例模组中的 Java 和 Kotlin 注册是否由同一 Registrate 管理。 */
 	@JvmStatic
 	@GameTest
 	@EmptyTemplate(floor = true)
@@ -70,6 +73,7 @@ object RegistrationRuntimeTests {
 		}
 	}
 
+	/** 验证同名重复注册被拒绝，已提交的注册引用与元数据仍可读取。 */
 	@JvmStatic
 	@GameTest
 	@EmptyTemplate(floor = true)

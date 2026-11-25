@@ -1,4 +1,4 @@
-@file:Suppress("ktlint:standard:max-line-length") // Spotless reports a line-length violation at the file header during formatting.
+@file:Suppress("ktlint:standard:max-line-length") // Spotless 格式化时会在文件头报告行宽超限。
 
 package com.modularmc.registrate.builders
 
@@ -53,12 +53,17 @@ import java.util.function.Consumer
 import java.util.function.Supplier
 import java.util.function.ToIntFunction
 
+/** 配置流体类型、源流体和流动流体的注册，并可附带方块、桶及客户端模型。 */
 open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, T, P, FluidBuilder<T, P>> {
+	/** 由模组提供，用于在注册阶段按配置创建一个新的 NeoForge 流体类型。 */
 	fun interface FluidTypeFactory {
+		/** 以配置完成的 [properties] 创建流体类型，返回供源流体与流动流体共享的实例。 */
 		fun create(properties: FluidType.Properties): FluidType
 	}
 
+	/** 由模组提供，用于在流体注册阶段创建具体的流动流体。 */
 	fun interface FluidFactory<T> {
+		/** 用已配置的 [properties] 创建流动流体。属性中引用的附属条目由注册流程延迟取得。 */
 		fun create(properties: BaseFlowingFluid.Properties): T
 	}
 
@@ -67,10 +72,10 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	private lateinit var clientExtensionFactory: NonNullSupplier<Supplier<IClientFluidTypeExtensions>>
 
 	/**
-	 * Supplies the client extension for this fluid type.
+	 * 为该流体类型登记客户端扩展。
 	 *
-	 * @param clientExtension the side-safe supplier of the client extension
-	 * @return this fluid builder
+	 * @param clientExtension 外层供应器须可在服务端安全创建，内层供应器在客户端读取扩展
+	 * @return 当前构建器
 	 */
 	open fun clientExtension(clientExtension: NonNullSupplier<Supplier<IClientFluidTypeExtensions>>): FluidBuilder<T, P> {
 		if (!this::clientExtensionFactory.isInitialized) {
@@ -81,7 +86,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	}
 
 	/**
-	 * Sets the fluid model textures and uses the still texture for the block particles.
+	 * 设置流体的静止和流动纹理，并将静止纹理用于方块粒子。
 	 */
 	open fun model(stillTexture: Identifier, flowingTexture: Identifier): FluidBuilder<T, P> {
 		unsafeRunWhenOn(Dist.CLIENT) {
@@ -95,6 +100,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		return this
 	}
 
+	/** 设置流体模型的取值器。首次设置时在客户端挂接模型注册，后续调用会替换模型定义。 */
 	open fun model(model: NonNullSupplier<Supplier<FluidModel.Unbaked>>): FluidBuilder<T, P> {
 		if (!this::fluidModel.isInitialized) {
 			unsafeRunWhenOn(Dist.CLIENT) { Runnable { registerModel() } }
@@ -105,7 +111,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 
 	protected open fun registerModel() {
 		onRegister { flowing ->
-			// Model loading runs again after resource reloads.
+			// 资源重载后会重新加载模型。
 			owner.modEventBus!!.addListener { event: RegisterFluidModelsEvent ->
 				event.register(fluidModel.get().get(), source.get(), flowing)
 			}
@@ -140,6 +146,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	private lateinit var source: NonNullSupplier<out BaseFlowingFluid>
 	private val tags = ObjectOpenHashSet<TagKey<Fluid>>()
 
+	/** 创建会同时注册新流体类型的流体构建器。实际类型由 [typeFactory] 延迟创建。 */
 	constructor(
 		owner: AbstractRegistrate<*>,
 		parent: P,
@@ -155,6 +162,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		this.registerType = true
 	}
 
+	/** 创建共享已有流体类型的构建器。引用由 [fluidType] 提供，类型注册由其所有者负责。 */
 	constructor(
 		owner: AbstractRegistrate<*>,
 		parent: P,
@@ -167,17 +175,14 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		this.bucketName = name + "_bucket"
 		this.fluidFactory = fluidFactory
 		this.fluidType = fluidType
-		this.registerType = false // Don't register if we have a fluid from outside.
+		this.registerType = false // 外部提供的流体类型由其所有者登记。
 	}
 
 	/**
-	 * Modify the properties of the fluid type. Modifications are done lazily, but the passed function is composed with
-	 * the current one, and as such this method can be called multiple times to perform
-	 * different operations.
+	 * 登记流体类型属性变换，创建流体类型时按登记顺序应用。
 	 *
-	 * @param cons
-	 * The action to perform on the attributes
-	 * @return this [FluidBuilder]
+	 * @param cons 配置流体类型属性的回调
+	 * @return 当前构建器
 	 */
 	open fun properties(cons: NonNullConsumer<FluidType.Properties>): FluidBuilder<T, P> {
 		typeProperties = typeProperties.andThen(cons)
@@ -185,42 +190,36 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	}
 
 	/**
-	 * Modify the properties of the flowing fluid. Modifications are done lazily, but the passed function is composed
-	 * with the current one, and as such this method can be called multiple times to perform
-	 * different operations.
+	 * 登记流动流体的属性变换。创建流体时按登记顺序应用。
 	 *
-	 * @param cons
-	 * The action to perform on the attributes
-	 * @return this [FluidBuilder]
+	 * @param cons 配置流动流体属性的回调
+	 * @return 当前构建器
 	 */
 	open fun fluidProperties(cons: NonNullConsumer<BaseFlowingFluid.Properties>): FluidBuilder<T, P> {
 		fluidProperties = fluidProperties.andThen(cons)
 		return this
 	}
 
-	/** Generates a default name from the source fluid's registry path using the fluid type's description key. */
+	/** 根据源流体的注册路径推导默认名称，并使用流体类型的描述键。 */
 	open fun defaultLang(): FluidBuilder<T, P> = defaultLang({ f: T -> f.fluidType.descriptionId }, sourceName)
 
-	/** Configures the source text and translations of this entry.  */
+	/** 使用流体类型的描述键声明源文本及显式译文。 */
 	open fun localization(configure: Consumer<LocalizationDeclaration.Builder>): FluidBuilder<T, P> = localization({ fluid: T -> fluid.fluidType.descriptionId }, configure)
 
 	/**
-	 * Set the translation for this fluid.
+	 * 为此流体指定源语言名称。
 	 *
-	 * @param name
-	 * A localized English name
-	 * @return this [FluidBuilder]
+	 * @param name 使用模组源语言书写的流体名称
+	 * @return 当前构建器
 	 */
 	open fun lang(name: String): FluidBuilder<T, P> = lang({ f: T -> f.fluidType.descriptionId }, name)
 
 	/**
-	 * Create a standard [BaseFlowingFluid.Source] for this fluid which will be built and registered along with
-	 * this fluid.
+	 * 为此流体配置标准 [BaseFlowingFluid.Source]，随流动流体一起构建和登记。
 	 *
-	 * @return this [FluidBuilder]
-	 * @see .source
-	 * @throws IllegalStateException
-	 * If [source] has been called before this method
+	 * @return 当前构建器
+	 * @see source
+	 * @throws IllegalStateException 已配置过源流体
 	 */
 	open fun defaultSource(): FluidBuilder<T, P> {
 		check(this.defaultSource == null) { "Cannot set a default source after a custom source has been created" }
@@ -229,12 +228,10 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	}
 
 	/**
-	 * Create a [BaseFlowingFluid] for this fluid, which is created by the given factory, and which will be built
-	 * and registered along with this fluid.
+	 * 使用指定工厂创建源流体，随流动流体一并登记。
 	 *
-	 * @param factory
-	 * A factory for the fluid, which accepts the properties and returns a new fluid
-	 * @return this [FluidBuilder]
+	 * @param factory 接收流体属性并创建源流体的工厂
+	 * @return 当前构建器
 	 */
 	open fun source(factory: NonNullFunction<BaseFlowingFluid.Properties, out BaseFlowingFluid>): FluidBuilder<T, P> {
 		this.defaultSource = false
@@ -243,14 +240,10 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	}
 
 	/**
-	 * Create a standard [LiquidBlock] for this fluid, building it immediately, and not allowing for further
-	 * configuration.
+	 * 为流体启用标准 [LiquidBlock]。需要自定义属性时可用 [block] 取得构建器。
 	 *
-	 * @return this [FluidBuilder]
-	 * @see .block
-	 * @throws IllegalStateException
-	 * If [block] or [block] has been called before
-	 * this method
+	 * @return 当前构建器
+	 * @throws IllegalStateException 已设置过液体方块或禁用液体方块
 	 */
 	open fun defaultBlock(): FluidBuilder<T, P> {
 		check(this.defaultBlock == null) { "Cannot set a default block after a custom block has been created" }
@@ -259,10 +252,9 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	}
 
 	/**
-	 * Create a standard [LiquidBlock] for this fluid, and return the builder for it so that further customization
-	 * can be done.
+	 * 创建标准 [LiquidBlock] 的构建器，便于继续配置液体方块。
 	 *
-	 * @return the [BlockBuilder] for the [LiquidBlock]
+	 * @return 液体方块的 [BlockBuilder]
 	 */
 	open fun block() = block(
 		NonNullBiFunction { fluid: T, properties: BlockBehaviour.Properties ->
@@ -274,14 +266,11 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	)
 
 	/**
-	 * Create a [LiquidBlock] for this fluid, which is created by the given factory, and return the builder for it
-	 * so that further customization can be done.
+	 * 使用指定工厂创建液体方块构建器。
 	 *
-	 * @param B
-	 * The type of the block
-	 * @param factory
-	 * A factory for the block, which accepts the block object and properties and returns a new block
-	 * @return the [BlockBuilder] for the [LiquidBlock]
+	 * @param B 液体方块类型
+	 * @param factory 接收源流体和方块属性并创建液体方块的工厂
+	 * @return 液体方块的 [BlockBuilder]
 	 */
 	open fun <B : LiquidBlock> block(factory: NonNullBiFunction<T, BlockBehaviour.Properties, out B>): BlockBuilder<B, FluidBuilder<T, P>> {
 		check(this.defaultBlock != false) { "Only one call to block/noBlock per builder allowed" }
@@ -313,6 +302,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		return ret
 	}
 
+	/** 关闭默认流体方块。与其他方块配置入口互斥，重复关闭会抛出 [IllegalStateException]。 */
 	@Beta
 	open fun noBlock(): FluidBuilder<T, P> {
 		check(this.defaultBlock != false) { "Only one call to block/noBlock per builder allowed" }
@@ -321,14 +311,10 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	}
 
 	/**
-	 * Create a standard [BucketItem] for this fluid, building it immediately, and not allowing for further
-	 * configuration.
+	 * 为流体启用标准 [BucketItem]。需要自定义物品时可用 [bucket] 取得构建器。
 	 *
-	 * @return this [FluidBuilder]
-	 * @see .bucket
-	 * @throws IllegalStateException
-	 * If [bucket] or [bucket] has been called before
-	 * this method
+	 * @return 当前构建器
+	 * @throws IllegalStateException 已设置过桶物品或禁用桶物品
 	 */
 	open fun defaultBucket(): FluidBuilder<T, P> {
 		check(this.defaultBucket == null) { "Cannot set a default bucket after a custom bucket has been created" }
@@ -337,10 +323,9 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	}
 
 	/**
-	 * Create a standard [BucketItem] for this fluid, and return the builder for it so that further customization
-	 * can be done.
+	 * 创建标准 [BucketItem] 的构建器，便于继续配置桶物品。
 	 *
-	 * @return the [ItemBuilder] for the [BucketItem]
+	 * @return 桶物品的 [ItemBuilder]
 	 */
 	open fun bucket() = bucket(
 		NonNullBiFunction { content: BaseFlowingFluid, properties: Item.Properties ->
@@ -352,15 +337,11 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	)
 
 	/**
-	 * Create a [BucketItem] for this fluid, which is created by the given factory, and return the builder for it
-	 * so that further customization can be done.
+	 * 使用指定工厂创建流体桶构建器。
 	 *
-	 * @param I
-	 * The type of the bucket item
-	 * @param factory
-	 * A factory for the bucket item, which accepts the fluid object supplier and properties and returns
-	 * a new item
-	 * @return the [ItemBuilder] for the [BucketItem]
+	 * @param I 桶物品类型
+	 * @param factory 接收流体和物品属性并创建桶物品的工厂
+	 * @return 桶物品的 [ItemBuilder]
 	 */
 	open fun <I : BucketItem> bucket(factory: NonNullBiFunction<BaseFlowingFluid, Item.Properties, out I>): ItemBuilder<I, FluidBuilder<T, P>> {
 		check(this.defaultBucket != false) { "Only one call to bucket/noBucket per builder allowed" }
@@ -383,6 +364,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		return ret
 	}
 
+	/** 关闭默认桶物品。与其他桶配置入口互斥，重复关闭会抛出 [IllegalStateException]。 */
 	@Beta
 	open fun noBucket(): FluidBuilder<T, P> {
 		check(this.defaultBucket != false) { "Only one call to bucket/noBucket per builder allowed" }
@@ -391,11 +373,10 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	}
 
 	/**
-	 * Assign [TagKey]`s` to this fluid and its source fluid. Multiple calls will add additional tags.
+	 * 向流动流体和源流体添加标签。多次调用会累加标签。
 	 *
-	 * @param tags
-	 * The tags to assign
-	 * @return this [FluidBuilder]
+	 * @param tags 要添加的流体标签
+	 * @return 当前构建器
 	 */
 	@SafeVarargs
 	fun tag(vararg tags: TagKey<Fluid>): FluidBuilder<T, P> {
@@ -417,11 +398,10 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 	}
 
 	/**
-	 * Remove [TagKey]`s` from this fluid and its source fluid. Multiple calls will remove additional tags.
+	 * 从流动流体和源流体的生成配置移除指定标签。
 	 *
-	 * @param tags
-	 * The tags to remove
-	 * @return this [FluidBuilder]
+	 * @param tags 要移除的流体标签
+	 * @return 当前构建器
 	 */
 	@SafeVarargs
 	fun removeTag(vararg tags: TagKey<Fluid>): FluidBuilder<T, P> {
@@ -442,7 +422,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		val block = owner.getOptional<Block, Block>(sourceName, Registries.BLOCK)
 		this.typeProperties.accept(properties)
 
-		// Use the sibling block's description ID for the default FluidType when it is already registered.
+		// 关联方块已注册时，默认流体类型沿用该方块的描述键。
 		if (block.isPresent && block.get().isBound) {
 			properties.descriptionId(block.get().get().descriptionId)
 		} else {
@@ -457,13 +437,11 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		return properties
 	}
 
+	/** 按已配置的属性调用流体工厂，创建流动流体实例。 */
 	override fun createEntry(): T = fluidFactory.create(makeProperties())
 
 	/**
-	 * {@inheritDoc}
-	 *
-	 *
-	 * Additionally registers the source fluid and the fluid type (if constructed).
+	 * 提交流动流体时一并登记源流体，以及由当前构建器创建的流体类型。
 	 */
 	override fun register(): FluidEntry<T> {
 		if (registerType) {
@@ -485,26 +463,20 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		return super.register() as FluidEntry<T>
 	}
 
+	/** 将流动流体包装为流体专用引用，供查询同组的源流体、方块和桶。 */
 	override fun createEntryWrapper(delegate: DeferredHolder<Fluid, T>): RegistryEntry<Fluid, T> = FluidEntry(owner, delegate)
 
 	companion object {
 		/**
-		 * Create a new [FluidBuilder] and configure data. The created builder will use a default ([FluidType])
-		 * and fluid class ([BaseFlowingFluid.Flowing]).
+		 * 创建使用默认 [FluidType] 和 [BaseFlowingFluid.Flowing] 的构建器。
 		 *
-		 * @param <P>
-		 * Parent object type
-		 * @param owner
-		 * The owning [AbstractRegistrate] object
-		 * @param parent
-		 * The parent object
-		 * @param name
-		 * Name of the entry being built
-		 * @param callback
-		 * A callback used to actually register the built entry
-		 * @return A new [FluidBuilder] with reasonable default data generators.
-		 * @see .create
-		</P> */
+		 * @param P 父级对象类型
+		 * @param owner 所属的 [AbstractRegistrate] 实例
+		 * @param parent 构建完成后返回的父级对象
+		 * @param name 条目名称
+		 * @param callback 将条目提交给所属实例的回调
+		 * @return 已配置默认数据的 [FluidBuilder]
+		 */
 		@JvmStatic
 		fun <P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback) = create(
 			owner,
@@ -516,108 +488,65 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		)
 
 		/**
-		 * Create a new [FluidBuilder] and configure data. The created builder will use a default fluid class
-		 * ([BaseFlowingFluid.Flowing]).
+		 * 使用指定的流体类型工厂，流动流体采用 [BaseFlowingFluid.Flowing]。
 		 *
-		 * @param <P>
-		 * Parent object type
-		 * @param owner
-		 * The owning [AbstractRegistrate] object
-		 * @param parent
-		 * The parent object
-		 * @param name
-		 * Name of the entry being built
-		 * @param callback
-		 * A callback used to actually register the built entry
-		 * @param typeFactory
-		 * A factory that creates the fluid type
-		 * @return A new [FluidBuilder] with reasonable default data generators.
-		 * @see .create
-		</P> */
+		 * @param P 父级对象类型
+		 * @param owner 所属的 [AbstractRegistrate] 实例
+		 * @param parent 构建完成后返回的父级对象
+		 * @param name 条目名称
+		 * @param callback 将条目提交给所属实例的回调
+		 * @param typeFactory 创建流体类型的工厂
+		 * @return 已配置默认数据的 [FluidBuilder]
+		 */
 		@JvmStatic
 		fun <P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, typeFactory: FluidTypeFactory): FluidBuilder<Flowing, P> =
 			create(owner, parent, name, callback, typeFactory, ::Flowing)
 
 		/**
-		 * Create a new [FluidBuilder] and configure data. The created builder will use a default fluid class
-		 * ([BaseFlowingFluid.Flowing]).
+		 * 复用已注册的流体类型，流动流体采用 [BaseFlowingFluid.Flowing]。
 		 *
-		 * @param <P>
-		 * Parent object type
-		 * @param owner
-		 * The owning [AbstractRegistrate] object
-		 * @param parent
-		 * The parent object
-		 * @param name
-		 * Name of the entry being built
-		 * @param callback
-		 * A callback used to actually register the built entry
-		 * @param fluidType
-		 * An existing and registered fluid type.
-		 * @return A new [FluidBuilder] with reasonable default data generators.
-		 * @see .create
-		</P> */
+		 * @param P 父级对象类型
+		 * @param owner 所属的 [AbstractRegistrate] 实例
+		 * @param parent 构建完成后返回的父级对象
+		 * @param name 条目名称
+		 * @param callback 将条目提交给所属实例的回调
+		 * @param fluidType 已注册的流体类型
+		 * @return 已配置默认数据的 [FluidBuilder]
+		 */
 		@JvmStatic
 		fun <P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, fluidType: NonNullSupplier<FluidType>): FluidBuilder<Flowing, P> =
 			create(owner, parent, name, callback, FluidTypeFactory { fluidType.get() }, ::Flowing)
 
 		/**
-		 * Create a new [FluidBuilder] and configure data. The created builder will use a default ([FluidType])
-		 * and fluid class ([BaseFlowingFluid.Flowing]).
+		 * 使用默认 [FluidType]，由调用方提供流动流体的工厂。
 		 *
-		 * @param <T>
-		 * The type of the builder
-		 * @param <P>
-		 * Parent object type
-		 * @param owner
-		 * The owning [AbstractRegistrate] object
-		 * @param parent
-		 * The parent object
-		 * @param name
-		 * Name of the entry being built
-		 * @param callback
-		 * A callback used to actually register the built entry
-		 * @param fluidFactory
-		 * A factory that creates the flowing fluid
-		 * @return A new [FluidBuilder] with reasonable default data generators.
-		</P></T> */
+		 * @param T 流体类型
+		 * @param P 父级对象类型
+		 * @param owner 所属的 [AbstractRegistrate] 实例
+		 * @param parent 构建完成后返回的父级对象
+		 * @param name 条目名称
+		 * @param callback 将条目提交给所属实例的回调
+		 * @param fluidFactory 创建流动流体的工厂
+		 * @return 已配置默认数据的 [FluidBuilder]
+		 */
 		@JvmStatic
 		fun <T : BaseFlowingFluid, P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, fluidFactory: FluidFactory<T>): FluidBuilder<T, P> =
 			create(owner, parent, name, callback, ::FluidType, fluidFactory)
 
 		/**
-		 * Create a new [FluidBuilder] and configure data. Used in lieu of adding side-effects to constructor, so that
-		 * alternate initialization strategies can be done in subclasses.
+		 * 创建 [FluidBuilder] 并安装默认配置，便于子类自定义初始化过程。
+		 * 默认生成源流体及其名称、带粒子纹理的液体方块模型，以及使用同名纹理的桶物品模型。
 		 *
-		 *
-		 * The fluid will be assigned the following data:
-		 *
-		 *  * The default translation (via [.defaultLang])
-		 *  * A default [source fluid][BaseFlowingFluid.Source] (via [.defaultSource])
-		 *  * A default block for the fluid, with its own default blockstate and model that configure the particle texture
-		 * (via [.defaultBlock])
-		 *  * A default bucket item, that uses a simple generated item model with a texture of the same name as this fluid
-		 * (via [.defaultBucket])
-		 *
-		 *
-		 * @param <T>
-		 * The type of the builder
-		 * @param <P>
-		 * Parent object type
-		 * @param owner
-		 * The owning [AbstractRegistrate] object
-		 * @param parent
-		 * The parent object
-		 * @param name
-		 * Name of the entry being built
-		 * @param callback
-		 * A callback used to actually register the built entry
-		 * @param typeFactory
-		 * A factory that creates the fluid type
-		 * @param fluidFactory
-		 * A factory that creates the flowing fluid
-		 * @return A new [FluidBuilder] with reasonable default data generators.
-		</P></T> */
+		 * @param T 流体类型
+		 * @param P 父级对象类型
+		 * @param owner 所属的 [AbstractRegistrate] 实例
+		 * @param parent 构建完成后返回的父级对象
+		 * @param name 条目名称
+		 * @param callback 将条目提交给所属实例的回调
+		 * @param typeFactory 创建流体类型的工厂
+		 * @param fluidFactory 创建流动流体的工厂
+		 * @return 已配置默认数据的 [FluidBuilder]
+		 */
 		@JvmStatic
 		fun <T : BaseFlowingFluid, P : Any> create(
 			owner: AbstractRegistrate<*>,
@@ -634,38 +563,19 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 		}
 
 		/**
-		 * Create a new [FluidBuilder] and configure data. Used in lieu of adding side-effects to constructor, so that
-		 * alternate initialization strategies can be done in subclasses.
+		 * 创建 [FluidBuilder] 并安装默认配置，便于子类自定义初始化过程。
+		 * 默认生成源流体及其名称、带粒子纹理的液体方块模型，以及使用同名纹理的桶物品模型。
 		 *
-		 *
-		 * The fluid will be assigned the following data:
-		 *
-		 *  * The default translation (via [.defaultLang])
-		 *  * A default [source fluid][BaseFlowingFluid.Source] (via [.defaultSource])
-		 *  * A default block for the fluid, with its own default blockstate and model that configure the particle texture
-		 * (via [.defaultBlock])
-		 *  * A default bucket item, that uses a simple generated item model with a texture of the same name as this fluid
-		 * (via [.defaultBucket])
-		 *
-		 *
-		 * @param <T>
-		 * The type of the builder
-		 * @param <P>
-		 * Parent object type
-		 * @param owner
-		 * The owning [AbstractRegistrate] object
-		 * @param parent
-		 * The parent object
-		 * @param name
-		 * Name of the entry being built
-		 * @param callback
-		 * A callback used to actually register the built entry
-		 * @param fluidType
-		 * An existing and registered fluid type
-		 * @param fluidFactory
-		 * A factory that creates the flowing fluid
-		 * @return A new [FluidBuilder] with reasonable default data generators.
-		</P></T> */
+		 * @param T 流体类型
+		 * @param P 父级对象类型
+		 * @param owner 所属的 [AbstractRegistrate] 实例
+		 * @param parent 构建完成后返回的父级对象
+		 * @param name 条目名称
+		 * @param callback 将条目提交给所属实例的回调
+		 * @param fluidType 已注册并由当前流体复用的类型
+		 * @param fluidFactory 创建流动流体的工厂
+		 * @return 已配置默认数据的 [FluidBuilder]
+		 */
 		@JvmStatic
 		fun <T : BaseFlowingFluid, P : Any> create(
 			owner: AbstractRegistrate<*>,

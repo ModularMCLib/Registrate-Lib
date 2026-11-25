@@ -27,7 +27,7 @@ import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap
 import java.util.TreeMap
 import java.util.function.Consumer
 
-/** Resolves the declarations for one DataGen output before the language provider writes any files. */
+/** 在语言文件写出前，为同一份数据生成输出解析本地化声明。 */
 internal class TranslationRegistry(private val parent: TranslationRegistry? = null) {
 	private val selections = Object2ObjectLinkedOpenHashMap<EntryKey, Selection>()
 	private val imports = ObjectArrayList<PendingImport>()
@@ -153,7 +153,7 @@ internal class TranslationRegistry(private val parent: TranslationRegistry? = nu
 		return Selection(key, candidate).also { put(key, it) }
 	}
 
-	/** Resolves language entries and, when requested, reports each matched import with its current status. */
+	/** 解析各语言文件的条目。提供 [reportImport] 时，同时报告匹配到的外部译文及其当前状态。 */
 	@JvmOverloads
 	fun resolve(reportImport: Consumer<ImportedTranslation>? = null): Map<LanguageFile, Map<String, String>> = resolveAll(reportImport).files
 

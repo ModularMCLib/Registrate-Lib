@@ -12,8 +12,9 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 
 import java.util.Optional
 
-/** Terminology defined by one mod. Register it during mod setup and query it alongside declarations. */
+/** 保存单个模组定义的术语。模组初始化时注册，解析本地化声明时查询。 */
 class Terminology {
+	/** 带有独立标识的一个术语义项。领域和文本类型用于消除歧义，译文、别名和关系供查询与数据生成使用。 */
 	@JvmRecord
 	data class GlossaryTerm @JvmOverloads constructor(
 		val id: String,
@@ -30,6 +31,7 @@ class Terminology {
 		internal fun matches(sourceText: String): Boolean = source.equals(sourceText, ignoreCase = true) || aliases.any { it.equals(sourceText, ignoreCase = true) }
 	}
 
+	/** 定义术语之间的同义、上下位、组成部分和一般关联。 */
 	enum class TermRelation {
 		SYNONYM,
 		BROADER,
@@ -39,8 +41,10 @@ class Terminology {
 		RELATED,
 	}
 
+	/** 记录一个单位的稳定标识、显示符号及分语言的名称和格式。 */
 	@JvmRecord
 	data class MeasurementUnit @JvmOverloads constructor(val id: String, val symbol: String, val names: Map<MinecraftLocale, String>, val formats: Map<MinecraftLocale, UnitFormat> = emptyMap()) {
+		/** 按目标语言的注册格式显示数值和单位。缺少该语言的格式时，用一个空格连接数值与符号。 */
 		fun format(value: Number, locale: MinecraftLocale): String = formats[locale]?.format(value, symbol) ?: "$value $symbol"
 	}
 
@@ -49,22 +53,27 @@ class Terminology {
 	private val glossaries = ObjectArrayList<Glossary>(1).apply { add(indexedGlossary) }
 	private val units = Object2ObjectOpenHashMap<String, MeasurementUnit>()
 
+	/** 登记供本地化声明引用的领域。 */
 	fun register(domain: Domain) {
 		domains.add(domain)
 	}
 
+	/** 将术语存入模组自带的词汇表。已有同标识术语时，同时替换旧的词形和关系索引。 */
 	fun register(term: GlossaryTerm) {
 		indexedGlossary.register(term)
 	}
 
+	/** 挂接外部词汇表。数据生成期间会用它查询术语、别名和关系。 */
 	fun register(glossary: Glossary) {
 		glossaries.add(glossary)
 	}
 
+	/** 按稳定标识登记单位。同一标识再次登记时采用新定义。 */
 	fun register(unit: MeasurementUnit) {
 		units[unit.id] = unit
 	}
 
+	/** 检查领域是否已在当前模组登记。 */
 	fun hasDomain(domain: Domain): Boolean = domains.contains(domain)
 
 	internal fun synonyms(term: GlossaryTerm): ObjectArrayList<GlossaryTerm> {
@@ -89,8 +98,10 @@ class Terminology {
 		return result
 	}
 
+	/** 按稳定标识查询术语，没有匹配的定义时返回空值。 */
 	fun glossary(id: String): Optional<GlossaryTerm> = Optional.ofNullable(findTerm(id))
 
+	/** 按稳定标识查找显示单位，没有匹配的定义时返回空值。 */
 	fun unit(id: String): Optional<MeasurementUnit> = Optional.ofNullable(units[id])
 
 	internal fun unitSymbol(id: String): String = units.getValue(id).symbol

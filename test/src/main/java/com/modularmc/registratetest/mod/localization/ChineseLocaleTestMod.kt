@@ -10,6 +10,7 @@ import com.modularmc.registrate.util.nullness.NonNullBiConsumer
 import net.minecraft.world.item.Item
 import net.neoforged.fml.common.Mod
 
+/** 使用简体中文作为源语言的第二个示例模组，用于覆盖跨命名空间的语言文件输出。 */
 @Mod(ChineseLocaleTestMod.MOD_ID)
 @Trans(
 	modId = ChineseLocaleTestMod.MOD_ID,

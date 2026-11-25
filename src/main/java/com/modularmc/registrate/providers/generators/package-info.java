@@ -1,9 +1,5 @@
 /**
- * Specialized generator adapters for models, recipes, and blockstates.
- *
- * <p>
- * These classes sit beneath the higher-level provider layer and expose the
- * concrete helpers used by builder datagen callbacks.
+ * 存放模型、配方和方块状态的生成适配器，为构建器的数据生成回调提供具体操作。
  */
 @org.jspecify.annotations.NullMarked
 package com.modularmc.registrate.providers.generators;

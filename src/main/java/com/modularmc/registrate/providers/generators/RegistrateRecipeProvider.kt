@@ -1,4 +1,4 @@
-// Expose the inherited protected Java static helpers to Java callers.
+// 公开继承自 Java 父类的受保护静态方法，供 Java 调用方使用。
 @file:Suppress("ACCIDENTAL_OVERRIDE")
 
 package com.modularmc.registrate.providers.generators
@@ -53,6 +53,7 @@ import java.util.function.Supplier
 import javax.annotation.CheckReturnValue
 import javax.annotation.processing.Generated
 
+/** 在配方生成回调中提供注册表查询和配方构建入口，并将结果转交给本轮配方输出。 */
 open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, registries: HolderLookup.Provider, output: RecipeOutput) :
 	RecipeProvider(registries, output),
 	RecipeOutput {
@@ -60,14 +61,19 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 	private val blockLookup = registries.lookupOrThrow(Registries.BLOCK)
 	private val entityLookup = registries.lookupOrThrow(Registries.ENTITY_TYPE)
 
+	/** 提交指定键下的配方和可选的解锁进度。 */
 	override fun accept(id: ResourceKey<Recipe<*>>, recipe: Recipe<*>, advancement: AdvancementHolder?) = output.accept(id, recipe, advancement)
 
+	/** 提交配方、可选的解锁进度以及数据包加载时使用的条件。 */
 	override fun accept(id: ResourceKey<Recipe<*>>, recipe: Recipe<*>, advancement: AdvancementHolder?, vararg conditions: ICondition) = output.accept(id, recipe, advancement, *conditions)
 
+	/** 从本轮配方输出取得解锁进度构建器。 */
 	override fun advancement(): Advancement.Builder = output.advancement()
 
+	/** 要求本轮配方输出同时写入配方的根进度。 */
 	override fun includeRootAdvancement() = output.includeRootAdvancement()
 
+	/** 执行模组的配方生成回调。生成器引用在回调期间可通过所属任务取得，回调结束后清除。 */
 	public override fun buildRecipes() {
 		runner.provider = this
 		try {
@@ -77,37 +83,62 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 		}
 	}
 
+	/** 返回此轮配方生成使用的注册表查询集合。 */
 	fun registries(): HolderLookup.Provider = registries
 
+	/** 返回此轮配方生成使用的物品注册表查询。 */
 	fun itemLookup(): HolderLookup<Item> = itemLookup
 
+	/** 返回此轮配方生成使用的方块注册表查询。 */
 	fun blockLookup(): HolderLookup<Block> = blockLookup
 
+	/** 返回此轮配方生成使用的实体类型注册表查询。 */
 	fun entityLookup(): HolderLookup<EntityType<*>> = entityLookup
 
+	/** 按键查询对应的注册表引用。找不到注册表或条目时抛出异常。 */
 	fun <T : Any> resolve(key: ResourceKey<T>): Holder<T> = registries.lookupOrThrow(key.registryKey()).getOrThrow(key)
 
+	/** 取 [id] 的路径并将斜杠替换为下划线，再以配方所属模组为命名空间。 */
 	fun safeId(id: Identifier): Identifier = Identifier.fromNamespaceAndPath(runner.owner.modid, safeName(id))
 
+	/** 以材料的标识推导当前模组下的配方标识。 */
 	fun safeId(source: DataIngredient): Identifier = safeId(source.id)
 
+	/** 将对象转换为对应物品，使用该物品的注册标识推导配方标识。 */
 	fun safeId(registryEntry: ItemLike): Identifier = safeId(BuiltInRegistries.ITEM.getKey(registryEntry.asItem()))
 
+	/** 从资源路径生成当前模组的配方注册键。 */
 	fun safeKey(id: Identifier): ResourceKey<Recipe<*>> = ResourceKey.create(
 		Registries.RECIPE,
 		Identifier.fromNamespaceAndPath(runner.owner.modid, safeName(id)),
 	)
 
+	/** 使用材料的标识生成当前模组的配方注册键。 */
 	fun safeKey(source: DataIngredient): ResourceKey<Recipe<*>> = safeKey(source.id)
 
+	/** 使用对象对应物品的注册标识生成当前模组的配方注册键。 */
 	fun safeKey(registryEntry: ItemLike): ResourceKey<Recipe<*>> = safeKey(BuiltInRegistries.ITEM.getKey(registryEntry.asItem()))
 
+	/** 取资源路径，并将路径中的斜杠转换为下划线，供组合配方名使用。 */
 	fun safeName(id: Identifier): String = id.path.replace('/', '_')
 
+	/** 从材料标识取得可用于组合配方名的路径。 */
 	fun safeName(source: DataIngredient): String = safeName(source.id)
 
+	/** 从对象对应物品的注册标识取得可用于组合配方名的路径。 */
 	fun safeName(registryEntry: ItemLike): String = safeName(BuiltInRegistries.ITEM.getKey(registryEntry.asItem()))
 
+	/**
+	 * 用指定工厂创建烹饪配方，采用材料提供的解锁条件并立即提交配方。
+	 * @param source 输入材料及其解锁条件
+	 * @param craftingCategory 配方用途类别
+	 * @param cookingCategory 烹饪配方书中的分类
+	 * @param result 提供烹饪结果的取值器
+	 * @param experience 完成后提供的经验
+	 * @param cookingTime 完成配方所需的游戏刻数
+	 * @param typeName 附加到配方标识末尾的类型名称
+	 * @param factory 用于创建具体烹饪配方的工厂
+	 */
 	fun <T : ItemLike, S : AbstractCookingRecipe> cooking(
 		source: DataIngredient,
 		craftingCategory: RecipeCategory,
@@ -131,6 +162,7 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 			.save(this, safeId(result.get()).toString() + "_from_" + safeName(source) + "_" + typeName)
 	}
 
+	/** 使用默认耗时生成熔炉冶炼配方。 */
 	fun <T : ItemLike> smelting(source: DataIngredient, category: RecipeCategory, cookingCategory: CookingBookCategory, result: Supplier<out T>, experience: Float) {
 		smelting(
 			source,
@@ -142,6 +174,7 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 		)
 	}
 
+	/** 使用指定的 [cookingTime] 生成熔炉冶炼配方，耗时单位为游戏刻。 */
 	fun <T : ItemLike> smelting(source: DataIngredient, category: RecipeCategory, cookingCategory: CookingBookCategory, result: Supplier<out T>, experience: Float, cookingTime: Int) {
 		cooking(
 			source,
@@ -155,6 +188,7 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 		)
 	}
 
+	/** 使用默认耗时生成高炉冶炼配方。 */
 	fun <T : ItemLike> blasting(source: DataIngredient, category: RecipeCategory, cookingCategory: CookingBookCategory, result: Supplier<out T>, experience: Float) {
 		blasting(
 			source,
@@ -166,6 +200,7 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 		)
 	}
 
+	/** 使用指定的 [cookingTime] 生成高炉冶炼配方，耗时单位为游戏刻。 */
 	fun <T : ItemLike> blasting(source: DataIngredient, category: RecipeCategory, cookingCategory: CookingBookCategory, result: Supplier<out T>, experience: Float, cookingTime: Int) {
 		cooking(
 			source,
@@ -179,6 +214,7 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 		)
 	}
 
+	/** 使用默认耗时生成烟熏炉配方。 */
 	fun <T : ItemLike> smoking(source: DataIngredient, category: RecipeCategory, cookingCategory: CookingBookCategory, result: Supplier<out T>, experience: Float) {
 		smoking(
 			source,
@@ -190,6 +226,7 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 		)
 	}
 
+	/** 使用指定的 [cookingTime] 生成烟熏炉配方，耗时单位为游戏刻。 */
 	fun <T : ItemLike> smoking(source: DataIngredient, category: RecipeCategory, cookingCategory: CookingBookCategory, result: Supplier<out T>, experience: Float, cookingTime: Int) {
 		cooking(
 			source,
@@ -203,6 +240,7 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 		)
 	}
 
+	/** 使用默认耗时生成营火烹饪配方。 */
 	fun <T : ItemLike> campfire(source: DataIngredient, category: RecipeCategory, cookingCategory: CookingBookCategory, result: Supplier<out T>, experience: Float) {
 		campfire(
 			source,
@@ -214,6 +252,7 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 		)
 	}
 
+	/** 使用指定的 [cookingTime] 生成营火烹饪配方，耗时单位为游戏刻。 */
 	fun <T : ItemLike> campfire(source: DataIngredient, category: RecipeCategory, cookingCategory: CookingBookCategory, result: Supplier<out T>, experience: Float, cookingTime: Int) {
 		cooking(
 			source,
@@ -227,27 +266,32 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 		)
 	}
 
+	/** 生成一次产出一个物品的切石机配方。 */
 	fun <T : ItemLike> stonecutting(source: DataIngredient, category: RecipeCategory, result: Supplier<out T>) {
 		stonecutting(source, category, result, 1)
 	}
 
+	/** 生成一次产出 [resultAmount] 个物品的切石机配方，由输入材料提供解锁条件。 */
 	fun <T : ItemLike> stonecutting(source: DataIngredient, category: RecipeCategory, result: Supplier<out T>, resultAmount: Int) {
 		SingleItemRecipeBuilder.stonecutting(source.toVanilla(), category, result.get(), resultAmount)
 			.unlockedBy("has_" + safeName(source), source.getCriterion(this))
 			.save(this, safeId(result.get()).toString() + "_from_" + safeName(source) + "_stonecutting")
 	}
 
+	/** 为同一输入和结果同时生成熔炉与高炉配方，各自使用默认耗时。 */
 	fun <T : ItemLike> smeltingAndBlasting(source: DataIngredient, category: RecipeCategory, cookingCategory: CookingBookCategory, result: Supplier<out T>, xp: Float) {
 		smelting(source, category, cookingCategory, result, xp)
 		blasting(source, category, cookingCategory, result, xp)
 	}
 
+	/** 为同一食物同时生成熔炉、烟熏炉和营火配方，各自使用默认耗时。 */
 	fun <T : ItemLike> food(source: DataIngredient, category: RecipeCategory, cookingCategory: CookingBookCategory, result: Supplier<out T>, xp: Float) {
 		smelting(source, category, cookingCategory, result, xp)
 		smoking(source, category, cookingCategory, result, xp)
 		campfire(source, category, cookingCategory, result, xp)
 	}
 
+	/** 用一种材料生成方形有序合成。启用 [small] 时用二乘二网格，否则用三乘三网格。 */
 	fun <T : ItemLike> square(source: DataIngredient, category: RecipeCategory, output: Supplier<out T>, small: Boolean) {
 		val builder: ShapedRecipeBuilder = shaped(category, output.get())
 			.define('X', source.toVanilla())
@@ -261,47 +305,63 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 	}
 
 	/**
-	 * @param <T>
-	 * @param source
-	 * @param output
-	</T> */
+	 * 旧版九合一存储配方入口，供已编译的调用方继续链接。
+	 *
+	 * @param T 存储配方产物的类型
+	 * @param source 压缩前的材料
+	 * @param category 配方类别
+	 * @param output 压缩配方的产物
+	 */
 	@Deprecated(
 		"""Broken, use {@link #storage(NonNullSupplier, RecipeCategory, NonNullSupplier)} or
 				{@link #storage(DataIngredient, RecipeCategory, NonNullSupplier, DataIngredient, NonNullSupplier)}.""",
 	)
 	fun <T : ItemLike> storage(source: DataIngredient, category: RecipeCategory, output: NonNullSupplier<out T>) {
 		square(source, category, output, false)
-		// This is backwards, but leaving in for binary compat
+		// 旧实现的反向配方使用了错误的输入和输出，为保持二进制兼容而保留。
 		singleItemUnfinished(source, category, output, 1, 9)
 			.save(this, safeId(source).toString() + "_from_" + safeName(output.get()))
 	}
 
+	/** 根据原料物品和压缩产物，生成九合一压缩和一拆九还原两条配方。 */
 	fun <T : ItemLike> storage(source: NonNullSupplier<out T>, category: RecipeCategory, output: NonNullSupplier<out T>) {
 		storage(DataIngredient.items(source), category, source, DataIngredient.items(output), output)
 	}
 
+	/**
+	 * 为压缩和还原分别指定可匹配的材料，再以指定物品为两条配方各自的产物。
+	 * @param sourceIngredient 压缩配方接受的原料
+	 * @param category 两条配方的类别
+	 * @param source 还原配方产出的原料物品
+	 * @param outputIngredient 还原配方接受的压缩材料
+	 * @param output 压缩配方产出的物品
+	 */
 	fun <T : ItemLike> storage(sourceIngredient: DataIngredient, category: RecipeCategory, source: NonNullSupplier<out T>, outputIngredient: DataIngredient, output: NonNullSupplier<out T>) {
 		square(sourceIngredient, category, output, false)
 		singleItemUnfinished(outputIngredient, category, source, 1, 9)
 			.save(this, safeId(sourceIngredient).toString() + "_from_" + safeName(output.get()))
 	}
 
+	/** 构建只使用一种材料的无序配方，并设置材料的解锁条件。调用方可继续配置并负责写出。 */
 	@CheckReturnValue
 	fun <T : ItemLike> singleItemUnfinished(source: DataIngredient, category: RecipeCategory, result: Supplier<out T>, required: Int, amount: Int): ShapelessRecipeBuilder =
 		shapeless(category, result.get(), amount)
 			.requires(source.toVanilla(), required)
 			.unlockedBy("has_" + safeName(source), source.getCriterion(this))
 
+	/** 将 [required] 份同类材料转换为 [amount] 个结果物品，立即写出无序配方。 */
 	fun <T : ItemLike> singleItem(source: DataIngredient, category: RecipeCategory, result: Supplier<out T>, required: Int, amount: Int) {
 		singleItemUnfinished(source, category, result, required, amount).save(this, safeKey(result.get()))
 	}
 
+	/** 将一份材料加工成四块木板，并加入原版木板配方分组。 */
 	fun <T : ItemLike> planks(source: DataIngredient, category: RecipeCategory, result: Supplier<out T>) {
 		singleItemUnfinished(source, category, result, 1, 4)
 			.group("planks")
 			.save(this, safeKey(result.get()))
 	}
 
+	/** 生成一次产出四个楼梯的有序配方。[stone] 为真时另生成一次产出一个楼梯的切石配方。 */
 	fun <T : ItemLike> stairs(source: DataIngredient, category: RecipeCategory, result: Supplier<out T>, group: String?, stone: Boolean) {
 		shaped(category, result.get(), 4)
 			.pattern("X  ").pattern("XX ").pattern("XXX")
@@ -314,6 +374,7 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 		}
 	}
 
+	/** 生成一次产出六个半砖的有序配方。[stone] 为真时另生成一次产出两个半砖的切石配方。 */
 	fun <T : ItemLike> slab(source: DataIngredient, category: RecipeCategory, result: Supplier<out T>, group: String?, stone: Boolean) {
 		shaped(category, result.get(), 6)
 			.pattern("XXX")
@@ -326,6 +387,7 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 		}
 	}
 
+	/** 以输入材料和木棍生成一次产出三个栅栏的有序配方。 */
 	fun <T : ItemLike> fence(source: DataIngredient, category: RecipeCategory, result: Supplier<out T>, group: String?) {
 		shaped(category, result.get(), 3)
 			.pattern("W#W").pattern("W#W")
@@ -336,6 +398,7 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 			.save(this, safeKey(result.get()))
 	}
 
+	/** 以输入材料和木棍生成一次产出一个栅栏门的有序配方。 */
 	fun <T : ItemLike> fenceGate(source: DataIngredient, category: RecipeCategory, result: Supplier<out T>, group: String?) {
 		shaped(category, result.get())
 			.pattern("#W#").pattern("#W#")
@@ -346,6 +409,7 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 			.save(this, safeKey(result.get()))
 	}
 
+	/** 为墙同时生成一次产出六个的有序配方和一次产出一个的切石配方。 */
 	fun <T : ItemLike> wall(source: DataIngredient, category: RecipeCategory, result: Supplier<out T>) {
 		shaped(category, result.get(), 6)
 			.pattern("XXX").pattern("XXX")
@@ -355,6 +419,7 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 		stonecutting(source, category, result)
 	}
 
+	/** 以同一种材料生成一次产出三个门的有序配方。 */
 	fun <T : ItemLike> door(source: DataIngredient, category: RecipeCategory, result: Supplier<out T>, group: String?) {
 		shaped(category, result.get(), 3)
 			.pattern("XX").pattern("XX").pattern("XX")
@@ -364,6 +429,7 @@ open class RegistrateRecipeProvider(private val runner: RegistrateRecipeRunner, 
 			.save(this, safeKey(result.get()))
 	}
 
+	/** 以同一种材料生成一次产出两个活板门的有序配方。 */
 	fun <T : ItemLike> trapDoor(source: DataIngredient, category: RecipeCategory, result: Supplier<out T>, group: String?) {
 		shaped(category, result.get(), 2)
 			.pattern("XXX").pattern("XXX")

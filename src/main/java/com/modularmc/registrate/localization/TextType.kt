@@ -1,6 +1,6 @@
 package com.modularmc.registrate.localization
 
-/** A stable, extensible role for text in a mod. */
+/** 标识文本在模组中的用途，模组可以定义自己的类型。 */
 @JvmRecord
 data class TextType(val id: String) {
 	companion object {
