@@ -10,11 +10,7 @@ import net.minecraft.network.chat.Style
 class ComponentTemplate(vararg lines: Line) {
 	/** A translation key and the style applied to its line. */
 	@JvmRecord
-	data class Line(val key: TranslationKey, val style: Style) {
-		init {
-			require(key.value.isNotBlank()) { "A non-blank translation key is required" }
-		}
-	}
+	data class Line(val key: TranslationKey, val style: Style)
 
 	private val lines = lines.toList()
 
