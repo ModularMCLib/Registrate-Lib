@@ -13,6 +13,7 @@ import com.modularmc.registrate.localization.terminology.Terminology.Measurement
 import com.modularmc.registrate.providers.DataGenContext;
 import com.modularmc.registrate.providers.core.ProviderType;
 import com.modularmc.registrate.providers.generators.RegistrateItemModelGenerator;
+import com.modularmc.registratetest.mod.localization.ComponentTemplateExample;
 import com.modularmc.registratetest.mod.localization.EnglishLabels;
 import com.modularmc.registrate.util.DataIngredient;
 import com.modularmc.registrate.util.entry.*;
@@ -356,6 +357,7 @@ public class TestMod {
         registrate.addLocalization(new TranslationKey(MOD_ID, "gui.testmod.voltage"),
                 text -> text.type(TextType.GUI_LABEL)
                         .source("Voltage: %s V").translation(MinecraftLocale.ZH_CN, "电压：%1$s V"));
+        ComponentTemplateExample.declare(registrate);
         registrate.addRawLang("testmod.custom.lang.with_placeholders1", "Placeholder 1 %s Placeholder 2 %s");
         registrate.addRawLang("testmod.custom.lang.with_placeholders2", "Placeholder 1 %s Placeholder 2 %2$s Placeholder 3 %s");
         registrate.addRawLang("testmod.custom.lang.brackets", "(Bracket 1) [Bracket 2] {Bracket 3} <Bracket 4> ◁Bracket 5▷");
