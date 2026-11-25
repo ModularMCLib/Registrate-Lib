@@ -1,10 +1,8 @@
 /**
- * Built-in data provider implementations and data generation callback context.
+ * 存放内置的数据提供器及数据生成回调使用的上下文。
  *
  * <p>
- * Shared provider contracts, type registries, and orchestration infrastructure
- * live in {@code com.modularmc.registrate.providers.core}. This package keeps
- * the concrete provider implementations closer to the data they generate.
+ * 提供器共用的契约、类型注册和任务调度由 {@code com.modularmc.registrate.providers.core} 提供。
  */
 @org.jspecify.annotations.NullMarked
 package com.modularmc.registrate.providers;

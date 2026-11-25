@@ -16,7 +16,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 
-/** Groups the providers attached to the same output before NeoForge starts the DataGen run. */
+/** 在数据生成开始前，归集写入同一输出位置的提供器。 */
 internal class DataGenBatch private constructor(private val output: PackOutput, private val root: Path) : DataProvider {
 	private val participants = ObjectArrayList<RegistrateDataProvider>()
 
