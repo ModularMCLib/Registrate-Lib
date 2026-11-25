@@ -1,7 +1,9 @@
 repositories {
     exclusiveContent {
         forRepository { maven { url = rootProject.uri("gradle/libs") } }
-        filter { includeModule("com.modularmc.mmclutils", "mmclutils-26.1.2") }
+        filter {
+            includeGroupAndSubgroups("com.modularmc")
+        }
     }
     mavenLocal()
     mavenCentral()
