@@ -1,20 +1,32 @@
-# RegistrateLib [![License](https://img.shields.io/github/license/ModularMCLib/RegistrateLib?cacheSeconds=36000)](https://www.tldrlegal.com/l/mpl-2.0) ![Minecraft Version](https://img.shields.io/badge/minecraft-26.1.2-blue)
+<h1 align="center">RegistrateLib</h1>
 
-<!-- [![Build Status](https://img.shields.io/jenkins/build?jobUrl=https%3A%2F%2Fci.tterrag.com%2Fjob%2FRegistrate%2Fjob%2F1.21%2F)](https://ci.tterrag.com/job/Registrate/job/1.21) -->
-<!-- [![Maven Version](https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Fmaven.tterrag.com%2Fcom%2Ftterrag%2Fregistrate%2FRegistrate%2Fmaven-metadata.xml)](https://maven.tterrag.com/com/tterrag/registrate/Registrate) -->
-<!-- Badges below are placeholders for this mod's own CI / Maven: -->
-[![Build Status](#)]()
-[![Maven Version](#)]()
+<p align="center">
+  用于创建和注册模组内容的 NeoForge 库。<br>
+  A NeoForge library for creating and registering mod content.
+</p>
 
-一个用于在你的模组中创建和注册对象的强大封装。  
-A powerful wrapper for creating and registering objects in your mod.
+<p align="center">
+  <a href="https://github.com/ModularMCLib/Registrate-Lib/releases"><img src="https://img.shields.io/badge/GitHub-Releases-24292F?logo=github&amp;logoColor=white&amp;style=for-the-badge" alt="GitHub Releases"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MPL--2.0-blue?style=for-the-badge" alt="License"></a>
+  <a href="https://discord.gg/HwnF3RTPtH"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&amp;logoColor=white&amp;style=for-the-badge" alt="Discord"></a>
+</p>
 
 ---
 
-## 分支状态 / Fork Status
+## 分支与版本 / Branches and Versions
 
-本仓库是 `com.modularmc.registrate` 命名空间下的 Registrate 分支，为 ModularMCLib 生态维护。当前分支面向 Minecraft `26.1.2`、NeoForge `26.1.2.126` 和 Java `25`。
-This repository is the `com.modularmc.registrate` fork maintained for the ModularMCLib ecosystem. This branch targets Minecraft `26.1.2`, NeoForge `26.1.2.126`, and Java `25`.
+| 分支 / Branch | Minecraft | NeoForge | Java | CI | 最新 Maven / Latest Maven | 下载 / Download |
+| --- | --- | --- | --- | --- | --- | --- |
+| [`26.1`](https://github.com/ModularMCLib/Registrate-Lib/tree/26.1) | `26.1.2` | `26.1.2.126` | `25` | [![CI (26.1)](https://img.shields.io/github/actions/workflow/status/ModularMCLib/Registrate-Lib/auto-build.yml?branch=26.1&style=flat-square)](https://github.com/ModularMCLib/Registrate-Lib/actions/workflows/auto-build.yml?query=branch%3A26.1) | [![Latest Maven version](https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Fmaven.fury.io%2Fmodularmclib%2Fcom%2Fmodularmc%2Fregistrate%2Fregistratelib-26.1.2%2Fmaven-metadata.xml&style=flat-square)](https://maven.fury.io/modularmclib/com/modularmc/registrate/registratelib-26.1.2/maven-metadata.xml) | [开发快照 / Snapshot](https://github.com/ModularMCLib/Registrate-Lib/releases/tag/latest-26.1) |
+| [`1.21`](https://github.com/ModularMCLib/Registrate-Lib/tree/1.21) | `1.21.1` | `21.1.265` | `21` | [![CI (1.21)](https://img.shields.io/github/actions/workflow/status/ModularMCLib/Registrate-Lib/auto-build.yml?branch=1.21&style=flat-square)](https://github.com/ModularMCLib/Registrate-Lib/actions/workflows/auto-build.yml?query=branch%3A1.21) | [![Latest Maven version](https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Fmaven.fury.io%2Fmodularmclib%2Fcom%2Fmodularmc%2Fregistrate%2Fregistratelib-1.21.1%2Fmaven-metadata.xml&style=flat-square)](https://maven.fury.io/modularmclib/com/modularmc/registrate/registratelib-1.21.1/maven-metadata.xml) | [开发快照 / Snapshot](https://github.com/ModularMCLib/Registrate-Lib/releases/tag/latest-1.21) |
+
+Maven 徽章显示 [ModularMCLib Maven](https://maven.fury.io/modularmclib/) 为对应 Minecraft 版本公开的最新版本。带 `-SNAPSHOT` 的版本是开发快照。
+
+The Maven badges show the latest published versions for each Minecraft version in [ModularMCLib Maven](https://maven.fury.io/modularmclib/). Versions ending in `-SNAPSHOT` are development builds.
+
+本仓库是 ModularMCLib 维护的 Registrate 分支，包命名空间为 `com.modularmc.registrate`。
+
+This is the ModularMCLib fork of Registrate, using the `com.modularmc.registrate` package namespace.
 
 ---
 
@@ -136,9 +148,13 @@ Add the library to your Gradle dependencies:
 
 ```groovy
 dependencies {
-    implementation "com.modularmc.registrate:registratelib:${registratelib_version}"
+    implementation "com.modularmc.registrate:registratelib-${minecraft_version}:${registratelib_version}"
 }
 ```
+
+将 `minecraft_version` 和 `registratelib_version` 设为上表同一行的 Minecraft 和 Maven 版本。
+
+Set `minecraft_version` and `registratelib_version` to the Minecraft and Maven versions from the same row above.
 
 然后在 `neoforge.mods.toml` 中将 `registratelib` 声明为必需依赖：  
 Then declare `registratelib` as a required dependency in your `neoforge.mods.toml`:
