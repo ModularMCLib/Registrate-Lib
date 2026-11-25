@@ -8,13 +8,7 @@ dependencies {
     additionalRuntimeClasspath(libs.kotlin.stdlib.get()) {
         exclude group: 'org.jetbrains', module: 'annotations'
     }
-
-    testImplementation(libs.testframework.get())
-    testAnnotationProcessor(project(':localization-processor'))
-    kspTest(project(':localization-processor'))
-
-    // Standard runtime mods //
-    localRuntime(libs.testframework)
+    jarJar(implementation(forge.mmclutils.get()))
 
     renderNurseCfg(libs.renderNurse)
 

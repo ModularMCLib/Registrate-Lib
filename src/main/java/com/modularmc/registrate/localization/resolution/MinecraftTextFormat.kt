@@ -7,7 +7,10 @@ import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap
 import java.util.regex.Pattern
 
 internal object MinecraftTextFormat {
-	private val tokenPattern = Pattern.compile("%(?:(\\d+)\\$)?s|%%")
+	private const val ARGUMENT = "%(?:(\\d+)\\$)?s|%%"
+	private const val PROTECTED = "$ARGUMENT|(§[^\\r\\n]|\\R)|https?://[^\\s<>§]+"
+	private val argumentPattern = Pattern.compile(ARGUMENT)
+	private val protectedPattern = Pattern.compile(PROTECTED)
 	private const val NORMAL = "abcdefghijklmn\u00F1opqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789()[]{}<>\u25C1\u25B7_,;.?!/\\'"
 	private const val INVERTED =
 		"\u0250q\u0254p\u01DD\u025Fb\u0265\u0131\u0638\u029E\u05DF\u026Fuuodb\u0279s\u0287n\u028C\u028Dx\u028Ez" +
@@ -22,61 +25,105 @@ internal object MinecraftTextFormat {
 
 	private data class Token(val start: Int, val end: Int, val argument: Int)
 
-	private val plainTextSignature: Int2IntMap = Int2IntMaps.EMPTY_MAP
-	private val plainText = Parsed(plainTextSignature, null)
-
-	class Parsed(val signature: Int2IntMap, val variant: String?)
-
-	fun parse(text: String, invert: Boolean): Parsed {
+	/** 统计可识别的格式占位符及其次数，用于比较源文和译文引用的参数是否一致。 */
+	fun signature(text: String): Int2IntMap {
 		val firstPercent = text.indexOf('%')
-		if (firstPercent < 0) {
-			return parsePlain(text, invert)
-		}
+		if (firstPercent < 0) return Int2IntMaps.EMPTY_MAP
 
-		val matcher = tokenPattern.matcher(text)
-		if (!matcher.find(firstPercent)) {
-			return parsePlain(text, invert)
-		}
+		val matcher = argumentPattern.matcher(text)
+		if (!matcher.find(firstPercent)) return Int2IntMaps.EMPTY_MAP
 
-		val tokens = if (invert) ArrayList<Token>(2) else null
 		val signature = Int2IntOpenHashMap(2)
 		var nextArgument = 1
 		do {
-			val indexStart = matcher.start(1)
-			val argument = when {
-				text[matcher.start() + 1] == '%' -> 0
-
-				indexStart < 0 -> nextArgument++
-
-				else -> {
-					val position = Integer.parseInt(text, indexStart, matcher.end(1), 10)
-					require(position >= 1) { "Minecraft argument indices start at 1" }
-					position
-				}
+			val index = matcher.start(1)
+			val argument = if (index >= 0) {
+				argumentIndex(text, index, matcher.end(1))
+			} else if (text[matcher.start() + 1] == '%') {
+				0
+			} else {
+				nextArgument++
 			}
 			signature.addTo(argument, 1)
-			tokens?.add(Token(matcher.start(), matcher.end(), argument))
 		} while (matcher.find())
-		return Parsed(signature, tokens?.let { upsideDown(text, it) })
+		return signature
 	}
 
-	private fun parsePlain(text: String, invert: Boolean): Parsed = if (invert) Parsed(plainTextSignature, upsideDown(text, emptyList())) else plainText
+	/** 逐段转换纯文本，保留 Minecraft 格式码、占位符及 [symbols] 指定的单位符号。 */
+	fun convert(text: String, symbols: Collection<String>, convertRun: (String) -> String): String {
+		val matcher = tokenPattern(symbols).matcher(text)
+		if (!matcher.find()) return convertRun(text)
 
-	private fun upsideDown(text: String, tokens: List<Token>): String {
 		val result = StringBuilder(text.length)
-		var cursor = text.length
+		var cursor = 0
+		do {
+			if (cursor < matcher.start()) result.append(convertRun(text.substring(cursor, matcher.start())))
+			result.append(text, matcher.start(), matcher.end())
+			cursor = matcher.end()
+		} while (matcher.find())
+		if (cursor < text.length) result.append(convertRun(text.substring(cursor)))
+		return result.toString()
+	}
+
+	/** 将可见文字变为倒置文本，同时尽量保持样式边界和不可拆分的格式标记。 */
+	fun upsideDown(text: String, symbols: Collection<String>): String {
+		val result = StringBuilder(text.length)
+		val matcher = tokenPattern(symbols).matcher(text)
+		if (!matcher.find()) {
+			appendUpsideDown(text, 0, text.length, result)
+			return result.toString()
+		}
+
+		val tokens = ArrayList<Token>(2)
+		var start = 0
+		var nextArgument = 1
+		do {
+			if (matcher.start(2) >= 0) {
+				// 换行和样式切换会断开文本片段，反转时让样式留在原来的文本上。
+				reverseRun(text, start, matcher.start(), tokens, result)
+				result.append(text, matcher.start(), matcher.end())
+				tokens.clear()
+				start = matcher.end()
+			} else {
+				val index = matcher.start(1)
+				val argument = when {
+					index >= 0 -> argumentIndex(text, index, matcher.end(1))
+					text[matcher.start()] != '%' -> -1
+					text[matcher.start() + 1] == '%' -> 0
+					else -> nextArgument++
+				}
+				tokens.add(Token(matcher.start(), matcher.end(), argument))
+			}
+		} while (matcher.find())
+		reverseRun(text, start, text.length, tokens, result)
+		return result.toString()
+	}
+
+	private fun argumentIndex(text: String, start: Int, end: Int): Int {
+		val index = Integer.parseInt(text, start, end, 10)
+		require(index >= 1) { "Minecraft argument indices start at 1" }
+		return index
+	}
+
+	private fun tokenPattern(symbols: Collection<String>): Pattern {
+		if (symbols.isEmpty()) return protectedPattern
+		val units = symbols.sortedByDescending(String::length).joinToString("|", transform = Pattern::quote)
+		return Pattern.compile("$PROTECTED|(?<!\\p{L})(?:$units)(?!\\p{L})")
+	}
+
+	private fun reverseRun(text: String, start: Int, end: Int, tokens: List<Token>, result: StringBuilder) {
+		var cursor = end
 		for (index in tokens.indices.reversed()) {
 			val token = tokens[index]
 			appendUpsideDown(text, token.end, cursor, result)
-			if (token.argument == 0) {
-				result.append("%%")
-			} else {
+			if (token.argument > 0) {
 				result.append('%').append(token.argument).append($$"$s")
+			} else {
+				result.append(text, token.start, token.end)
 			}
 			cursor = token.start
 		}
-		appendUpsideDown(text, 0, cursor, result)
-		return result.toString()
+		appendUpsideDown(text, start, cursor, result)
 	}
 
 	private fun appendUpsideDown(text: String, start: Int, end: Int, result: StringBuilder) {

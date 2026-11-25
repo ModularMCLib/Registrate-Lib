@@ -24,7 +24,8 @@ import java.util.Optional
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 
-open class RegistrateDataProvider(parent: AbstractRegistrate<*>, private val mod: String, event: GatherDataEvent) : DataProvider {
+/** 按收集事件的逻辑侧和依赖顺序组织模组的数据提供器，向下游提供器传递正确的注册表查询。 */
+open class RegistrateDataProvider(private val parent: AbstractRegistrate<*>, private val mod: String, event: GatherDataEvent) : DataProvider {
 	private val output = event.generator.packOutput
 	private val registriesLookup: CompletableFuture<HolderLookup.Provider> = event.lookupProvider
 	private val subProviders = Object2ObjectLinkedOpenHashMap<ProviderType<*>, RegistrateProvider>()
@@ -57,8 +58,10 @@ open class RegistrateDataProvider(parent: AbstractRegistrate<*>, private val mod
 		}
 	}
 
+	/** 用当前模组的提供器独立执行一轮数据生成，并在资源生成后汇总语言文件。 */
 	override fun run(cache: CachedOutput): CompletableFuture<*> = DataGenBatch.run(cache, output, listOf(this))
 
+	/** 将本实例加入当前收集事件的生成批次，让写入同一输出目录的模组共享语言阶段。 */
 	open fun attach(event: GatherDataEvent) {
 		DataGenBatch.attach(event, this)
 	}
@@ -78,18 +81,30 @@ open class RegistrateDataProvider(parent: AbstractRegistrate<*>, private val mod
 		CompletableFuture.allOf(*runs.values.toTypedArray())
 	}
 
-	internal fun collectTranslations(registry: TranslationRegistry) {
-		(subProviders[ProviderType.LANG] as? RegistrateLangProvider)?.collect(registry)
+	internal val modId: String
+		get() = mod
+
+	internal fun hasLanguageProvider(): Boolean = ProviderType.LANG in subProviders
+
+	internal fun localizationExportPath() = parent.localizationExportPath()
+
+	internal fun localizationSourceLocale() = parent.requireSourceLocale()
+
+	internal fun collectTranslations(registry: TranslationRegistry, exportRegistry: TranslationRegistry?) {
+		(subProviders[ProviderType.LANG] as? RegistrateLangProvider)?.collect(exportRegistry ?: registry)
 	}
 
+	/** 返回带有模组标识的生成任务名称。 */
 	override fun getName(): String = "Registrate Provider for $mod"
 
+	/** 查询本轮启用的提供器或已构造的子生成器。对应类型未启用或尚未创建时返回空值。 */
 	@Suppress("UNCHECKED_CAST")
 	open fun <P : Any> getSubProvider(type: GeneratorType<P>): Optional<P> {
 		val provider = if (type is ProviderType<*>) subProviders[type] else subGenerators[type]
 		return Optional.ofNullable(provider as P?)
 	}
 
+	/** 保存本轮创建的子生成器，供其他回调按类型键查询。提供器类型键由此对象统一管理。 */
 	open fun <T : Any> putSubProvider(type: GeneratorType<out T>, generator: T) {
 		if (type !is ProviderType<*>) subGenerators[type] = generator
 	}
@@ -100,6 +115,7 @@ open class RegistrateDataProvider(parent: AbstractRegistrate<*>, private val mod
 		internal val TAG_TYPES = ConcurrentHashMap<ResourceKey<out Registry<*>>, ProviderType<*>>()
 		internal val CLIENT_TYPES = ObjectOpenHashSet<ProviderType<*>>()
 
+		/** 返回已登记的提供器名称，未登记时返回 `null`。子生成器键使用其文本名称。 */
 		@JvmStatic
 		fun getTypeName(type: GeneratorType<*>): String? = if (type is ProviderType<*>) TYPES.inverse()[type] else type.toString()
 	}

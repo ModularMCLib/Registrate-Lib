@@ -1,10 +1,8 @@
 /**
- * Root package for the public Registrate entrypoints.
+ * Registrate 的公共入口。
  *
  * <p>
- * This layer contains the main orchestration types used by downstream mods:
- * the abstract registration coordinator, the default {@code Registrate}
- * implementation, and the NeoForge library entrypoint used by this fork.
+ * 包含供模组使用的注册协调器、默认的 {@code Registrate} 实现，以及 NeoForge 加载本库时使用的模组入口。
  */
 @org.jspecify.annotations.NullMarked
 package com.modularmc.registrate;

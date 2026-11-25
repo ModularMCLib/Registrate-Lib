@@ -47,14 +47,14 @@ RegistrateLib is a maintained fork of Registrate for the `com.modularmc.registra
 - `com.modularmc.registrate.internal.util`
   - 分发限制执行与内部调试日志辅助 / Dist-gated execution and internal debug logging helpers
 
-- `com.modularmc.registrate.test.mod`
+- `com.modularmc.registratetest.mod`
   - 用作集成测试的示例模组 / Sample mod used as an integration harness
 
-- `com.modularmc.registrate.test.gametests`
+- `com.modularmc.registratetest.gametests`
   - 可执行的运行时检查 / Executable runtime checks
 
-- `com.modularmc.registrate.test.meta`
-  - 用于生成的桥接方法和受保护 API 快照的维护工具 / Maintenance tooling for generated bridge methods and protected API snapshots
+- `com.modularmc.registratetest.meta`
+  - 维护生成的桥接方法和受保护的 API 清单 / Maintains generated bridge methods and protected API listings
 
 ## 公开 API 边界 / Public API Boundary
 
@@ -75,8 +75,8 @@ Treat the root package plus `builders` and `util.entry` as the main downstream-f
   Event-bus plumbing and other implementation-only helpers belong under `internal`
 - 实例级 NeoForge 生命周期编排放在 `internal.lifecycle`
   Instance-scoped NeoForge lifecycle orchestration belongs in `internal.lifecycle`
-- 仅测试用的框架放在 `src/test/java`
-  Test-only scaffolding belongs under `src/test/java`
+- 仅测试用的框架放在 `test/src/main/java`
+  Test-only scaffolding belongs under `test/src/main/java`
 
 ## 现代化原则 / Modernization Principles
 

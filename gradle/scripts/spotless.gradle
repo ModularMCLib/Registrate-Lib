@@ -9,7 +9,7 @@ spotless {
         endWithNewline()
     }
     java {
-        target 'src/*/java/**/*.java',  'localization-processor/src/main/java/**/*.java'
+        target 'src/*/java/**/*.java'
 
         def orderFile = file("$rootDir/gradle/spotless/spotless.importorder")
         def formatFile = file("$rootDir/gradle/spotless/spotless.eclipseformat.xml")
@@ -23,7 +23,7 @@ spotless {
         eclipse('4.31').configFile(formatFile)
     }
     kotlin {
-        target 'src/*/java/**/*.kt', 'localization-processor/src/*/java/**/*.kt'
+        target 'src/*/java/**/*.kt'
 
         def orderFile = file("$rootDir/gradle/spotless/spotless.ktlint")
         ktlint().setEditorConfigPath(orderFile)

@@ -8,9 +8,12 @@ import net.minecraft.core.Registry
 import net.minecraft.resources.ResourceKey
 import net.neoforged.neoforge.registries.DeferredHolder
 
-/** Submits a completed builder to its owner during mod setup. The creator runs at registry time. */
+/**
+ * 接收构建完成的条目，将对象创建推迟到 NeoForge 注册阶段。
+ * 所属 Registrate 在模组初始化时将此回调交给构建器。构建器配置完成后调用一次。
+ */
 interface BuilderCallback {
-	/** Queues an entry with its holder factory and returns the resulting deferred holder. */
+	/** 将条目、对象工厂和引用工厂提交到待注册队列，返回该条目的延迟引用。 */
 	fun <R : Any, T : R> accept(
 		name: String,
 		type: ResourceKey<out Registry<R>>,
@@ -19,7 +22,7 @@ interface BuilderCallback {
 		entryFactory: NonNullFunction<DeferredHolder<R, T>, out RegistryEntry<R, T>>,
 	): RegistryEntry<R, T>
 
-	/** Queues an entry using the default holder wrapper for its registry. */
+	/** 用目标注册表的默认引用类型提交条目。 */
 	fun <R : Any, T : R> accept(name: String, type: ResourceKey<out Registry<R>>, builder: Builder<R, T, *, *>, factory: NonNullSupplier<out T>): RegistryEntry<R, T> =
 		accept(name, type, builder, factory) { RegistryEntry(builder.owner, it) }
 }

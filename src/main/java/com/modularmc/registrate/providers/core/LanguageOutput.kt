@@ -12,9 +12,9 @@ import com.google.gson.JsonObject
 
 import java.util.concurrent.CompletableFuture
 
-object LanguageOutput {
+internal object LanguageOutput {
 	@JvmStatic
-	fun write(cache: CachedOutput, output: PackOutput, registry: TranslationRegistry): CompletableFuture<*> {
+	internal fun write(cache: CachedOutput, output: PackOutput, registry: TranslationRegistry): CompletableFuture<*> {
 		val paths = output.createPathProvider(Target.RESOURCE_PACK, "lang")
 		val files = registry.resolve()
 		val entries = files.entries.iterator()

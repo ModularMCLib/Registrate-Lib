@@ -1,0 +1,124 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
+import org.slf4j.event.Level
+
+plugins {
+    id 'java-library'
+    alias libs.plugins.modDevGradle
+    alias libs.plugins.kotlin.jvm
+}
+
+group = rootProject.group
+version = rootProject.version
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+}
+
+kotlin {
+    jvmToolchain(21)
+    compilerOptions {
+        jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
+    }
+}
+
+sourceSets.main.resources.srcDir 'src/generated/resources'
+
+neoForge {
+    version = libs.versions.neoForge.get()
+
+    parchment {
+        minecraftVersion = libs.versions.minecraft.get()
+        mappingsVersion = libs.versions.parchment.get()
+    }
+
+    addModdingDependenciesTo(sourceSets.main)
+
+    mods {
+        testmod {
+            sourceSet(sourceSets.main)
+        }
+    }
+
+    runs {
+        gameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.main
+            ideName = 'Game Tests'
+
+            gameDirectory.set(rootProject.file('run/gametest/server'))
+            systemProperty('neoforge.enabledGameTestNamespaces', 'testmod')
+            environment('TEST', 'true')
+        }
+
+        gameTestClient {
+            client()
+            sourceSet = sourceSets.main
+            ideName = 'Game Tests (Client)'
+
+            gameDirectory.set(rootProject.file('run/gametest/client'))
+            systemProperty('neoforge.enabledGameTestNamespaces', 'testmod')
+            environment('TEST', 'true')
+        }
+
+        Testdata {
+            data()
+            sourceSet = sourceSets.main
+            ideName = 'Test Data Generation'
+
+            gameDirectory.set(rootProject.file('run/data'))
+            programArguments.addAll('--mod', 'testmod,localetest', '--flat')
+            programArguments.add(providers.gradleProperty('testDataSide').orElse('all').map { '--' + it })
+            programArguments.add('--output')
+            programArguments.add(providers.gradleProperty('testDataOutput').orElse('test/src/generated/resources').map { rootProject.file(it).absolutePath })
+            programArguments.addAll('--existing', file('src/main/resources/').absolutePath)
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            jvmArgument('-ea:com.modularmc.registrate...')
+            logLevel = Level.INFO
+        }
+    }
+}
+repositories {
+    mavenLocal()
+    maven {
+        name = "fury"
+        url = uri("https://maven.fury.io/modularmclib/")
+        content { includeGroup("com.modularmc.mmclutils") }
+    }
+    mavenCentral()
+    // Resolve libraries hosted on Maven Central without querying mod repositories.
+    exclusiveContent { // Force
+        forRepository { mavenCentral() }
+        filter {
+            includeGroup("it.unimi.dsi")
+            includeGroup("org.lwjgl")
+            includeGroup("com.google.guava")
+            includeGroup("org.jacoco")
+            includeGroupAndSubgroups("io.netty")
+            includeGroupAndSubgroups("org.jetbrains")
+            includeGroupAndSubgroups("org.ow2")
+        }
+    }
+}
+
+dependencies {
+    implementation(project(':'))
+    implementation(libs.testframework)
+    compileOnly(libs.jetbrains.annotations)
+    compileOnly(libs.jspecify)
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-Xmaxerrs' << '2000'
+    options.compilerArgs << '-Xlint:-removal'
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}

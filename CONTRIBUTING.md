@@ -36,7 +36,7 @@
 
 - `RegistrateLib` 是本分支的库模组入口点，同时持有共享元数据/常量
   `RegistrateLib` is the library mod entrypoint for the fork and also holds shared metadata/constants
-- `src/test/java/com/modularmc/registrate/test/meta` 包含用于生成的桥接方法的维护辅助工具
-  `src/test/java/com/modularmc/registrate/test/meta` contains maintenance helpers for generated bridge methods
+- `test/src/main/java/com/modularmc/registratetest` 包含用于生成的桥接方法的维护辅助工具
+  `test/src/main/java/com/modularmc/registratetest` contains maintenance helpers for generated bridge methods
 - 当上游 Registrate 变更时，先更新实现类，然后对照 `docs/architecture.md` 重新验证包所有权
   When upstream Registrate changes, update implementation classes first and then re-verify package ownership against `docs/architecture.md`
