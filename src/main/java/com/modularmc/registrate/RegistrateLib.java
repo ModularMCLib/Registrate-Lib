@@ -23,6 +23,7 @@ public final class RegistrateLib {
 
     /**
      * 供 NeoForge 加载运行时库时实例化。各下游模组自行创建其所属的 {@link Registrate}。
+     *
      * @param modEventBus NeoForge 注入的本库模组事件总线
      */
     public RegistrateLib(IEventBus modEventBus) {}

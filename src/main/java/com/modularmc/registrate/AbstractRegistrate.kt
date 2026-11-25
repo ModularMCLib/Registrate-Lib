@@ -872,6 +872,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 
 	/* === 条目构建入口 === */
 	// 通用条目
+
 	/** 使用当前条目名称提交注册，创建游戏对象时调用 [factory]。 */
 	open fun <R : Any, T : R> simple(registryType: ResourceKey<Registry<R>>, factory: NonNullSupplier<T>): RegistryEntry<R, T> = simple(currentName(), registryType, factory)
 
@@ -926,6 +927,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		}
 
 	// 物品
+
 	/** 使用当前条目名称创建物品构建器，由 [factory] 接收配置完成的物品属性。 */
 	open fun <T : Item> item(factory: NonNullFunction<Item.Properties, T>): ItemBuilder<T, S> = item(self(), factory)
 
@@ -950,6 +952,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	}
 
 	// 方块
+
 	/** 使用当前条目名称创建方块构建器，由 [factory] 接收配置完成的方块属性。 */
 	open fun <T : Block> block(factory: NonNullFunction<BlockBehaviour.Properties, T>): BlockBuilder<T, S> = block(self(), factory)
 
@@ -979,6 +982,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	}
 
 	// 实体
+
 	/** 使用当前条目名称创建实体类型构建器，以 [classification] 设置原版实体分类。 */
 	open fun <T : Entity> entity(factory: EntityFactory<T>, classification: MobCategory): EntityBuilder<T, S> = entity(self(), factory, classification)
 
@@ -1011,6 +1015,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		}
 
 	// 方块实体
+
 	/** 使用当前条目名称创建方块实体类型构建器，可接着指定适用方块。 */
 	open fun <T : BlockEntity> blockEntity(factory: BlockEntityFactory<T>): BlockEntityBuilder<T, S> = blockEntity(self(), factory)
 
@@ -1041,6 +1046,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 		}
 
 	// 流体
+
 	/** 为当前名称创建流体构建器，使用默认纹理、默认流体类型和默认的流动流体实现。 */
 	open fun fluid(): FluidBuilder<Flowing, S> = fluid(self())
 
@@ -1256,6 +1262,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	}.model(stillTexture, flowingTexture)
 
 	// 菜单
+
 	/** 使用当前条目名称创建普通菜单构建器。界面工厂仅在客户端取得。 */
 	open fun <T : AbstractContainerMenu, SC> menu(factory: MenuFactory<T>, screenFactory: NonNullSupplier<ScreenFactory<T, SC>>) where SC : Screen, SC : MenuAccess<T> =
 		menu(currentName(), factory, screenFactory)
@@ -1333,6 +1340,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	}
 
 	// 创造模式标签页
+
 	/** 使用当前条目名称创建创造模式标签页构建器，并将该标签页设为本实例的默认页。 */
 	open fun defaultCreativeTab(): NoConfigBuilder<CreativeModeTab, CreativeModeTab, S> = defaultCreativeTab(self())
 
