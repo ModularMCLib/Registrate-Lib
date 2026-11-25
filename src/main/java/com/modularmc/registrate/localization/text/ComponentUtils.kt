@@ -115,8 +115,7 @@ object ComponentUtils {
 
 	/** Collects stream elements in encounter order before joining them. */
 	@JvmStatic
-	fun joining(separator: Component): Collector<Component, *, MutableComponent> =
-		Collectors.collectingAndThen(Collectors.toList<Component>()) { join(it, separator) }
+	fun joining(separator: Component): Collector<Component, *, MutableComponent> = Collectors.collectingAndThen(Collectors.toList<Component>()) { join(it, separator) }
 
 	/** Selects a palette color at the given tick. */
 	@JvmStatic

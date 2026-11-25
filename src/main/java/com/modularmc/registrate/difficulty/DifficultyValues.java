@@ -24,7 +24,8 @@ public final class DifficultyValues<D extends Enum<D> & DifficultyLevel, V> {
      *
      * @param levels declared levels, typically from the enum's {@code values()} method
      * @param values a value for every declared level
-     * @throws IllegalArgumentException if fewer than two levels are supplied, an ID is blank or repeated, or a value is missing
+     * @throws IllegalArgumentException if fewer than two levels are supplied, an ID is blank or repeated, or a value is
+     *                                  missing
      */
     public DifficultyValues(D[] levels, Map<D, ? extends V> values) {
         if (levels.length < 2) throw new IllegalArgumentException("At least two difficulty levels are required");
