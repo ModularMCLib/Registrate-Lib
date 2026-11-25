@@ -38,13 +38,10 @@ import java.util.function.Consumer
 import java.util.function.Supplier
 
 /**
- * A builder for items, allows for customization of the [Item.Properties] and configuration of data associated
- * with items (models, recipes, etc.).
+ * 构建和注册物品，可配置物品属性、模型和配方等数据。
  *
- * @param T
- * The type of item being built
- * @param P
- * Parent object type
+ * @param T 物品类型
+ * @param P 父级对象类型
  */
 open class ItemBuilder<T : Item, P : Any> protected constructor(
 	owner: AbstractRegistrate<*>,
@@ -60,16 +57,10 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 		Object2ObjectLinkedOpenHashMap()
 
 	/**
-	 * Modify the properties of the item. Modifications are done lazily, but the passed function is composed with the
-	 * current one, and as such this method can be called multiple times to perform
-	 * different operations.
+	 * 登记物品属性变换，构建物品时按登记顺序应用。变换返回另一份属性对象时，后续变换从新对象开始。
 	 *
-	 *
-	 * If a different properties instance is returned, it will replace the existing one entirely.
-	 *
-	 * @param func
-	 * The action to perform on the properties
-	 * @return this [ItemBuilder]
+	 * @param func 要应用的属性变换
+	 * @return 当前构建器
 	 */
 	open fun properties(func: NonNullUnaryOperator<Item.Properties>): ItemBuilder<T, P> {
 		propertiesCallback = propertiesCallback.andThen(func)
@@ -77,19 +68,17 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 	}
 
 	/**
-	 * Replace the initial state of the item properties, without replacing or removing any modifications done via
-	 * [properties].
+	 * 设置物品属性的起点，保留已通过 [properties] 登记的变换。
 	 *
-	 * @param properties
-	 * A supplier to to create the initial properties
-	 * @return this [ItemBuilder]
+	 * @param properties 创建初始属性的供应器
+	 * @return 当前构建器
 	 */
 	open fun initialProperties(properties: NonNullSupplier<Item.Properties>): ItemBuilder<T, P> {
 		initialProperties = properties
 		return this
 	}
 
-	/** Adds this item to a tab, with an optional callback to customize its display. */
+	/** 将物品加入指定创造模式标签页。可选的回调控制该物品在标签页中的呈现。 */
 	@JvmOverloads
 	open fun tab(
 		tab: ResourceKey<CreativeModeTab>,
@@ -97,17 +86,17 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 			modifier.accept(item)
 		},
 	): ItemBuilder<T, P> {
-		creativeModeTabs[tab] = modifier // Should we get the current value in the map [if one exists] and
-		// .andThen() the 2 together? right now we replace any consumer that
-		// currently exists
+		creativeModeTabs[tab] = modifier // 同一个标签页只保存一个回调。
+		// 重复登记会替换之前的回调。
+		// 如果需要组合回调，由调用方组合后登记。
 		return this
 	}
 
 	/**
-	 * Removes the modifier from this builder from the given [CreativeModeTab].
+	 * 移除该物品对此创造模式标签页登记的回调。
 	 *
-	 * @param tab A [ResourceKey] representing the [CreativeModeTab] to remove the modifier from
-	 * @return This builder
+	 * @param tab 要移除回调的标签页键
+	 * @return 当前构建器
 	 */
 	open fun removeTab(tab: ResourceKey<CreativeModeTab>): ItemBuilder<T, P> {
 		creativeModeTabs.remove(tab)
@@ -115,9 +104,9 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 	}
 
 	/**
-	 * Assign the default model to this item, which is simply a generated model with a single texture of the same name.
+	 * 使用与注册名称同名的单张纹理生成默认物品模型。
 	 *
-	 * @return this [ItemBuilder]
+	 * @return 当前构建器
 	 */
 	open fun defaultModel(): ItemBuilder<T, P> = model {
 		NonNullBiConsumer { ctx, provider ->
@@ -126,10 +115,10 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 	}
 
 	/**
-	 * Generates the default item model with the supplied layer tints.
+	 * 生成默认物品模型，并为模型各层配置着色来源。
 	 *
-	 * @param tints The tint sources in model layer order
-	 * @return this [ItemBuilder]
+	 * @param tints 按模型图层顺序排列的着色来源
+	 * @return 当前构建器
 	 */
 	open fun defaultModel(vararg tints: ItemTintSource): ItemBuilder<T, P> = model {
 		NonNullBiConsumer { ctx, provider ->
@@ -139,12 +128,11 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 	}
 
 	/**
-	 * Configure the model for this item.
+	 * 设置此物品的模型生成回调。
 	 *
-	 * @param cons
-	 * The callback which will be invoked during data creation
-	 * @return this [ItemBuilder]
-	 * @see .setData
+	 * @param cons 提供数据生成回调的供应器
+	 * @return 当前构建器
+	 * @see setData
 	 */
 	open fun model(cons: NonNullSupplier<NonNullBiConsumer<DataGenContext<Item, T>, RegistrateItemModelGenerator>>): ItemBuilder<T, P> {
 		val model: NonNullSupplier<NonNullBiConsumer<DataGenContext<Item, T>, RegistrateItemModelGenerator>> =
@@ -157,48 +145,43 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 	}
 
 	/**
-	 * Assign the default translation, as specified by
-	 * [RegistrateLangProvider.getAutomaticName]. This is
-	 * the default, so it is generally
-	 * not necessary to call, unless for undoing previous changes.
+	 * 用 [RegistrateLangProvider.getAutomaticName] 从注册名称推导默认翻译，可用于恢复默认生成方式。
 	 *
-	 * @return this [ItemBuilder]
+	 * @return 当前构建器
 	 */
 	open fun defaultLang(): ItemBuilder<T, P> = lang { obj: T -> obj.descriptionId }
 
-	/** Configures the source text and translations of this entry.  */
+	/** 使用物品的描述键声明源文本及显式译文。 */
 	open fun localization(configure: Consumer<LocalizationDeclaration.Builder>): ItemBuilder<T, P> = localization({ obj: T -> obj.descriptionId }, configure)
 
 	/**
-	 * Set the translation for this item.
+	 * 为此物品指定源语言名称。
 	 *
-	 * @param name
-	 * A localized English name
-	 * @return this [ItemBuilder]
+	 * @param name 使用模组源语言书写的物品名称
+	 * @return 当前构建器
 	 */
 	open fun lang(name: String): ItemBuilder<T, P> = lang({ obj: T -> obj.descriptionId }, name)
 
 	/**
-	 * Configure the recipe(s) for this item.
+	 * 设置此物品的配方生成回调。
 	 *
-	 * @param cons
-	 * The callback which will be invoked during data generation.
-	 * @return this [ItemBuilder]
-	 * @see .setData
+	 * @param cons 数据生成时执行的回调
+	 * @return 当前构建器
+	 * @see setData
 	 */
 	open fun recipe(cons: NonNullBiConsumer<DataGenContext<Item, T>, RegistrateRecipeProvider>) = setData(ProviderType.RECIPE, cons)
 
 	/**
-	 * Add burn time for the item
+	 * 将物品登记为熔炉燃料。
 	 *
-	 * @param tick time in ticks for this item to burn in furnace.
+	 * @param tick 该物品在熔炉中燃烧的游戏刻数
 	 */
 	open fun burnTime(tick: Int): ItemBuilder<T, P> = dataMap(NeoForgeDataMaps.FURNACE_FUELS, FurnaceFuel(tick))
 
 	/**
-	 * Add compost chance for the item
+	 * 登记物品的堆肥成功概率。
 	 *
-	 * @param chance chance for composter to increase one level when composting this item.
+	 * @param chance 投入一个该物品时堆肥桶增加一层的概率
 	 */
 	open fun compostable(chance: Float): ItemBuilder<T, P> = dataMap(NeoForgeDataMaps.COMPOSTABLES, Compostable(chance))
 
@@ -217,18 +200,16 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 						)
 					}
 				}
-				creativeModeTabs.clear() // this registration should only fire once, to doubly ensure this, clear the map
+				creativeModeTabs.clear() // 这个注册回调只需执行一次，用完即清空待处理的扩展。
 			},
 		)
 	}
 
 	/**
-	 * Register a client extension for this item. The [IClientItemExtensions] instance can be shared across many
-	 * items.
+	 * 登记物品客户端扩展。同一个 [IClientItemExtensions] 实例可供多个物品共用。
 	 *
-	 * @param clientExtension
-	 * The client extension to register for this item
-	 * @return this [ItemBuilder]
+	 * @param clientExtension 外层供应器须可在服务端安全创建，内层供应器在客户端取得扩展
+	 * @return 当前构建器
 	 */
 	open fun clientExtension(clientExtension: NonNullSupplier<Supplier<IClientItemExtensions>>): ItemBuilder<T, P> {
 		if (this.clientExtension == null) {
@@ -252,53 +233,40 @@ open class ItemBuilder<T : Item, P : Any> protected constructor(
 	}
 
 	/**
-	 * Assign [TagKey]`s` to this item. Multiple calls will add additional tags.
+	 * 向物品添加标签。多次调用会累加标签。
 	 *
-	 * @param tags
-	 * The tag to assign
-	 * @return this [ItemBuilder]
+	 * @param tags 要添加的物品标签
+	 * @return 当前构建器
 	 */
 	@SafeVarargs
 	fun tag(vararg tags: TagKey<Item>) = tag(ProviderType.ITEM_TAGS, *tags)
 
+	/** 应用物品属性变换，写入注册键，再由工厂创建物品。 */
 	override fun createEntry(): T {
 		var properties = this.initialProperties.get()
 		properties = propertiesCallback.apply(properties)
 		return factory.apply(properties.setId(resourceKey))
 	}
 
+	/** 用物品专用引用包装延迟绑定的条目。 */
 	override fun createEntryWrapper(delegate: DeferredHolder<Item, T>): RegistryEntry<Item, T> = ItemEntry(owner, delegate)
 
+	/** 提交物品注册，返回可用于构造物品堆叠的物品引用。 */
 	override fun register(): ItemEntry<T> = super.register() as ItemEntry<T>
 
 	companion object {
 		/**
-		 * Create a new [ItemBuilder] and configure data. Used in lieu of adding side-effects to constructor, so that
-		 * alternate initialization strategies can be done in subclasses.
+		 * 创建 [ItemBuilder]，并配置使用单张纹理的默认物品模型及默认翻译。子类可在此入口扩展初始化。
 		 *
-		 *
-		 * The item will be assigned the following data:
-		 *
-		 *  * A simple generated model with one texture (via [.defaultModel])
-		 *  * The default translation (via [.defaultLang])
-		 *
-		 *
-		 * @param <T>
-		 * The type of the builder
-		 * @param <P>
-		 * Parent object type
-		 * @param owner
-		 * The owning [AbstractRegistrate] object
-		 * @param parent
-		 * The parent object
-		 * @param name
-		 * Name of the entry being built
-		 * @param callback
-		 * A callback used to actually register the built entry
-		 * @param factory
-		 * Factory to create the item
-		 * @return A new [ItemBuilder] with reasonable default data generators.
-		</P></T> */
+		 * @param T 物品类型
+		 * @param P 父级对象类型
+		 * @param owner 所属的 [AbstractRegistrate] 实例
+		 * @param parent 构建完成后返回的父级对象
+		 * @param name 条目名称
+		 * @param callback 将条目提交给所属实例的回调
+		 * @param factory 接收属性并创建物品的工厂
+		 * @return 配置好默认模型和翻译的物品构建器
+		 */
 		@JvmStatic
 		fun <T : Item, P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, factory: NonNullFunction<Item.Properties, T>) =
 			ItemBuilder(owner, parent, name, callback, factory)

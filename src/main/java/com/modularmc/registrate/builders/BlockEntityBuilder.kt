@@ -29,12 +29,10 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 import java.util.function.Consumer
 
 /**
- * A builder for block entities, allows for customization of the valid blocks.
+ * 构建和注册方块实体类型，登记可承载此类型的方块。
  *
- * @param T
- * The type of block entity being built
- * @param P
- * Parent object type
+ * @param T 方块实体类型
+ * @param P 父级对象类型
  */
 open class BlockEntityBuilder<T : BlockEntity, P : Any> protected constructor(
 	owner: AbstractRegistrate<*>,
@@ -49,7 +47,15 @@ open class BlockEntityBuilder<T : BlockEntity, P : Any> protected constructor(
 	callback,
 	Registries.BLOCK_ENTITY_TYPE,
 ) {
+	/** 由模组实现，用于游戏在指定位置创建方块实体实例。回调运行在发起创建的线程上。 */
 	fun interface BlockEntityFactory<T : BlockEntity> {
+		/**
+		 * 创建与当前位置和方块状态对应的方块实体。
+		 * @param type 已注册的方块实体类型
+		 * @param pos 方块在世界中的位置
+		 * @param state 创建时的方块状态
+		 * @return 新的方块实体实例
+		 */
 		fun create(type: BlockEntityType<T>, pos: BlockPos, state: BlockState): T
 	}
 
@@ -58,11 +64,10 @@ open class BlockEntityBuilder<T : BlockEntity, P : Any> protected constructor(
 		null
 
 	/**
-	 * Add a valid block for this block entity.
+	 * 添加一个可承载此方块实体的方块。
 	 *
-	 * @param block
-	 * A supplier for the block to add at registration time
-	 * @return this [BlockEntityBuilder]
+	 * @param block 注册时取得方块的供应器
+	 * @return 当前构建器
 	 */
 	open fun validBlock(block: NonNullSupplier<out Block>): BlockEntityBuilder<T, P> {
 		validBlocks.add(block)
@@ -70,11 +75,10 @@ open class BlockEntityBuilder<T : BlockEntity, P : Any> protected constructor(
 	}
 
 	/**
-	 * Add valid blocks for this block entity.
+	 * 添加多个可承载此方块实体的方块。
 	 *
-	 * @param blocks
-	 * An array of suppliers for the block to add at registration time
-	 * @return this [BlockEntityBuilder]
+	 * @param blocks 注册时取得各个方块的供应器
+	 * @return 当前构建器
 	 */
 	@SafeVarargs
 	fun validBlocks(vararg blocks: NonNullSupplier<out Block>): BlockEntityBuilder<T, P> {
@@ -83,20 +87,13 @@ open class BlockEntityBuilder<T : BlockEntity, P : Any> protected constructor(
 	}
 
 	/**
-	 * Register an [BlockEntityRenderer] for this block entity.
+	 * 为此方块实体类型登记客户端渲染器。
 	 *
-	 *
-	 *
-	 * @apiNote This requires the [Class] of the block entity object, which can only be gotten by inspecting an
-	 * instance of it. Thus, the entity will be constructed to register the renderer.
-	 *
-	 * @param renderer
-	 * A (server safe) supplier to an [Function] that will provide this block entity's renderer
-	 * given the renderer dispatcher
-	 * @return this [BlockEntityBuilder]
+	 * @param renderer 外层供应器须可在服务端安全创建，内层工厂在客户端接收渲染上下文并创建渲染器
+	 * @return 当前构建器
 	 */
 	open fun renderer(renderer: NonNullSupplier<NonNullFunction<BlockEntityRendererProvider.Context, BlockEntityRenderer<in T, *>>>): BlockEntityBuilder<T, P> {
-		if (this.renderer == null) { // First call only
+		if (this.renderer == null) { // 首次设置时绑定渲染事件，后续设置由该监听器读取。
 			unsafeRunWhenOn(Dist.CLIENT) { Runnable { this.registerRenderer() } }
 		}
 		this.renderer = renderer
@@ -115,10 +112,10 @@ open class BlockEntityBuilder<T : BlockEntity, P : Any> protected constructor(
 	}
 
 	/**
-	 * Register [Capabilities] for this block entity.
+	 * 在能力注册事件中为此方块实体登记能力。
 	 *
-	 * @param registerCapabilitiesEvent A consumer for the register capabilities event
-	 * @return this [BlockEntityBuilder]
+	 * @param registerCapabilitiesEvent 接收能力注册事件的回调
+	 * @return 当前构建器
 	 */
 	open fun registerCapability(registerCapabilitiesEvent: Consumer<RegisterCapabilitiesEvent>): BlockEntityBuilder<T, P> {
 		addModListener(
@@ -129,6 +126,7 @@ open class BlockEntityBuilder<T : BlockEntity, P : Any> protected constructor(
 		return this
 	}
 
+	/** 在注册时收集有效方块，并将实例工厂与新类型绑定。 */
 	override fun createEntry(): BlockEntityType<T> {
 		val factory: BlockEntityFactory<T> = this.factory
 		val supplier: NonNullSupplier<BlockEntityType<T>> = asSupplier()
@@ -137,34 +135,25 @@ open class BlockEntityBuilder<T : BlockEntity, P : Any> protected constructor(
 		return BlockEntityType({ pos, state -> factory.create(supplier.get(), pos, state) }, *valid)
 	}
 
+	/** 用方块实体类型的专用引用包装延迟绑定的条目。 */
 	override fun createEntryWrapper(delegate: DeferredHolder<BlockEntityType<*>, BlockEntityType<T>>) = BlockEntityEntry(owner, delegate)
 
+	/** 提交方块实体类型注册，返回用于创建或查询实例的类型引用。 */
 	override fun register(): BlockEntityEntry<T> = super.register() as BlockEntityEntry<T>
 
 	companion object {
 		/**
-		 * Create a new [BlockEntityBuilder] and configure data. Used in lieu of adding side-effects to constructor,
-		 * so that alternate initialization strategies can be done in subclasses.
+		 * 创建 [BlockEntityBuilder]，供子类在此入口附加初始化配置。
 		 *
-		 *
-		 * The block entity will be assigned the following data:
-		 *
-		 * @param <T>
-		 * The type of the builder
-		 * @param <P>
-		 * Parent object type
-		 * @param owner
-		 * The owning [AbstractRegistrate] object
-		 * @param parent
-		 * The parent object
-		 * @param name
-		 * Name of the entry being built
-		 * @param callback
-		 * A callback used to actually register the built entry
-		 * @param factory
-		 * Factory to create the block entity
-		 * @return A new [BlockEntityBuilder] with reasonable default data generators.
-		</P></T> */
+		 * @param T 方块实体类型
+		 * @param P 父级对象类型
+		 * @param owner 所属的 [AbstractRegistrate] 实例
+		 * @param parent 构建完成后返回的父级对象
+		 * @param name 条目名称
+		 * @param callback 将条目提交给所属实例的回调
+		 * @param factory 创建方块实体的工厂
+		 * @return 新的方块实体构建器
+		 */
 		@JvmStatic
 		fun <T : BlockEntity, P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, factory: BlockEntityFactory<T>) =
 			BlockEntityBuilder(owner, parent, name, callback, factory)

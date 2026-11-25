@@ -1,11 +1,8 @@
 /**
- * Shared downstream-facing support utilities.
+ * 存放供下游模组复用的公共工具。
  *
  * <p>
- * Only helpers that are intentionally part of the reusable library surface and
- * are not clearly builder- or provider-specific should live here. Internal
- * event plumbing, dist-gated execution helpers, and debug markers belong under
- * {@code com.modularmc.registrate.internal}.
+ * 一次性事件监听、物理侧判断和调试标记由 {@code com.modularmc.registrate.internal} 提供。
  */
 @org.jspecify.annotations.NullMarked
 package com.modularmc.registrate.util;

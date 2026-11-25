@@ -36,13 +36,10 @@ import java.util.function.Consumer
 import java.util.function.Supplier
 
 /**
- * A builder for blocks, allows for customization of the [Block.Properties], creation of block items, and
- * configuration of data associated with blocks (loot tables, recipes, etc.).
+ * 构建和注册方块，可配置方块属性、创建方块物品，并生成模型、配方和战利品表。
  *
- * @param T
- * The type of block being built
- * @param P
- * Parent object type
+ * @param T 要构建的方块类型
+ * @param P 父级对象类型
  */
 open class BlockBuilder<T : Block, P : Any> protected constructor(
 	owner: AbstractRegistrate<*>,
@@ -58,16 +55,10 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	private var tintSources: NonNullSupplier<Supplier<List<BlockTintSource>>>? = null
 
 	/**
-	 * Modify the properties of the block. Modifications are done lazily, but the passed function is composed with the
-	 * current one, and as such this method can be called multiple times to perform
-	 * different operations.
+	 * 登记方块属性变换，构建方块时按登记顺序应用。变换返回另一份属性对象时，后续变换从新对象开始。
 	 *
-	 *
-	 * If a different properties instance is returned, it will replace the existing one entirely.
-	 *
-	 * @param func
-	 * The action to perform on the properties
-	 * @return this [BlockBuilder]
+	 * @param func 要应用的属性变换
+	 * @return 当前构建器
 	 */
 	open fun properties(func: NonNullUnaryOperator<BlockBehaviour.Properties>): BlockBuilder<T, P> {
 		propertiesCallback = propertiesCallback.andThen<BlockBehaviour.Properties>(func)
@@ -75,13 +66,10 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	}
 
 	/**
-	 * Replace the initial state of the block properties, without replacing or removing any modifications done via
-	 * [properties].
+	 * 以另一方块的完整属性副本作为起点，保留已通过 [properties] 登记的变换。
 	 *
-	 * @param block
-	 * The block to create the initial properties from (via
-	 * [Block.Properties.ofFullCopy])
-	 * @return this [BlockBuilder]
+	 * @param block 用于读取初始属性的方块供应器
+	 * @return 当前构建器
 	 */
 	open fun initialProperties(block: NonNullSupplier<out Block>): BlockBuilder<T, P> {
 		initialProperties = NonNullSupplier { BlockBehaviour.Properties.ofFullCopy(block.get()) }
@@ -89,25 +77,17 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	}
 
 	/**
-	 * Create a standard [BlockItem] for this block, building it immediately, and not allowing for further
-	 * configuration.
+	 * 用默认配置提交此方块的 [BlockItem]。物品沿用方块的翻译键。
 	 *
-	 *
-	 * The item will have no lang entry (since it would duplicate the block's)
-	 *
-	 * @return this [BlockBuilder]
-	 * @see .item
+	 * @return 当前构建器
+	 * @see item
 	 */
 	open fun simpleItem(): BlockBuilder<T, P> = item().build()
 
 	/**
-	 * Create a standard [BlockItem] for this block, and return the builder for it so that further customization
-	 * can be done.
+	 * 创建标准 [BlockItem] 的构建器，便于继续配置物品。默认使用方块的翻译键。
 	 *
-	 *
-	 * The item will have no lang entry (since it would duplicate the block's)
-	 *
-	 * @return the [ItemBuilder] for the [BlockItem]
+	 * @return 方块物品的 [ItemBuilder]
 	 */
 	open fun item() = item(
 		NonNullBiFunction { block: T, properties: Item.Properties ->
@@ -119,18 +99,11 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	)
 
 	/**
-	 * Create a [BlockItem] for this block, which is created by the given factory, and return the builder for it
-	 * so that further customization can be done.
+	 * 使用指定工厂创建方块物品构建器。默认使用简单的方块物品模型，并沿用方块的翻译键。
 	 *
-	 *
-	 * By default, the item will have no lang entry (since it would duplicate the block's) and a simple block item
-	 * model.
-	 *
-	 * @param I
-	 * The type of the item
-	 * @param factory
-	 * A factory for the item, which accepts the block object and properties and returns a new item
-	 * @return the [ItemBuilder] for the [BlockItem]
+	 * @param I 物品类型
+	 * @param factory 接收方块和物品属性并创建物品的工厂
+	 * @return 方块物品的 [ItemBuilder]
 	 */
 	open fun <I : Item> item(factory: NonNullBiFunction<in T, Item.Properties, out I>): ItemBuilder<I, BlockBuilder<T, P>> = owner.item(
 		this,
@@ -151,37 +124,28 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 		}
 
 	/**
-	 * Create a [BlockEntity] for this block, which is created by the given factory, and assigned this block as
-	 * its one and only valid block.
+	 * 创建并提交方块实体类型，初始有效方块为当前方块。
 	 *
-	 * @param BE
-	 * The type of the block entity
-	 * @param factory
-	 * A factory for the block entity
-	 * @return this [BlockBuilder]
-	</BE> */
+	 * @param BE 方块实体类型
+	 * @param factory 创建方块实体的工厂
+	 * @return 当前构建器
+	 */
 	open fun <BE : BlockEntity> simpleBlockEntity(factory: BlockEntityBuilder.BlockEntityFactory<BE>) = blockEntity(factory).build()
 
 	/**
-	 * Create a [BlockEntity] for this block, which is created by the given factory, and assigned this block as
-	 * its one and only valid block.
+	 * 创建方块实体构建器，初始有效方块为当前方块。可在返回的构建器上继续添加有效方块及其他配置。
 	 *
-	 *
-	 * The created [BlockEntityBuilder] is returned for further configuration.
-	 *
-	 * @param BE
-	 * The type of the block entity
-	 * @param factory
-	 * A factory for the block entity
-	 * @return the [BlockEntityBuilder]
-	</BE> */
+	 * @param BE 方块实体类型
+	 * @param factory 创建方块实体的工厂
+	 * @return 方块实体的 [BlockEntityBuilder]
+	 */
 	open fun <BE : BlockEntity> blockEntity(factory: BlockEntityBuilder.BlockEntityFactory<BE>) = owner.blockEntity(this, name, factory).validBlock(asSupplier())
 
 	/**
-	 * Registers the tint sources for this block in tint index order.
+	 * 按模型的着色索引顺序登记方块着色来源。
 	 *
-	 * @param tintSources A side-safe supplier of the block tint sources
-	 * @return this [BlockBuilder]
+	 * @param tintSources 外层供应器须可在服务端安全创建，内层供应器在客户端取得着色来源
+	 * @return 当前构建器
 	 */
 	open fun color(tintSources: NonNullSupplier<Supplier<List<BlockTintSource>>>): BlockBuilder<T, P> {
 		if (this.tintSources == null) {
@@ -200,12 +164,10 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	}
 
 	/**
-	 * Assign the default blockstate, which maps all states to a single model file (via
-	 * [RegistrateBlockModelGenerator.createTrivialCube]). This is the default, so it is generally not
-	 * necessary
-	 * to call, unless for undoing previous changes.
+	 * 使用 [RegistrateBlockModelGenerator.createTrivialCube] 生成默认方块状态，所有状态共用一个立方体模型。
+	 * 可再次调用以替换之前设置的生成方式。
 	 *
-	 * @return this [BlockBuilder]
+	 * @return 当前构建器
 	 */
 	open fun defaultBlockstate(): BlockBuilder<T, P> = blockstate {
 		NonNullBiConsumer { ctx: DataGenContext<Block, T>, prov: RegistrateBlockModelGenerator ->
@@ -216,12 +178,11 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	}
 
 	/**
-	 * Configure the blockstate/models for this block.
+	 * 设置此方块的方块状态和模型生成回调。
 	 *
-	 * @param cons
-	 * The callback which will be invoked during data generation.
-	 * @return this [BlockBuilder]
-	 * @see .setData
+	 * @param cons 提供数据生成回调的供应器
+	 * @return 当前构建器
+	 * @see setData
 	 */
 	open fun blockstate(cons: NonNullSupplier<NonNullBiConsumer<DataGenContext<Block, T>, RegistrateBlockModelGenerator>>): BlockBuilder<T, P> {
 		val blockstate: NonNullSupplier<NonNullBiConsumer<DataGenContext<Block, T>, RegistrateBlockModelGenerator>> =
@@ -234,48 +195,36 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	}
 
 	/**
-	 * Assign the default translation, as specified by
-	 * [RegistrateLangProvider.getAutomaticName]. This is
-	 * the default, so it is generally
-	 * not necessary to call, unless for undoing previous changes.
+	 * 用 [RegistrateLangProvider.getAutomaticName] 从注册名称推导默认翻译，可用于恢复默认生成方式。
 	 *
-	 * @return this [BlockBuilder]
+	 * @return 当前构建器
 	 */
 	open fun defaultLang(): BlockBuilder<T, P> = lang { obj: T -> obj.descriptionId }
 
-	/** Configures the source text and translations of this entry.  */
+	/** 使用方块的描述键声明源文本及显式译文。 */
 	open fun localization(configure: Consumer<LocalizationDeclaration.Builder>): BlockBuilder<T, P> = localization({ obj: T -> obj.descriptionId }, configure)
 
 	/**
-	 * Set the translation for this block.
+	 * 为此方块指定源语言名称。
 	 *
-	 * @param name
-	 * A localized English name
-	 * @return this [BlockBuilder]
+	 * @param name 使用模组源语言书写的方块名称
+	 * @return 当前构建器
 	 */
 	open fun lang(name: String): BlockBuilder<T, P> = lang({ obj: T -> obj.descriptionId }, name)
 
 	/**
-	 * Assign the default loot table, as specified by [RegistrateBlockLootTables.dropSelf]. This is the
-	 * default, so it is generally not necessary to call, unless for
-	 * undoing previous changes.
+	 * 恢复默认战利品表。方块被破坏时按 [RegistrateBlockLootTables.dropSelf] 的规则掉落自身。
 	 *
-	 * @return this [BlockBuilder]
+	 * @return 当前构建器
 	 */
 	open fun defaultLoot(): BlockBuilder<T, P> = loot { obj: RegistrateBlockLootTables, block: T -> obj.dropSelf(block) }
 
 	/**
-	 * Configure the loot table for this block. This is different than most data gen callbacks as the callback does not
-	 * accept a [DataGenContext], but instead a
-	 * [RegistrateBlockLootTables], for creating specifically block loot tables.
+	 * 配置方块战利品表。回调接收专用的 [RegistrateBlockLootTables] 和方块对象。
+	 * 方块通过 [Block.Properties.noLootTable] 禁用战利品表时，跳过该回调。
 	 *
-	 *
-	 * If the block does not have a loot table (i.e. [Block.Properties.noLootTable] is called) this action will
-	 * be *skipped*.
-	 *
-	 * @param cons
-	 * The callback which will be invoked during block loot table creation.
-	 * @return this [BlockBuilder]
+	 * @param cons 生成方块战利品表时执行的回调
+	 * @return 当前构建器
 	 */
 	open fun loot(cons: NonNullBiConsumer<RegistrateBlockLootTables, T>) = setData(
 		ProviderType.LOOT,
@@ -290,24 +239,21 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	}
 
 	/**
-	 * Configure the recipe(s) for this block.
+	 * 设置此方块的配方生成回调。
 	 *
-	 * @param cons
-	 * The callback which will be invoked during data generation.
-	 * @return this [BlockBuilder]
-	 * @see .setData
+	 * @param cons 数据生成时执行的回调
+	 * @return 当前构建器
+	 * @see setData
 	 */
 	open fun recipe(cons: NonNullBiConsumer<DataGenContext<Block, T>, RegistrateRecipeProvider>) = setData(ProviderType.RECIPE, cons)
 
 	private var clientExtension: NonNullSupplier<Supplier<IClientBlockExtensions>>? = null
 
 	/**
-	 * Register a client extension for this block.
-	 * The [IClientBlockExtensions] instance can be shared across many items.
+	 * 登记方块客户端扩展。同一个 [IClientBlockExtensions] 实例可供多个方块共用。
 	 *
-	 * @param clientExtension
-	 * The client extension to register for this block
-	 * @return this [BlockBuilder]
+	 * @param clientExtension 外层供应器须可在服务端安全创建，内层供应器在客户端取得扩展
+	 * @return 当前构建器
 	 */
 	open fun clientExtension(clientExtension: NonNullSupplier<Supplier<IClientBlockExtensions>>): BlockBuilder<T, P> {
 		if (this.clientExtension == null) {
@@ -331,55 +277,41 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	}
 
 	/**
-	 * Assign [TagKey]`s` to this block. Multiple calls will add additional tags.
+	 * 向此方块添加标签。多次调用会累加标签。
 	 *
-	 * @param tags
-	 * The tags to assign
-	 * @return this [BlockBuilder]
+	 * @param tags 要添加的标签键
+	 * @return 当前构建器
 	 */
 	@SafeVarargs
 	fun tag(vararg tags: TagKey<Block>) = tag(ProviderType.BLOCK_TAGS, *tags)
 
+	/** 应用已登记的属性变换，写入注册键，再由工厂创建方块。 */
 	override fun createEntry(): T {
 		var properties = this.initialProperties.get()
 		properties = propertiesCallback.apply(properties)
 		return factory.apply(properties.setId(resourceKey))
 	}
 
+	/** 用方块专用引用包装延迟绑定的条目，便于获取关联方块物品。 */
 	override fun createEntryWrapper(delegate: DeferredHolder<Block, T>) = BlockEntry(owner, delegate)
 
+	/** 提交方块注册，返回可保存到静态字段的方块引用。 */
 	override fun register(): BlockEntry<T> = super.register() as BlockEntry<T>
 
 	companion object {
 		/**
-		 * Create a new [BlockBuilder] and configure data. Used in lieu of adding side-effects to constructor, so that
-		 * alternate initialization strategies can be done in subclasses.
+		 * 创建带默认数据配置的 [BlockBuilder]，集中设置可由子类替换的生成规则。
+		 * 默认让所有方块状态共用单纹理立方体模型，生成掉落自身的战利品表和默认名称。
 		 *
-		 *
-		 * The block will be assigned the following data:
-		 *
-		 *  * A default blockstate file mapping all states to one model (via [.defaultBlockstate])
-		 *  * A simple cube_all model (used in the blockstate) with one texture (via [.defaultBlockstate])
-		 *  * A self-dropping loot table (via [.defaultLoot])
-		 *  * The default translation (via [.defaultLang])
-		 *
-		 *
-		 * @param <T>
-		 * The type of the builder
-		 * @param <P>
-		 * Parent object type
-		 * @param owner
-		 * The owning [AbstractRegistrate] object
-		 * @param parent
-		 * The parent object
-		 * @param name
-		 * Name of the entry being built
-		 * @param callback
-		 * A callback used to actually register the built entry
-		 * @param factory
-		 * Factory to create the block
-		 * @return A new [BlockBuilder] with reasonable default data generators.
-		</P></T> */
+		 * @param T 方块类型
+		 * @param P 父级对象类型
+		 * @param owner 所属的 [AbstractRegistrate] 实例
+		 * @param parent 构建完成后返回的父级对象
+		 * @param name 条目名称
+		 * @param callback 将条目提交给所属实例的回调
+		 * @param factory 接收属性并创建方块的工厂
+		 * @return 配置好默认数据生成规则的构建器
+		 */
 		@JvmStatic
 		fun <T : Block, P : Any> create(owner: AbstractRegistrate<*>, parent: P, name: String, callback: BuilderCallback, factory: NonNullFunction<BlockBehaviour.Properties, T>) = BlockBuilder(
 			owner,
