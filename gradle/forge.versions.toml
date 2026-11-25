@@ -1,5 +1,5 @@
 [versions]
-mmclutils = "0.1.0"
+mmclutils = "0.1.0-SNAPSHOT"
 
 
 ## modrinth maven ##

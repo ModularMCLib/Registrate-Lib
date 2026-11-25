@@ -1,10 +1,4 @@
 repositories {
-    exclusiveContent {
-        forRepository { maven { url = rootProject.uri("gradle/libs") } }
-        filter {
-            includeGroupAndSubgroups("com.modularmc")
-        }
-    }
     mavenLocal()
     mavenCentral()
     // Resolve libraries hosted on Maven Central without querying mod repositories.
@@ -30,6 +24,10 @@ repositories {
     maven { // JEI mirror, AE2
         name = "ModMaven"
         url = "https://modmaven.dev"
+    }
+    maven {
+        name = "fury"
+        url = uri("https://maven.fury.io/modularmclib/")
     }
     exclusiveContent { // terraformers - EMI
         forRepository { maven { url = "https://maven.terraformersmc.com/releases/" } }

@@ -1,9 +1,0 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0">
-    <modelVersion>4.0.0</modelVersion>
-
-    <groupId>com.modularmc.mmclutils</groupId>
-    <artifactId>mmclutils-26.1.2</artifactId>
-    <version>0.1.0</version>
-
-    <packaging>jar</packaging>
-</project>

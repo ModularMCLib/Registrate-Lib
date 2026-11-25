@@ -79,12 +79,6 @@ neoForge {
     }
 }
 repositories {
-    exclusiveContent {
-        forRepository { maven { url = rootProject.uri("gradle/libs") } }
-        filter {
-            includeGroupAndSubgroups("com.modularmc")
-        }
-    }
     mavenLocal()
     mavenCentral()
     // Resolve libraries hosted on Maven Central without querying mod repositories.
@@ -99,6 +93,10 @@ repositories {
             includeGroupAndSubgroups("org.jetbrains")
             includeGroupAndSubgroups("org.ow2")
         }
+    }
+    maven {
+        name = "fury"
+        url = uri("https://maven.fury.io/modularmclib/")
     }
 }
 
