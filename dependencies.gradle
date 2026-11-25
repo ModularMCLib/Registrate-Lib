@@ -5,6 +5,8 @@ dependencies {
     jarJar(api(libs.kotlin.stdlib.get())) {
         exclude group: 'org.jetbrains', module: 'annotations'
     }
+    jarJar(implementation(forge.mmclutils.get()))
+
     renderNurseCfg(libs.renderNurse)
 
     //////////////////////////////////////////////////////
