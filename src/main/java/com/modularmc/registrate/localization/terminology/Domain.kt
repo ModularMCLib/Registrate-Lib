@@ -1,6 +1,6 @@
 package com.modularmc.registrate.localization.terminology
 
-/** A stable, extensible field used to associate terms and localization declarations. */
+/** 通过稳定标识关联术语和本地化声明。模组可以定义自己的领域。 */
 @JvmRecord
 data class Domain(val id: String) {
 	companion object {

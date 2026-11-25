@@ -1,6 +1,6 @@
 package com.modularmc.registrate.localization.annotation
 
-/** One entry of a variant group, appended to the group's key prefix. */
+/** 变体组中的一条声明。该变体的键后缀接到组的公共前缀后。 */
 @Retention(AnnotationRetention.BINARY)
 @Target()
 annotation class Variant(val id: String, val source: String, val translations: Array<Translation> = [])

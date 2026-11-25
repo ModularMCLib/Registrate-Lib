@@ -17,7 +17,7 @@ import org.objectweb.asm.Type
 import java.lang.annotation.ElementType
 import java.util.EnumMap
 
-/** Reads declarations from the owning mod file's NeoForge scan data during DataGen. */
+/** 数据生成时从所属模组文件的 NeoForge 扫描结果中读取本地化声明。 */
 internal object AnnotatedTranslations {
 	private val trans = Type.getType(Trans::class.java)
 	private val transVariants = Type.getType(TransVariants::class.java)

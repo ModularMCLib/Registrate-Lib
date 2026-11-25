@@ -11,13 +11,14 @@ import com.modularmc.registrate.localization.TranslationKey
 import com.modularmc.registrate.localization.TranslationSource.Kind
 import com.modularmc.registrate.localization.resolution.MinecraftTextFormat
 
-/** Defines how DataGen derives a missing target from text resolved for the input locale. */
+/** 定义目标语言缺少译文时的派生规则。数据生成流程以输入语言已解析的文本为基础。 */
 class LocaleDerivation private constructor(
 	val input: MinecraftLocale,
 	val output: MinecraftLocale,
 	internal val kind: Kind,
 	private val transform: (String, Collection<String>, TranslationKey, LocalizationDeclaration) -> String,
 ) {
+	/** 创建纯文本转换规则。转换器会逐段执行，格式控制、占位符和单位符号由本地化流程保留。 */
 	constructor(input: MinecraftLocale, output: MinecraftLocale, converter: LocaleConverter) : this(
 		input,
 		output,
@@ -35,7 +36,7 @@ class LocaleDerivation private constructor(
 		internal val BRITISH_ENGLISH = LocaleDerivation(EN_US, EN_GB) { text, _ -> BritishEnglish.convert(text) }
 		internal val TRADITIONAL_CHINESE = LocaleDerivation(ZH_CN, ZH_TW) { text, _ -> TraditionalChinese.convert(text) }
 
-		/** Copies the resolved input as a display fallback for a missing target. */
+		/** 为目标语言配置显示回退规则。缺少译文时直接使用输入语言已解析的文本。 */
 		@JvmStatic
 		fun fallback(input: MinecraftLocale, output: MinecraftLocale): LocaleDerivation = LocaleDerivation(input, output, Kind.FALLBACK) { text, _, _, _ -> text }
 	}
