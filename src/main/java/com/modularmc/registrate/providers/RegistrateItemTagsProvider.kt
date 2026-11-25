@@ -18,6 +18,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 
 import java.util.concurrent.CompletableFuture
 
+/** 为已注册物品生成标签，可从本轮生成的方块标签复制条目。 */
 open class RegistrateItemTagsProvider(
 	owner: AbstractRegistrate<*>,
 	type: ProviderType<RegistrateItemTagsProvider>,
@@ -31,10 +32,12 @@ open class RegistrateItemTagsProvider(
 }, fileHelper) {
 	private val tagsToCopy = Object2ObjectOpenHashMap<TagKey<Block>, TagKey<Item>>()
 
+	/** 将 [sourceTag] 的方块标签条目复制到 [targetTag]。再次配置相同来源时采用最后指定的目标。 */
 	open fun copy(sourceTag: TagKey<Block>, targetTag: TagKey<Item>) {
 		tagsToCopy[sourceTag] = targetTag
 	}
 
+	/** 在物品标签内容生成后合并要复制的方块标签。找不到指定来源时，生成任务异常结束。 */
 	override fun createContentsProvider(): CompletableFuture<HolderLookup.Provider> = super.createContentsProvider().thenCombineAsync(blockTags) { lookup, blockTagLookup ->
 		for ((source, target) in tagsToCopy) {
 			val destination = getOrCreateRawBuilder(target)

@@ -1,4 +1,4 @@
-// Preserve Java's public static bridges to inherited protected static methods.
+// 保留 Java 调用方访问父类受保护静态方法的公共转发方法。
 @file:Suppress("ACCIDENTAL_OVERRIDE")
 
 package com.modularmc.registrate.providers.loot
@@ -23,6 +23,7 @@ import net.minecraft.world.level.storage.loot.providers.number.NumberProvider
 import java.util.function.Consumer
 import javax.annotation.processing.Generated
 
+/** 生成所属模组的方块掉落表，使用当前数据生成轮次的注册表查询。 */
 open class RegistrateBlockLootTables(provider: HolderLookup.Provider, private val parent: AbstractRegistrate<*>, private val callback: Consumer<RegistrateBlockLootTables>) :
 	BlockLootSubProvider(mutableSetOf<Item>(), FeatureFlags.REGISTRY.allFlags(), provider),
 	RegistrateLootTables {
@@ -30,18 +31,24 @@ open class RegistrateBlockLootTables(provider: HolderLookup.Provider, private va
 	private val blockLookup = registries.lookupOrThrow(Registries.BLOCK)
 	private val entityLookup = registries.lookupOrThrow(Registries.ENTITY_TYPE)
 
+	/** 执行本轮方块掉落表的生成回调。 */
 	override fun generate() {
 		callback.accept(this)
 	}
 
+	/** 返回所属模组提交且已注册的方块，供原版掉落表收集流程遍历。 */
 	override fun getKnownBlocks(): Iterable<Block> = parent.getAll<Block, Block>(Registries.BLOCK).map { it.get() }
 
+	/** 返回方块掉落表生成时使用的注册表查询集合。 */
 	fun getRegistries(): HolderLookup.Provider = registries
 
+	/** 返回方块掉落表使用的物品注册表查询。 */
 	fun itemLookup(): HolderLookup<Item> = itemLookup
 
+	/** 返回方块掉落表使用的方块注册表查询。 */
 	fun blockLookup(): HolderLookup<Block> = blockLookup
 
+	/** 返回方块掉落表使用的实体类型注册表查询。 */
 	fun entityLookup(): HolderLookup<EntityType<*>> = entityLookup
 
 	// @formatter:off

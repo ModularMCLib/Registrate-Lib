@@ -1,10 +1,9 @@
 /**
- * Fluent concrete builder APIs for registering content.
+ * 提供物品、方块、实体等具体类型的链式注册入口。
  *
  * <p>
- * These classes form the primary downstream-facing DSL. Shared builder
- * contracts and scaffolding live in {@code com.modularmc.registrate.builders.base},
- * while this package focuses on content-specific registration behavior.
+ * 这些构建器负责各类条目的注册规则和默认配置。共用契约与基础逻辑位于 {@code com.modularmc.registrate.builders.base}。
+ * </p>
  */
 @org.jspecify.annotations.NullMarked
 package com.modularmc.registrate.builders;

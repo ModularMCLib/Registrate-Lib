@@ -1,5 +1,10 @@
 repositories {
     mavenLocal()
+    maven {
+        name = "fury"
+        url = uri("https://maven.fury.io/modularmclib/")
+        content { includeGroup("com.modularmc.mmclutils") }
+    }
     mavenCentral()
     // Resolve libraries hosted on Maven Central without querying mod repositories.
     exclusiveContent { // Force
@@ -8,7 +13,6 @@ repositories {
             includeGroup("it.unimi.dsi")
             includeGroup("org.lwjgl")
             includeGroup("com.google.guava")
-            includeGroup("com.google.devtools.ksp")
             includeGroupAndSubgroups("io.netty")
             includeGroupAndSubgroups("org.jetbrains")
         }

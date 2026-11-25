@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Registrate Localization Exchange",
+  "type": "object",
+  "required": ["formatVersion", "modId", "sourceLocale", "entries"],
+  "properties": {
+    "formatVersion": { "const": 1 },
+    "modId": { "type": "string" },
+    "sourceLocale": { "$ref": "#/$defs/locale" },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "locale": {
+      "type": "string",
+      "pattern": "^[a-z]{2}_[a-z]{2}$"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "entry": {
+      "type": "object",
+      "required": ["namespace", "key", "source", "context", "translations"],
+      "properties": {
+        "namespace": { "type": "string" },
+        "key": { "type": "string" },
+        "source": { "$ref": "#/$defs/sourceText" },
+        "context": { "$ref": "#/$defs/context" },
+        "translations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/translation" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "sourceText": {
+      "type": "object",
+      "required": ["locale", "text", "revision"],
+      "properties": {
+        "locale": { "$ref": "#/$defs/locale" },
+        "text": { "type": "string" },
+        "revision": { "$ref": "#/$defs/revision" }
+      },
+      "additionalProperties": false
+    },
+    "context": {
+      "type": "object",
+      "required": ["domains", "type", "glossaryIds", "unitIds", "placeholderSignature"],
+      "properties": {
+        "domains": { "type": "array", "items": { "type": "string" } },
+        "type": { "type": ["string", "null"] },
+        "glossaryIds": { "type": "array", "items": { "type": "string" } },
+        "unitIds": { "type": "array", "items": { "type": "string" } },
+        "placeholderSignature": {
+          "type": "object",
+          "propertyNames": { "pattern": "^(0|[1-9][0-9]*)$" },
+          "additionalProperties": { "type": "integer", "minimum": 1 }
+        }
+      },
+      "additionalProperties": false
+    },
+    "translation": {
+      "type": "object",
+      "required": ["locale", "text", "source", "sourceRevision", "status", "locked"],
+      "properties": {
+        "locale": { "$ref": "#/$defs/locale" },
+        "text": { "type": "string" },
+        "source": { "$ref": "#/$defs/translationSource" },
+        "sourceRevision": { "$ref": "#/$defs/revision" },
+        "status": {
+          "type": ["string", "null"],
+          "enum": ["stale", "draft", "in_review", "approved", null]
+        },
+        "locked": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "translationSource": {
+      "type": "object",
+      "required": ["kind", "location"],
+      "properties": {
+        "kind": {
+          "enum": ["fallback", "variant", "automatic", "glossary", "imported", "declared"]
+        },
+        "location": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

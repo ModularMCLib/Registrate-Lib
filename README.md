@@ -55,9 +55,9 @@ This repository is the `com.modularmc.registrate` fork maintained for the Modula
 - `com.modularmc.registrate.internal.event` — 用于构建器和注册生命周期钩子的一次性事件连接 / one-shot event wiring used by builders and registration lifecycle hooks
 - `com.modularmc.registrate.internal.lifecycle` — 实例级生命周期桥接 / per-instance lifecycle bridges
 - `com.modularmc.registrate.internal.util` — 分发限制执行与内部日志辅助 / dist-gated execution and internal logging helpers
-- `com.modularmc.registrate.test.mod` — 集成测试示例模组 / the integration-style sample mod
-- `com.modularmc.registrate.test.gametests` — 可执行的运行时验证场景 / executable validation scenarios for runtime behavior
-- `com.modularmc.registrate.test.meta` — 维护工具，使生成的桥接方法与上游 API 保持一致 / maintenance utilities that keep generated bridge methods aligned with upstream APIs
+- `com.modularmc.registratetest.mod` — 集成测试示例模组 / the integration-style sample mod
+- `com.modularmc.registratetest.gametests` — 可执行的运行时验证场景 / executable validation scenarios for runtime behavior
+- `com.modularmc.registratetest.meta` — 维护工具，使生成的桥接方法与上游 API 保持一致 / maintenance utilities that keep generated bridge methods aligned with upstream APIs
 
 ---
 

@@ -2,7 +2,7 @@ package com.modularmc.registrate.localization.annotation
 
 import com.modularmc.registrate.localization.MinecraftLocale
 
-/** Explicit target text supplied by an annotated declaration. */
+/** 为注解声明提供指定语言的译文。 */
 @Retention(AnnotationRetention.BINARY)
 @Target()
 annotation class Translation(val locale: MinecraftLocale, val text: String)

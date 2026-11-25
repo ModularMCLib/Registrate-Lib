@@ -28,11 +28,13 @@ import java.util.concurrent.CompletableFuture
 import java.util.function.BiConsumer
 import java.util.function.Consumer
 
+/** 为所属模组组织各类掉落表的生成任务，并在收集后运行原版及自定义校验。 */
 open class RegistrateLootTableProvider(private val parent: AbstractRegistrate<*>, output: PackOutput, private val lookup: CompletableFuture<HolderLookup.Provider>) :
 	LootTableProvider(output, emptySet(), emptyList(), lookup),
 	RegistrateProvider {
-	/** Defines the context and factory for a family of loot tables. */
+	/** 定义一类掉落表所使用的上下文参数和生成器工厂。 */
 	interface LootType<T : RegistrateLootTables> {
+		/** 从本轮查询和所属模组创建掉落表生成器，在生成阶段调用 [callback] 收集该类掉落表。 */
 		fun getLootCreator(provider: HolderLookup.Provider, parent: AbstractRegistrate<*>, callback: Consumer<T>): T
 
 		fun getLootSet(): LootContextParamSet
@@ -44,6 +46,7 @@ open class RegistrateLootTableProvider(private val parent: AbstractRegistrate<*>
 			@JvmField
 			val ENTITY = register("entity", LootContextParamSets.ENTITY, ::RegistrateEntityLootTables)
 
+			/** 登记一类掉落表的参数集合与生成器工厂。同名登记会替换该类的定义。 */
 			@JvmStatic
 			fun <T : RegistrateLootTables> register(name: String, set: LootContextParamSet, factory: TriFunction<HolderLookup.Provider, AbstractRegistrate<*>, Consumer<T>, T>): LootType<T> {
 				val type = object : LootType<T> {
@@ -61,10 +64,13 @@ open class RegistrateLootTableProvider(private val parent: AbstractRegistrate<*>
 	private val lootActions = HashMultimap.create<LootContextParamSet, Consumer<BiConsumer<ResourceKey<LootTable>, LootTable.Builder>>>()
 	private val currentLootCreators = ObjectOpenHashSet<RegistrateLootTables>()
 
+	/** 返回本轮已就绪的注册表查询。查询尚未完成时抛出 [IllegalStateException]。 */
 	open fun getProvider(): HolderLookup.Provider = checkNotNull(lookup.getNow(null)) { "Loot table registry lookup is not ready" }
 
+	/** 按条目的注册键查询引用。缺少注册表或条目时抛出异常。 */
 	open fun <T : Any> resolve(key: ResourceKey<T>): Holder<T> = getProvider().lookupOrThrow(key.registryKey()).getOrThrow(key)
 
+	/** 掉落表作为服务端数据生成。 */
 	override fun getSide(): LogicalSide = LogicalSide.SERVER
 
 	override fun validate(tables: WritableRegistry<LootTable>, validationContext: ValidationContext, problems: ProblemReporter.Collector) {
@@ -72,6 +78,7 @@ open class RegistrateLootTableProvider(private val parent: AbstractRegistrate<*>
 		for (creator in currentLootCreators) creator.validate(tables, validationContext)
 	}
 
+	/** 为指定掉落表类型追加生成回调。回调接收该类型的生成器。 */
 	@Suppress("UNCHECKED_CAST")
 	open fun <T : RegistrateLootTables> addLootAction(type: LootType<T>, action: NonNullConsumer<T>) {
 		specialLootActions.put(type, action as Consumer<RegistrateLootTables>)
@@ -89,6 +96,7 @@ open class RegistrateLootTableProvider(private val parent: AbstractRegistrate<*>
 		return creator
 	}
 
+	/** 收集所属模组的掉落表配置，并返回按类型和上下文创建的子生成任务。 */
 	override fun getTables(): List<SubProviderEntry> {
 		parent.genData(ProviderType.LOOT, this)
 		currentLootCreators.clear()

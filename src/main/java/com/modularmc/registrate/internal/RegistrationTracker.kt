@@ -22,6 +22,7 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 import java.util.Optional
 import java.util.function.BiConsumer
 
+/** 在同一模组内按注册表暂存条目，管理绑定阶段、条目元数据和注册回调。 */
 class RegistrationTracker(private val modId: String) {
 	private enum class Stage(val description: String) {
 		CREATION("creation"),
@@ -70,6 +71,12 @@ class RegistrationTracker(private val modId: String) {
 	private val afterRegisterCallbacks = HashMultimap.create<ResourceKey<out Registry<*>>, Runnable>()
 	private val completedRegistrations = ObjectOpenHashSet<ResourceKey<out Registry<*>>>()
 
+	/**
+	 * 在普通优先级处理当前注册表，按提交顺序创建、写入并绑定条目。
+	 * @param event 当前注册表的注册事件
+	 * @param skipErrors 条目注册失败时是否记录异常后继续处理下一项
+	 * @param devEnvironment 开发环境下发现未使用的条目回调时立即抛出异常
+	 */
 	fun onRegister(event: RegisterEvent, skipErrors: Boolean, devEnvironment: Boolean) {
 		val registry = event.registryKey
 		if (!pendingEntryCallbacks.isEmpty) {
@@ -99,12 +106,23 @@ class RegistrationTracker(private val modId: String) {
 		}
 	}
 
+	/** 在最低优先级标记注册表完成，并执行等待此注册表的回调。 */
 	fun onRegisterLate(event: RegisterEvent) {
 		val registry = event.registryKey
 		completedRegistrations.add(registry)
 		for (callback in afterRegisterCallbacks.removeAll(registry)) callback.run()
 	}
 
+	/**
+	 * 暂存同名条目的对象工厂、引用和元数据。返回的引用要等注册事件触发后才绑定。
+	 * @param name 当前模组命名空间下的条目名称
+	 * @param registry 目标注册表
+	 * @param creator 写入注册表时调用的对象工厂
+	 * @param entryFactory 用延迟引用构造条目包装对象的工厂
+	 * @param metadata 随条目保存的数据生成回调和本地化声明
+	 * @return 尚未绑定的条目引用
+	 * @throws IllegalArgumentException 同一注册表已存在同名条目
+	 */
 	fun <R : Any, T : R> track(
 		name: String,
 		registry: ResourceKey<out Registry<R>>,
@@ -127,8 +145,10 @@ class RegistrationTracker(private val modId: String) {
 		return registration.delegate
 	}
 
+	/** 查询指定注册键的元数据，未提交该条目时抛出 [IllegalArgumentException]。 */
 	fun getMetadata(key: ResourceKey<*>): EntryMetadata = registration(key.location().path, key.registryKey()).metadata
 
+	/** 在调用线程上逐一处理已声明本地化的条目，向回调传入条目引用和声明。 */
 	fun forEachLocalization(action: BiConsumer<RegistryEntry<*, *>, EntryLocalization>) {
 		for (row in registrations.values) {
 			for (registration in row.values) {
@@ -138,6 +158,7 @@ class RegistrationTracker(private val modId: String) {
 		}
 	}
 
+	/** 添加在条目注册时执行的回调。条目尚未提交时先按注册表和名称暂存。 */
 	fun <R : Any, T : R> addRegisterCallback(name: String, registry: ResourceKey<out Registry<R>>, callback: NonNullConsumer<in T>) {
 		val entry = findRegistration<R, T>(name, registry)
 		if (entry == null) {
@@ -147,17 +168,22 @@ class RegistrationTracker(private val modId: String) {
 		}
 	}
 
+	/** 暂存注册表完成后运行的回调。应在该注册表的注册完成事件之前调用。 */
 	fun <R : Any> addAfterRegisterCallback(registry: ResourceKey<out Registry<R>>, callback: Runnable) {
 		afterRegisterCallbacks.put(registry, callback)
 	}
 
+	/** 判断指定注册表是否已进入注册完成阶段。 */
 	fun <R : Any> isRegistered(registry: ResourceKey<out Registry<R>>): Boolean = registry in completedRegistrations
 
+	/** 按注册表和名称查找已提交条目的引用。缺少该条目时抛出 [IllegalArgumentException]。 */
 	@Suppress("UNCHECKED_CAST")
 	fun <R : Any, T : R> get(name: String, registry: ResourceKey<out Registry<R>>): RegistryEntry<R, T> = registration(name, registry).delegate as RegistryEntry<R, T>
 
+	/** 按注册表和名称查找条目引用，没有对应条目时返回空值。 */
 	fun <R : Any, T : R> getOptional(name: String, registry: ResourceKey<out Registry<R>>): Optional<RegistryEntry<R, T>> = Optional.ofNullable(findRegistration<R, T>(name, registry)?.delegate)
 
+	/** 收集当前模组提交到指定注册表的引用，保留提交顺序。 */
 	@Suppress("UNCHECKED_CAST")
 	fun <R : Any, T : R> getAll(registry: ResourceKey<out Registry<R>>): Collection<RegistryEntry<R, T>> = registrations[registry]?.values?.map { it.delegate as RegistryEntry<R, T> } ?: emptyList()
 

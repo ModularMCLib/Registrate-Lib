@@ -2,7 +2,7 @@ package com.modularmc.registrate.util.nullness
 
 import javax.annotation.Nonnull
 
-/** Non-null type-use annotation retained for Java consumers. */
+/** 供 Java 调用方识别非空类型的类型使用注解。 */
 @MustBeDocumented
 @Nonnull
 @Retention(AnnotationRetention.RUNTIME)

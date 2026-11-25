@@ -4,11 +4,12 @@ import com.modularmc.registrate.internal.util.RegistrateLogger
 
 import net.neoforged.fml.ModList
 
+/** 一个模组的默认注册入口。在初始化阶段通过 [create] 创建并绑定到模组事件总线。 */
 open class Registrate protected constructor(modid: String) : AbstractRegistrate<Registrate>(modid) {
 	companion object {
 		private val LOGGER = RegistrateLogger.core()
 
-		/** Creates a Registrate and attaches its listeners to the owning mod's event bus. */
+		/** 创建一个 Registrate 实例，并将监听器绑定到所属模组的事件总线。 */
 		@JvmStatic
 		fun create(modid: String): Registrate {
 			val registrate = Registrate(modid)
