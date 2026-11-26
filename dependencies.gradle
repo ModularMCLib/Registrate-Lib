@@ -2,12 +2,6 @@ dependencies {
     compileOnly(libs.jetbrains.annotations)
     compileOnly(libs.jspecify)
 
-    jarJar(api(libs.kotlin.stdlib.get())) {
-        exclude group: 'org.jetbrains', module: 'annotations'
-    }
-    additionalRuntimeClasspath(libs.kotlin.stdlib.get()) {
-        exclude group: 'org.jetbrains', module: 'annotations'
-    }
     api(forge.mmclutils)
 
     renderNurseCfg(libs.renderNurse)
