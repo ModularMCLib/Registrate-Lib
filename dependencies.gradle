@@ -8,9 +8,7 @@ dependencies {
     additionalRuntimeClasspath(libs.kotlin.stdlib.get()) {
         exclude group: 'org.jetbrains', module: 'annotations'
     }
-    compileOnly(forge.mmclutils)
-
-    localRuntime(forge.mmclutils)
+    api(forge.mmclutils)
 
     renderNurseCfg(libs.renderNurse)
 
