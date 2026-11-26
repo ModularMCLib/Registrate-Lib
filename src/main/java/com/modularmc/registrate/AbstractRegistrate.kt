@@ -172,7 +172,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	private val datagensByEntry = HashBasedTable.create<Pair<String, ResourceKey<out Registry<*>>>, GeneratorType<*>, EntryMetadata.DataGenerator<*>>()
 	private val datagens = ArrayListMultimap.create<GeneratorType<*>, NonNullConsumer<*>>()
 	private val creativeModeTabModifiers = ArrayListMultimap.create<ResourceKey<CreativeModeTab>, Consumer<CreativeModeTabModifier>>()
-	private var defaultCreativeModeTab: ResourceKey<CreativeModeTab> = CreativeModeTabs.SEARCH
+	private var defaultCreativeModeTab: ResourceKey<CreativeModeTab>? = CreativeModeTabs.SEARCH
 
 	private val dataGeneration = NonNullSupplier.lazy(DatagenModLoader::isRunningDataGen)
 
@@ -693,12 +693,12 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	}
 
 	/**
-	 * 为之后创建的物品构建器指定默认创造模式标签页。已有标签页时传入其注册键，通过 Registrate 创建新标签页时使用对应重载。
+	 * 为之后创建的物品构建器指定默认创造模式标签页。传入 `null` 时只使用构建器显式指定的标签页。
 	 *
-	 * @param creativeModeTab 默认创造模式标签页的注册键
+	 * @param creativeModeTab 默认创造模式标签页的注册键，或用于关闭默认分栏的 `null`
 	 * @return 当前实例
 	 */
-	open fun defaultCreativeTab(creativeModeTab: ResourceKey<CreativeModeTab>): S {
+	open fun defaultCreativeTab(creativeModeTab: ResourceKey<CreativeModeTab>?): S {
 		defaultCreativeModeTab = creativeModeTab
 		return self()
 	}
@@ -949,8 +949,9 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	open fun <T : Item, P : Any> item(parent: P, name: String, factory: NonNullFunction<Item.Properties, T>): ItemBuilder<T, P> = entry<Item, T, P, ItemBuilder<T, P>>(
 		name,
 	) { callback: BuilderCallback ->
-		ItemBuilder.create(this, parent, name, callback, factory)
-			.tab(defaultCreativeModeTab)
+		ItemBuilder.create(this, parent, name, callback, factory).also { builder ->
+			defaultCreativeModeTab?.let { builder.tab(it) }
+		}
 	}
 
 	// 方块
@@ -1388,10 +1389,11 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 	 * @return 可追加注册回调的标签页构建器
 	 */
 	open fun <P : Any> defaultCreativeTab(parent: P, name: String, config: Consumer<CreativeModeTab.Builder>): NoConfigBuilder<CreativeModeTab, CreativeModeTab, P> {
-		this.defaultCreativeModeTab = ResourceKey.create(
+		val tabKey = ResourceKey.create(
 			Registries.CREATIVE_MODE_TAB,
 			ResourceLocation.fromNamespaceAndPath(this.modid, name),
 		)
+		this.defaultCreativeModeTab = tabKey
 		return this.generic(
 			parent,
 			name,
@@ -1403,7 +1405,7 @@ abstract class AbstractRegistrate<S : AbstractRegistrate<S>> protected construct
 				}
 				.title(
 					addRawLang(
-						Util.makeDescriptionId("itemGroup", this.defaultCreativeModeTab.location()),
+						Util.makeDescriptionId("itemGroup", tabKey.location()),
 						toEnglishName(name),
 						TranslationSource.Kind.AUTOMATIC,
 					),
