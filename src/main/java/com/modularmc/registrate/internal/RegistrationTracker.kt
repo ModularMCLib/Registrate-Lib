@@ -72,7 +72,7 @@ class RegistrationTracker(private val modId: String) {
 	private val completedRegistrations = ObjectOpenHashSet<ResourceKey<out Registry<*>>>()
 
 	/**
-	 * 在普通优先级处理当前注册表，按提交顺序创建、写入并绑定条目。
+	 * 处理当前注册表，按提交顺序创建、写入并绑定条目。
 	 * @param event 当前注册表的注册事件
 	 * @param skipErrors 条目注册失败时是否记录异常后继续处理下一项
 	 * @param devEnvironment 开发环境下发现未使用的条目回调时立即抛出异常

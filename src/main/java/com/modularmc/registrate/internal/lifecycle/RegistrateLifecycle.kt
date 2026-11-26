@@ -25,7 +25,7 @@ class RegistrateLifecycle(private val owner: AbstractRegistrate<*>, private val 
 		/** 返回当前启动是否正在运行数据生成，用于决定是否订阅收集数据事件。 */
 		fun doDatagen(): Boolean
 
-		/** 在普通优先级接收注册事件，处理当前注册表的条目。 */
+		/** 在 LOW 优先级接收注册事件，处理当前注册表的条目。 */
 		fun onRegister(event: RegisterEvent)
 
 		/** 在最低优先级接收注册事件，执行等待当前注册表写入结束的操作。 */
@@ -46,7 +46,7 @@ class RegistrateLifecycle(private val owner: AbstractRegistrate<*>, private val 
 
 		val onRegister = Consumer(hooks::onRegister)
 		val onRegisterLate = Consumer(hooks::onRegisterLate)
-		bus.addListener(EventPriority.NORMAL, RegisterEvent::class.java, onRegister)
+		bus.addListener(EventPriority.LOW, RegisterEvent::class.java, onRegister)
 		bus.addListener(EventPriority.LOWEST, RegisterEvent::class.java, onRegisterLate)
 		bus.addListener(BuildCreativeModeTabContentsEvent::class.java, hooks::onBuildCreativeModeTabContents)
 
