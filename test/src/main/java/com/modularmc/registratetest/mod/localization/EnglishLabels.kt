@@ -17,6 +17,9 @@ import com.modularmc.registratetest.mod.TestMod
 	],
 )
 object EnglishLabels {
+	@field:Trans(source = "Standby", translations = [Translation(MinecraftLocale.ZH_CN, "待机")])
+	private const val standby = "gui.testmod.power.standby"
+
 	@field:Trans(
 		modId = TestMod.MOD_ID,
 		key = "gui.testmod.kotlin_default_label",
@@ -31,4 +34,15 @@ object EnglishLabels {
 		translations = [Translation(MinecraftLocale.ZH_CN, "测试容器")],
 	)
 	const val MENU_TITLE = "gui.testmod.container"
+}
+
+private object StandaloneLabels {
+	@field:Trans(modId = TestMod.MOD_ID, source = "Enable")
+	private const val ENABLE = "gui.testmod.enable"
+
+	@field:Trans(modId = TestMod.MOD_ID, valuePrefix = "gui.testmod.tier.", source = "Voltage tier: %s")
+	private const val VOLTAGE_TIER = "voltage"
+
+	@field:Trans(modId = TestMod.MOD_ID, namePrefix = "gui.testmod", source = "Advanced")
+	private val advanced = false
 }

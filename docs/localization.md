@@ -89,7 +89,27 @@ DataGen 用模组当前选中的源文本核对修订。源文本变化会将译
 
 添加 RegistrateLib 模组依赖即可在 Java 和 Kotlin 源码中使用本地化注解。DataGen 从 NeoForge 的扫描结果读取所属模组文件中的声明。升级时移除 RegistrateLib 的 `annotationProcessor` 和 `ksp` 依赖。旧构建目录里有索引文件时，清理一次再构建。
 
-`@Trans` 和 `@TransVariants` 可以声明在类型或字段上。文件只包含一个 Mod 时可以省略 `modId`，DataGen 使用该 Mod 的源 Locale。文件包含多个 Mod 时，每条声明都必须填写 `modId`。省略 `namespace` 时，资源命名空间取所属 Mod 的 ID。
+`@Trans` 和 `@TransVariants` 可以声明在类型或字段上。DataGen 使用所属 Mod 的源 Locale。文件包含多个 Mod 时需要指定 `modId`。使用类级前缀的字段可以继承类上的 `modId` 和 `namespace`，也可以单独指定。省略 `namespace` 时，资源命名空间取所属 Mod 的 ID。
+
+在类上声明一次前缀，字段只需填写源文本和可选译文。默认按 JVM 字段名拼接，如 `gui.mymod.power.standby`。设置 `useFieldValues = true` 后，同组字段改用字符串常量值作后缀，如 `gui.mymod.tier.lv`。
+
+```java
+@TransVariants(keyPrefix = "gui.mymod.power")
+final class PowerLabels {
+    @Trans(source = "Standby")
+    static final String standby = "gui.mymod.power.standby";
+}
+
+@TransVariants(keyPrefix = "gui.mymod.tier", useFieldValues = true)
+final class TierLabels {
+    @Trans(source = "Low voltage")
+    static final String LOW_VOLTAGE = "lv";
+}
+```
+
+字段的取键顺序为显式 `key`、`namePrefix` 加字段名、`valuePrefix` 加字段值、声明该字段的类上的前缀、字段值本身。`@Trans(valuePrefix = "gui.mymod.tier", source = "Low voltage")` 可以单独用于值为 `"lv"` 的字段。按值取键要求 Java 编译期 `static final String` 常量或 Kotlin `const val`。类型上的 `@Trans` 需要显式 `key`。
+
+也可以在 `@TransVariants` 的 `value` 数组中直接列出变体。
 
 ```java
 @TransVariants(keyPrefix = "gui.mymod.power", value = {
