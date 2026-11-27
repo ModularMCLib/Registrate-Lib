@@ -49,34 +49,39 @@ internal object AnnotatedTranslations {
 		}
 
 		val annotations = modFile.file.scanResult.annotations
-		val classGroups = annotations.asSequence()
-			.filter { it.annotationType() == transVariants && it.targetType() == ElementType.TYPE }
-			.associate { it.clazz() to it.annotationData() }
+		val classDeclarations = annotations.asSequence()
+			.filter { it.targetType() == ElementType.TYPE && (it.annotationType() == trans || it.annotationType() == transVariants) }
+			.groupBy { it.clazz() }
 		val fieldConstants = HashMap<Type, Map<String, String>>()
 		for (annotation in annotations) {
 			val type = annotation.annotationType()
 			if (type != trans && type != transVariants) continue
 			val values = annotation.annotationData()
-			val explicitKey = values["key"] as String?
-			val namePrefix = (values["namePrefix"] as String?).orEmpty()
-			val valuePrefix = (values["valuePrefix"] as String?).orEmpty()
-			val useClassGroup = type == trans && annotation.targetType() == ElementType.FIELD &&
-				explicitKey == null && namePrefix.isEmpty() && valuePrefix.isEmpty()
-			val group = if (useClassGroup) classGroups[annotation.clazz()] else null
-			val declaredModId = (values["modId"] as String?).orEmpty().ifEmpty { (group?.get("modId") as String?).orEmpty() }
+			val field = annotation.targetType() == ElementType.FIELD
+			val classAnnotations = if (field) classDeclarations[annotation.clazz()].orEmpty() else emptyList()
+			val declaredModId = (values["modId"] as String?).orEmpty().ifEmpty {
+				val classModIds = classAnnotations.mapNotNull { (it.annotationData()["modId"] as String?)?.takeIf(String::isNotEmpty) }.distinct()
+				check(classModIds.size <= 1) { "${annotation.location()} must declare modId because its class declares different modIds: $classModIds" }
+				classModIds.firstOrNull().orEmpty()
+			}
 			if (declaredModId.isEmpty()) {
 				check(singleModFile) { "${annotation.location()} must declare modId because its file contains multiple mods" }
 			} else if (declaredModId != modId) {
 				continue
 			}
 
+			val explicitKey = values["key"] as String?
+			val namePrefix = (values["namePrefix"] as String?).orEmpty()
+			val valuePrefix = (values["valuePrefix"] as String?).orEmpty()
+			val useClassGroup = type == trans && field && explicitKey == null && namePrefix.isEmpty() && valuePrefix.isEmpty()
+			val group = if (useClassGroup) classAnnotations.firstOrNull { it.annotationType() == transVariants }?.annotationData() else null
 			val namespace = (values["namespace"] as String?).orEmpty()
 				.ifEmpty { (group?.get("namespace") as String?).orEmpty() }
 				.ifEmpty { modId }
 			val location = annotation.location()
 			if (type == trans) {
 				val key = explicitKey ?: run {
-					check(annotation.targetType() == ElementType.FIELD) { "@Trans $location must declare key" }
+					check(field) { "@Trans $location must declare key" }
 					val memberName = annotation.memberName()
 					val groupPrefix = group?.get("keyPrefix") as String?
 					when {

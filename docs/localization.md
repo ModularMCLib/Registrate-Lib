@@ -89,7 +89,9 @@ DataGen 用模组当前选中的源文本核对修订。源文本变化会将译
 
 添加 RegistrateLib 模组依赖即可在 Java 和 Kotlin 源码中使用本地化注解。DataGen 从 NeoForge 的扫描结果读取所属模组文件中的声明。升级时移除 RegistrateLib 的 `annotationProcessor` 和 `ksp` 依赖。旧构建目录里有索引文件时，清理一次再构建。
 
-`@Trans` 和 `@TransVariants` 可以声明在类型或字段上。DataGen 使用所属 Mod 的源 Locale。文件包含多个 Mod 时需要指定 `modId`。使用类级前缀的字段可以继承类上的 `modId` 和 `namespace`，也可以单独指定。省略 `namespace` 时，资源命名空间取所属 Mod 的 ID。
+`@Trans` 和 `@TransVariants` 可以声明在类型或字段上。字段的 `modId` 优先使用显式值，省略时继承声明类上 `@Trans` 或 `@TransVariants` 的 `modId`，与取键方式无关。类上的两个本地化注解指定不同的 `modId` 时，字段需要显式指定。没有可继承的值时，单 Mod 文件默认归属于该 Mod，多 Mod 文件需要显式指定。DataGen 使用最终所属 Mod 的源 Locale。
+
+使用类级前缀的字段也可以继承类上的 `namespace`，字段可以单独指定。省略 `namespace` 且没有继承值时，资源命名空间取所属 Mod 的 ID。
 
 在类上声明一次前缀，字段只需填写源文本和可选译文。默认按 JVM 字段名拼接，如 `gui.mymod.power.standby`。设置 `useFieldValues = true` 后，同组字段改用字符串常量值作后缀，如 `gui.mymod.tier.lv`。
 
