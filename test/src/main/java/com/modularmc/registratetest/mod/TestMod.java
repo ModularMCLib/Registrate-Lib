@@ -7,11 +7,13 @@ import com.modularmc.registrate.localization.MinecraftLocale;
 import com.modularmc.registrate.localization.TextType;
 import com.modularmc.registrate.localization.TranslationKey;
 import com.modularmc.registrate.localization.annotation.Trans;
+import com.modularmc.registrate.localization.annotation.TransVariants;
 import com.modularmc.registrate.localization.terminology.Domain;
 import com.modularmc.registrate.localization.terminology.Terminology.GlossaryTerm;
 import com.modularmc.registrate.localization.terminology.Terminology.MeasurementUnit;
 import com.modularmc.registrate.providers.core.ProviderType;
 import com.modularmc.registrate.providers.generators.RegistrateRecipeProvider;
+import com.modularmc.registratetest.mod.localization.ChineseLocaleTestMod;
 import com.modularmc.registratetest.mod.localization.ComponentTemplateExample;
 import com.modularmc.registratetest.mod.localization.EnglishLabels;
 import com.modularmc.registrate.util.DataIngredient;
@@ -113,6 +115,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /** 注册示例方块、物品、流体等内容，并为数据生成和游戏测试提供集成用例。 */
 @Mod(TestMod.MOD_ID)
+@TransVariants(modId = TestMod.MOD_ID, namespace = ChineseLocaleTestMod.MOD_ID, keyPrefix = "gui.testmod.tier", useFieldValues = true)
 public class TestMod {
 
     public static final String MOD_ID = "testmod";
@@ -122,6 +125,9 @@ public class TestMod {
 
     @Trans(modId = MOD_ID, key = "gui.testmod.java_default_label", source = "Electric potential")
     public static final String JAVA_DEFAULT_LABEL = "gui.testmod.java_default_label";
+
+    @Trans(source = "Storage tier: %s")
+    private static final String STORAGE_TIER = "storage";
 
     private static final GlossaryTerm POTENTIAL = new GlossaryTerm("electric_potential", "electric potential", List.of(Domain.PHYSICS), Map.of(MinecraftLocale.ZH_CN, "电势"));
     private static final DeclarationDefaults TECHNOLOGY = new DeclarationDefaults(List.of(Domain.ENGINEERING, Domain.PHYSICS), TextType.ITEM, List.of(POTENTIAL));

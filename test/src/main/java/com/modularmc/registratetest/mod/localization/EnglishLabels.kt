@@ -17,18 +17,41 @@ import com.modularmc.registratetest.mod.TestMod
 	],
 )
 object EnglishLabels {
+	@field:Trans(source = "Standby", translations = [Translation(MinecraftLocale.ZH_CN, "待机")])
+	private const val standby = "gui.testmod.power.standby"
+
 	@field:Trans(
-		modId = TestMod.MOD_ID,
 		key = "gui.testmod.kotlin_default_label",
 		source = "Electric potential",
 	)
 	const val DEFAULT_LABEL = "gui.testmod.kotlin_default_label"
 
 	@field:Trans(
-		modId = TestMod.MOD_ID,
 		key = "gui.testmod.container",
 		source = "Test Container",
 		translations = [Translation(MinecraftLocale.ZH_CN, "测试容器")],
 	)
 	const val MENU_TITLE = "gui.testmod.container"
+
+	@field:Trans(
+		modId = ChineseLocaleTestMod.MOD_ID,
+		source = "停机",
+		translations = [Translation(MinecraftLocale.EN_US, "Shutdown")],
+	)
+	private const val shutdown = "gui.testmod.power.shutdown"
+}
+
+@Trans(modId = TestMod.MOD_ID, key = "gui.testmod.controls", source = "Controls")
+private object StandaloneLabels {
+	@field:Trans(source = "Enable")
+	private const val ENABLE = "gui.testmod.enable"
+
+	@field:Trans(valuePrefix = "gui.testmod.tier.", source = "Voltage tier: %s")
+	private const val VOLTAGE_TIER = "voltage"
+
+	@field:Trans(namePrefix = "gui.testmod", source = "Advanced")
+	private val advanced = false
+
+	@field:TransVariants(keyPrefix = "gui.testmod.controls", value = [Variant(id = "disabled", source = "Disabled")])
+	private val disabled = false
 }
