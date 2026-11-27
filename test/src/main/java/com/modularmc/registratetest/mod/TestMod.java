@@ -22,6 +22,7 @@ import net.minecraft.advancements.AdvancementType;
 import net.minecraft.advancements.critereon.InventoryChangeTrigger;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.entity.ItemRenderer;
@@ -233,6 +234,8 @@ public class TestMod {
     @VisibleForTesting
     public final BlockEntry<TestBlock> testblock = registrate.object("testblock")
             .block(TestBlock::new)
+            .addLayer(() -> RenderType::cutoutMipped)
+            .addLayer(() -> RenderType::translucent)
             .properties(BlockBehaviour.Properties::noOcclusion)
             .blockstate(() -> (ctx, prov) -> prov.create(ctx.getEntry(), prov.mcLoc("block/glass")))
             .transform(TestMod::applyDiamondDrop)
@@ -290,6 +293,8 @@ public class TestMod {
                     ResourceLocation.withDefaultNamespace("block/water_flow"),
                     ResourceLocation.withDefaultNamespace("block/lava_still"),
                     FluidType::new)
+            .renderType(() -> RenderType::cutoutMipped)
+            .renderType(() -> RenderType::translucent)
             .properties(p -> p.lightLevel(15).canConvertToSource(true))
             .noBucket()
             .register();

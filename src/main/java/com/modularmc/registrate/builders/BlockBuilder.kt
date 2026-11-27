@@ -18,6 +18,8 @@ import com.modularmc.registrate.util.entry.BlockEntry
 import com.modularmc.registrate.util.nullness.*
 
 import net.minecraft.client.color.block.BlockColor
+import net.minecraft.client.renderer.ItemBlockRenderTypes
+import net.minecraft.client.renderer.RenderType
 import net.minecraft.core.registries.Registries
 import net.minecraft.tags.TagKey
 import net.minecraft.world.item.BlockItem
@@ -27,6 +29,8 @@ import net.minecraft.world.level.block.entity.BlockEntity
 import net.minecraft.world.level.block.state.BlockBehaviour
 import net.minecraft.world.level.storage.loot.BuiltInLootTables
 import net.neoforged.api.distmarker.Dist
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent
+import net.neoforged.neoforge.client.ChunkRenderTypeSet
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent
 import net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent
@@ -54,6 +58,7 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 		NonNullUnaryOperator.identity<BlockBehaviour.Properties>()
 
 	private var colorHandler: NonNullSupplier<Supplier<BlockColor>>? = null
+	private var renderLayers: MutableList<Supplier<Supplier<RenderType>>>? = null
 
 	/**
 	 * 登记方块属性变换，构建方块时按登记顺序应用。变换返回另一份属性对象时，后续变换从新对象开始。
@@ -75,6 +80,45 @@ open class BlockBuilder<T : Block, P : Any> protected constructor(
 	open fun initialProperties(block: NonNullSupplier<out Block>): BlockBuilder<T, P> {
 		initialProperties = NonNullSupplier { BlockBehaviour.Properties.ofFullCopy(block.get()) }
 		return this
+	}
+
+	/**
+	 * 追加方块的区块渲染层。客户端设置阶段会把所有已声明的层一起登记。
+	 *
+	 * @param layer 双层供应器，仅在客户端求值
+	 * @return 当前构建器
+	 * @throws IllegalArgumentException 客户端提供的类型不是区块渲染层
+	 */
+	@Deprecated("Set the render type in the block model or override BakedModel.getRenderTypes.")
+	open fun addLayer(layer: Supplier<Supplier<RenderType>>): BlockBuilder<T, P> {
+		unsafeRunWhenOn(Dist.CLIENT) {
+			Runnable {
+				require(layer.get().get() in RenderType.chunkBufferLayers()) { "Invalid block render layer for ${owner.modid}:$name" }
+			}
+		}
+		val layers = renderLayers
+		if (layers == null) {
+			renderLayers = arrayListOf(layer)
+			onRegister(::registerLayers)
+		} else {
+			layers.add(layer)
+		}
+		return this
+	}
+
+	/** 方块注册完成后，为客户端设置阶段安排渲染层登记。 */
+	@Suppress("DEPRECATION")
+	protected open fun registerLayers(block: T) {
+		unsafeRunWhenOn(Dist.CLIENT) {
+			Runnable {
+				addModListener(owner, FMLClientSetupEvent::class.java) { event ->
+					event.enqueueWork {
+						val layers = checkNotNull(renderLayers).map { it.get().get() }
+						ItemBlockRenderTypes.setRenderLayer(block, ChunkRenderTypeSet.of(layers))
+					}
+				}
+			}
+		}
 	}
 
 	/**
