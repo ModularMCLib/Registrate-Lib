@@ -6,6 +6,7 @@ import com.modularmc.registrate.localization.MinecraftLocale.EN_GB
 import com.modularmc.registrate.localization.MinecraftLocale.EN_UD
 import com.modularmc.registrate.localization.MinecraftLocale.EN_US
 import com.modularmc.registrate.localization.MinecraftLocale.ZH_CN
+import com.modularmc.registrate.localization.MinecraftLocale.ZH_HK
 import com.modularmc.registrate.localization.MinecraftLocale.ZH_TW
 import com.modularmc.registrate.localization.TranslationKey
 import com.modularmc.registrate.localization.TranslationSource.Kind
@@ -34,7 +35,8 @@ class LocaleDerivation private constructor(
 	companion object {
 		internal val UPSIDE_DOWN = LocaleDerivation(EN_US, EN_UD, Kind.VARIANT) { text, symbols, _, _ -> MinecraftTextFormat.upsideDown(text, symbols) }
 		internal val BRITISH_ENGLISH = LocaleDerivation(EN_US, EN_GB) { text, _ -> BritishEnglish.convert(text) }
-		internal val TRADITIONAL_CHINESE = LocaleDerivation(ZH_CN, ZH_TW) { text, _ -> TraditionalChinese.convert(text) }
+		internal val HONG_KONG_CHINESE = LocaleDerivation(ZH_CN, ZH_HK) { text, _ -> TraditionalChinese.toHongKong(text) }
+		internal val TAIWAN_CHINESE = LocaleDerivation(ZH_CN, ZH_TW) { text, _ -> TraditionalChinese.toTaiwan(text) }
 
 		/** 为目标语言配置显示回退规则。缺少译文时直接使用输入语言已解析的文本。 */
 		@JvmStatic

@@ -52,6 +52,8 @@ var title = registrate.addLocalization(new TranslationKey(MOD_ID, "gui.mymod.vol
 
 `registrate.deriveLocale(new LocaleDerivation(EN_US, EN_GB, converter))` 为模组注册转换规则。转换器处理未受保护的文本片段，可读取语言、Key 和声明。`LocaleDerivation.fallback(EN_GB, EN_AU)` 在缺少目标译文时使用已解析的输入语言。规则允许组成多步路径，循环会在 DataGen 收集时报告。已有译文优先于转换和回退。
 
+DataGen 默认从已解析的 `zh_cn` 译文派生 `zh_tw`（台灣）和 `zh_hk`（香港）。转换先用 ICU 做简转繁，再应用 OpenCC 的地区字形规则。`zh_tw` 还应用台灣用词，例如将「软件」转换为「軟體」。
+
 转换会保留 Minecraft 参数、样式标记、URL、换行和已声明的单位符号。默认的 `en_us → en_ud` 同样遵循这些规则，并用显式索引保持倒置后的参数含义。
 
 ### 导出交换数据

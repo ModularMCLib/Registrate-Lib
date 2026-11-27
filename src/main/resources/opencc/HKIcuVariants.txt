@@ -1,0 +1,2 @@
+# ICU converts 里面 to 裡面. The Hong Kong variant uses 裏面.
+裡	裏
