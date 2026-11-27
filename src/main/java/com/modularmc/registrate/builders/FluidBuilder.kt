@@ -19,6 +19,8 @@ import com.modularmc.registrate.util.entry.RegistryEntry
 import com.modularmc.registrate.util.nullness.*
 
 import net.minecraft.Util
+import net.minecraft.client.renderer.ItemBlockRenderTypes
+import net.minecraft.client.renderer.RenderType
 import net.minecraft.core.registries.Registries
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.tags.TagKey
@@ -32,6 +34,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.material.Fluid
 import net.neoforged.api.distmarker.Dist
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent
 import net.neoforged.neoforge.client.model.DynamicFluidContainerModel.Colors
@@ -68,6 +71,7 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 
 	private var textures: FluidTextures? = null
 	private var clientExtension: NonNullSupplier<Supplier<IClientFluidTypeExtensions>>? = null
+	private var renderLayer: Supplier<Supplier<RenderType>>? = null
 
 	/**
 	 * Supplies the client extension for this fluid type. The extension controls its textures, tint and overlays.
@@ -116,6 +120,41 @@ open class FluidBuilder<T : BaseFlowingFluid, P : Any> : AbstractBuilder<Fluid, 
 				}
 			},
 		)
+	}
+
+	/**
+	 * 设置源流体和流动流体共用的区块渲染层。重复调用时采用最后一次设置。
+	 *
+	 * @param layer 双层供应器，仅在客户端求值
+	 * @return 当前构建器
+	 * @throws IllegalArgumentException 客户端提供的类型不是区块渲染层
+	 */
+	open fun renderType(layer: Supplier<Supplier<RenderType>>): FluidBuilder<T, P> {
+		unsafeRunWhenOn(Dist.CLIENT) {
+			Runnable {
+				require(layer.get().get() in RenderType.chunkBufferLayers()) { "Invalid fluid render layer for ${owner.modid}:$sourceName" }
+			}
+		}
+		if (renderLayer == null) {
+			onRegister(::registerRenderType)
+		}
+		renderLayer = layer
+		return this
+	}
+
+	/** 流动流体注册完成后，为客户端设置阶段安排两种流体的渲染层登记。 */
+	protected open fun registerRenderType(fluid: T) {
+		unsafeRunWhenOn(Dist.CLIENT) {
+			Runnable {
+				addModListener(owner, FMLClientSetupEvent::class.java) { event ->
+					event.enqueueWork {
+						val layer = checkNotNull(renderLayer).get().get()
+						ItemBlockRenderTypes.setRenderLayer(fluid, layer)
+						ItemBlockRenderTypes.setRenderLayer(getSource(), layer)
+					}
+				}
+			}
+		}
 	}
 
 	private val sourceName: String
